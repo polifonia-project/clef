@@ -18,6 +18,9 @@ credits: Marilena Daquino (UNIBO), Martin Hlosta (FFHS, external collaborator), 
 
 ---
 
+[![DOI](https://zenodo.org/badge/479251315.svg)](https://zenodo.org/badge/latestdoi/479251315)
+[![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
+
 Working demo: https://projects.dharc.unibo.it/musow/.
 
 Documentation: https://polifonia-project.github.io/clef/

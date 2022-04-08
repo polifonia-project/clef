@@ -1,0 +1,155 @@
+$def with(f,user,res_type,res_name,is_git_auth, project)
+$var user = user
+$var is_git_auth = is_git_auth
+$var project = project
+
+<header class="row">
+	<h3 class="col-md-12 col-sm-12">$res_name</h3>
+	<p class="col-md-12 col-sm-12" id='res_type$res_type' class='col-md-8'>
+		$res_type
+		<span class="tip" data-toggle="tooltip" data-placement="bottom"
+			title="" data-original-title="You cannot change template name and class.">
+			<i class="fas fa-info-circle"></i></span>
+	</p>
+</header>
+<section class="corners row set_template_field">
+	<section class="col-md-8 col-lg-8 col-sm-8">
+
+		<form id="templateForm" class="col-md-12 col-sm-12 col-lg-12" action="" method="POST">
+			<section class="row">
+				<section class="sortable homeheading col-md-12 col-lg-12 col-sm-12">
+					$if f:
+						$for field in f:
+							<section class="block_field">
+								$ id = field["id"]
+								<!-- TYPE -->
+								<section class="row">
+									<label class='col-md-3'>FIELD TYPE</label>
+									<select onchange="change_fields(this)" class="col-md-8 ($res_type) custom-select" id='type__$id' name='type__$id'>
+										<option value="None">Select</option>
+										<option value="Textbox">Textbox (text values or name of entities)</option>
+										<option value="Textarea">Textarea (long textual descriptions)</option>
+									  <option value="Dropdown">Dropdown (select one value from a list)</option>
+									  <option value="Checkbox">Checkbox (multiple choice)</option>
+									</select>
+									<script type="text/javascript">
+										$$("#type__$id option[value$$=$field['type']").attr("selected","selected");
+									</script>
+								</section>
+
+								<!-- LABEL -->
+								<section class="row">
+									<label class='col-md-3'>DISPLAY NAME</label>
+									<input type='text' id='label__$id' class='col-md-8' name='label__$id' value='${field["label"]}'/>
+								</section>
+
+								<!-- PREPEND -->
+								<section class="row">
+									<label class='col-md-3'>DESCRIPTION <br><span class="comment">a short explanation of the expected value</span></label>
+									<textarea id='prepend__$id' class='col-md-8 align-self-start' name='prepend__$id' rows="5">$:field["prepend"]</textarea>
+								</section>
+
+								<!-- PROPERTY -->
+								<section class="row">
+									<label class='col-md-3'>RDF PROPERTY <br><span class='comment'>start typing to get suggestions from LOV</span></label>
+									<input type='text' id='property__$id' class='col-md-8 searchLOV' name='property__$id' value='${field["property"]}'/>
+									<div id="searchresult"> </div>
+								</section>
+
+
+								<section id="addons__$id">
+									$if field['type'] == 'Textbox':
+										<!-- VALUE -->
+										<section class="row">
+											<label class='col-md-3'>VALUE TYPE</label>
+											<select class="col-md-8 ($res_type) custom-select" id='value__$id' name='value__$id' onchange="add_disambiguate('$id',this)">
+												<option value="None">Select</option>
+												<option value="Literal">Free text (Literal)</option>
+											  <option value="URI">Entity (URI from Wikidata or catalogue)</option>
+												<option value="Place">Location (from geonames)</option>
+											</select>
+											<script type="text/javascript">
+												$$("#value__$id option[value$$=$field['value']").attr("selected","selected");
+											</script>
+										</section>
+
+										<!-- PLACEHOLDER -->
+										<section class="row">
+											<label class='col-md-3'>PLACEHOLDER <br><span class="comment">an example value to be shown to the user (optional)</span></label>
+											<input type='text' id='placeholder__$id' class='col-md-8 align-self-start' name='placeholder__$id' value="${field['placeholder']}"/>
+										</section>
+									$elif field['type'] == 'Textarea':
+										<!-- PLACEHOLDER -->
+										<section class="row">
+											<label class='col-md-3'>PLACEHOLDER <br><span class="comment">an example value to be shown to the user (optional)</span></label>
+											<input type='text' id='placeholder__$id' class='col-md-8 align-self-start' name='placeholder__$id' value="${field['placeholder']}"/>
+										</section>
+									$else:
+										<!-- VALUES -->
+										<section class="row">
+											<label class='col-md-3'>VALUES <br><span class="comment">write one pair uri, label (comma separated) per row</span></label>
+											$ num_rows = len(field["values"])*2
+											<textarea id='values__$id' class='col-md-8 values_area' name='values__$id' rows="$num_rows">
+											$for uri,lab in field["values"].items():
+												$uri.strip(), $:lab.strip()
+											</textarea>
+										</section>
+
+									$if 'value' in field and field['value'] == 'URI':
+										<!-- BROWSE -->
+										<section class="row">
+											$ checked_browse = "checked=checked" if 'browse'in field and field["browse"] == "True" else ""
+											<label class="left col-md-11 col-sm-6" for="browse__$id">use this value as a filter in <em>Explore</em> page</label>
+											<input $checked_browse type="checkbox" id="browse__$id" name="browse__$id">
+										</section>
+									$if 'value' in field and field['value'] == 'Literal' and field['type'] == 'Textbox':
+										$ checked_disambiguate = "checked=checked" if 'disambiguate'in field and field["disambiguate"] == "True" else ""
+										<!-- DISAMBIGUATE -->
+										<section class="row">
+											<label class="left col-md-11 col-sm-6" for="disambiguate__$id">use this value as primary label (e.g. book title)</label>
+											<input $checked_disambiguate class='disambiguate' onClick='disable_other_cb(this)' type="checkbox" id="disambiguate__$id" name="disambiguate__$id">
+										</section>
+								</section>
+								<a href="#" class="up"><i class="fas fa-arrow-up"></i></a> <a href="#" class="down"><i class="fas fa-arrow-down"></i></a>
+								<a href="#" class="trash"><i class="far fa-trash-alt"></i></a>
+							</section>
+				</section>
+				<section class="add_fields homeheading col-md-12 col-lg-12 col-sm-12">
+					<a class="link_btn" onclick="add_field('Textbox','$res_type')" name="add_textbox">Add Textbox</a>
+					<a class="link_btn" onclick="add_field('Textarea','$res_type')" name="add_textarea">Add Textarea</a>
+					<a class="link_btn" onclick="add_field('Dropdown','$res_type')" name="add_dropdown">Add Dropdown</a>
+					<a class="link_btn" onclick="add_field('Checkbox','$res_type')" name="add_checkbox">Add Checkbox</a>
+				</section>
+			</section>
+			<section class="buttonsSection">
+				<button id="updateTemplate" name="action" value="updateTemplate-$res_name" class="btn btn-dark" type="submit">Save</button>
+				<button class="btn btn-dark delete_template" data-toggle="modal" data-target="#popup" name="action" value="deleteTemplate-$res_name" type="submit" title="delete">Delete <i class="far fa-trash-alt"></i></button>
+			</section>
+		</form>
+	</section>
+	<section class="homeheading col-md-4 col-sm-4 col-lg-4">
+		<p class="caption">Tips</p>
+		<p>You can create your template for data entry in few easy steps! Select the appearance of your field (text box, dropdown, checkbox), name it and provide a short description.</p>
+		<p>Start typing the full URI or the prefix (e.g. <code>foaf:depic..</code>) of the RDF property to be associated to the field.
+		You will get suggestions from the <a href="https://lov.linkeddata.es/">LOV vocabularies catalogue</a> for autocompletion.
+		Easy right? You can still choose to ignore suggestions and create your own property.</p>
+		<p>Field values can be free text, entities, or controlled lists of terms.</p>
+		<h5>Text box</h5>
+		<p>
+			<code>Free text</code>: any free text descriptions. You can use this field value as the main title the record (use the checkbox below).
+			You <b>must</b> select one field as a title.</p>
+		<p>
+			<code>Entity</code>: a term that can be reused in other records. When creating a record, you'll get autocompletion suggestions from <a href="https://www.wikidata.org/wiki/Wikidata:Main_Page">Wikidata</a> and the catalogue.
+			 You can select this field to be used as a filter in the page Explore. You can create as many filters as you want.
+			 </p>
+		<p><code>Location</code>: a place that can be geolocalised. Similarly to entities, autocompletion suggestions from <a href="http://www.geonames.org/">geonames</a> will appear.</p>
+		<h5>Text area</h5>
+		<p>A Textarea allows for longer text descriptions to be annotated.
+			When filling in, press return to enable entity extraction from text (e.g. people names, places, organizations).
+			You will be able to accept or reject suggestions, and these will be automatically added to your data (by means of <code>schema:keywords</code>)</p>
+		<h5>Dropdown and checkbox</h5>
+		<p>Create your own controlled vocabulary in <code>VALUES</code>.
+			For each line include the full URI and the label of a term separated by comma. URIs can be from external vocabularies or reuse the URI base that you <a href="setup">setup</a>.</p>
+	</section>
+
+</section>

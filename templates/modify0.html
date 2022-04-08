@@ -1,0 +1,105 @@
+$def with (graphdata, pageID, record_form, user, ids_dropdown,is_git_auth,invalid, project,template)
+
+$var user = user
+$var is_git_auth = is_git_auth
+$var project = project
+
+<header class="row needDoc">
+	<button id="showRight">&gt; help</button>
+	<script type="text/javascript">
+		$$('#cbp-spmenu-s2').load( "./documentation #documentation", function() {
+			$$(".documentation").removeClass('col-md-7').addClass('col-md-12 col-sm-4');
+			$$("h2").css('font-size','2em');
+		} );
+	</script>
+	$if invalid == True:
+		<h3>The form is not valid, please check mandatory fields</h3>
+	$else:
+		<h3>Modify record</h3>
+</header>
+<section class="row">
+
+
+	<section class="corners col-md-8 col-lg-8 col-sm-8">
+		<form id="modifyForm" class="col-md-12 col-sm-12 col-lg-12" action="" method="POST">
+			<input type='hidden' name='recordID' value=$:pageID>
+			$if template:
+				<input type='hidden' name='templateID' value=$:template>
+			<section class="row">
+				<section class="homeheading col-md-8 col-lg-8 col-sm-8">
+					$for input in record_form.inputs:
+						<section class="form_row">
+							$ id = input.get_default_id()
+							$id
+							$if type(input) == Checkbox:
+								$ checked_value = 'http'+id.split('_http')[1].split(',',1)[0]
+								$ field_base = id.split('_http')[0].rsplit('-',1)[0]
+								$ field_name = id.split('_http')[0]
+
+								<section class="col-md-12 col-sm-12 col-lg-12">
+									$:input.pre
+									$:input.render()
+									$:input.description
+									$if any(checked_value in k_v for k_v in graphdata[field_base]):
+										<script type="text/javascript">
+											$$("input[name=$field_name]").attr("checked","checked");
+										</script>
+								</section>
+							$else:
+								<section class="label col-12">
+									$:input.description
+								</section>
+								<section class="col-md-12 col-sm-12 col-lg-12 input_or_select detect_web_page">
+									$:input.pre
+									$if id in graphdata:
+										<!-- string value -->
+										$if isinstance(graphdata[id][0],str):
+											$:input.set_value(graphdata[id][0])
+											$:input.render()
+										$elif id in ids_dropdown:
+											<!-- dropdown -->
+											$:input.render()
+											$if len(graphdata[id]) > 0:
+												<script type="text/javascript">
+													$$('#$id').prepend($$('<option value="None">Select from the list</option>'));
+													$$("#$id option[value$$=$graphdata[id][0][0]]").attr("selected","selected");
+												</script>
+
+										$else:
+											<!-- text box with URI,label -->
+											$:input.render()
+											$if len(graphdata[id]) > 0:
+												$for k_v in graphdata[id]:
+														<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>
+														<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
+									$else:
+										$:input.render()
+										$if len(graphdata[id]) == 0:
+											<script type="text/javascript">
+												$$('#$id').prepend($$('<option selected=selected value="None">Select from the list</option>'));
+											</script>
+								</section>
+						</section>
+				</section>
+				<section class="homeheading col-md-4 col-sm-4 col-lg-4">
+					<h2>Remember to save!</h2>
+					$ has_keywords = ['yes' for k,v in graphdata.items() if 'keywords' in k]
+					$if len(has_keywords) > 0:
+						<p>Here are the keywords you saved</p>
+						$for k,v in graphdata.items():
+							$if 'keywords' in k:
+								$for k_v in graphdata[k]:
+									<span class='tag $k_v[0]' data-input='keywords' id='$k_v[0]'>$:k_v[1]</span>
+									<input type='hidden' class='hiddenInput $k_v[0]' name='keywords-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
+				</section>
+			</section>
+
+			<section class="buttonsSection">
+				<input class="btn btn-dark" type="submit" value="Save"/>
+			</section>
+		</form>
+	</section>
+	<section id="searchresult">
+	</section>
+
+</section>

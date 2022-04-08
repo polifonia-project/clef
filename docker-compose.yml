@@ -1,0 +1,27 @@
+version: "3.8"
+services:
+  db:
+      container_name: db
+      image: "lyrasis/blazegraph:2.1.5"
+      # Uncomment if you want to access blazegraph interface in your browser (http://localhost:8888) 
+      #  ports:
+      #   - 8888:8080
+      volumes:
+        - .:/app
+        - ./blaze_vm.properties:/RWStore.properties
+      restart: always
+  web:
+      container_name: web
+      build: .
+      depends_on: 
+        - db
+      volumes:
+        - .:/app
+      ports:
+        - 8080:8080
+      stdin_open: true
+      tty: true
+      command: ["/wait-for-it.sh", "db:8080", "--", "python", "app.py","8080"]
+      environment: 
+        - BLAZEGRAPH_ENDPOINT=http://db:8080/bigdata/sparql
+        - PUBLIC_BLAZEGRAPH_ENDPOINT=http://localhost:8080/sparql

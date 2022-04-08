@@ -1,0 +1,91 @@
+$def with(record_form, pageID, user, alert, limit, is_git_auth,invalid,project,template)
+$var user = user
+$var is_git_auth = is_git_auth
+$var project = project
+
+$if alert == False:
+	<header class="row needDoc">
+		<button id="showRight"><i class="far fa-lightbulb"></i> help</button>
+		<script type="text/javascript">
+			$$('#cbp-spmenu-s2').load( "./documentation #documentation", function() {
+				$$(".documentation").removeClass('col-md-7').addClass('col-md-12 col-sm-4');
+				$$("h2").css('font-size','3em');
+			} );
+			setTimeout( function(){ document.getElementById( "recordForm" ).reset(); }, 5 );
+		</script>
+		$if invalid == True:
+			<h3>The form is not valid, please check mandatory fields</h3>
+		$else:
+			<h3>Thanks for helping $project to grow!</h3>
+	</header>
+	<section class="corners row">
+		<section class="col-md-8 col-lg-8 col-sm-8">
+			<form id="recordForm" class="col-md-12 col-sm-12 col-lg-12" action="" method="POST">
+				<input type='hidden' name='recordID' value=$:pageID>
+				$if template:
+					<input type='hidden' name='templateID' value=$:template>
+				<section class="row">
+					<section class="homeheading col-md-8 col-lg-8 col-sm-8">
+						$for input in record_form.inputs:
+							<section class=" form_row">
+								$ id = input.get_default_id()
+								$if type(input) == Checkbox:
+									<section class="col-md-12 col-sm-12 col-lg-12">
+										$:input.pre
+										$:input.render()
+										$:input.description
+									</section>
+								$else:
+									<section class="label col-12">
+										$:input.description
+									</section>
+									<section class="col-md-12 col-sm-12 col-lg-12 input_or_select detect_web_page">
+										$:input.pre
+										$:input.render()
+									</section>
+									$if type(input) == Dropdown:
+										<script type="text/javascript">
+											$$('#$id').prepend($$('<option value="None">Select from the list</option>'));
+										</script>
+							</section>
+					</section>
+					<section class="homeheading col-md-4 col-sm-4 col-lg-4">
+						<h2>What did you find?</h2>
+					</section>
+				</section>
+				<section class="buttonsSection">
+					<input id="save_record" class="btn btn-dark" type="submit" value="Save"/>
+				</section>
+			</form>
+		</section>
+		<section id="searchresult">
+		</section>
+		<section class="col-md-3" id="lookup">
+		</section>
+	</section>
+	<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+	<script type="text/javascript">
+		// alert when mouse leave page to save
+    function addEvent(obj, evt, fn) {
+        if (obj.addEventListener) {
+            obj.addEventListener(evt, fn, false);
+        }
+        else if (obj.attachEvent) {
+            obj.attachEvent("on" + evt, fn);
+        }
+    };
+
+    addEvent(document, "mouseout", function(e) {
+        e = e ? e : window.event;
+        var from = e.relatedTarget || e.toElement;
+        if (!from || from.nodeName == "HTML") {
+            // stop your drag event here
+            // for now we can just use an alert
+            alert("Please, remember to save before leaving the page");
+        }
+    });
+	</script>
+$else:
+	<header class="row needDoc">
+		<h3>You already proposed $limit new resources today! Please come back tomorrow</h3>
+	</header>

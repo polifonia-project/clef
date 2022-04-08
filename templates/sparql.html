@@ -1,0 +1,18 @@
+$def with (active, user,is_git_auth,project)
+$var user = user
+$var is_git_auth=is_git_auth
+$var project= project
+
+<header class="row">
+  <h3 class="col-md-12 col-lg-12 col-sm-12">SPARQL endpoint</h3>
+</header>
+<article class="corners">
+  <div id="yasqe"></div>
+  <div id="yasr"></div>
+</article>
+
+<!-- SPARQL GUI -->
+<link rel="stylesheet" type="text/css" href="./static/css/yasgui.css">
+<script src='static/js/yasr.bundled.min.js'></script>
+<script src='static/js/yasqe.bundled.min.js'></script>
+<script src="static/js/sparql.js"></script>

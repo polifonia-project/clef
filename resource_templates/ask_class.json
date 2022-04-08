@@ -1,0 +1,1 @@
+[{"id": "res_name", "label": "Select a Template", "class": "col-md-11", "prepend": "The class of the resource to be described", "browse": "False", "type": "Dropdown", "values": {"resource_templates/template-example_template.json": "example_template"}}]

@@ -1,0 +1,32 @@
+@prefix ns1: <http://schema.org/> .
+@prefix ns2: <http://dbpedia.org/ontology/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://w3id.org/clef/1649337895-820798> a <http://example.org/ExampleClass> ;
+    rdfs:label "Hello world" ;
+    ns1:birthPlace <https://sws.geonames.org/3181928> ;
+    ns1:description "I am an example record created using the template \"Example template\". Records can be created by anybody and from everywhere, whether you are in Rome or Tokyo." ;
+    ns1:gender <http://example.org/female> ;
+    ns1:knows <http://www.wikidata.org/entity/Q254> ;
+    ns1:memberOf <http://example.org/unibo> ;
+    ns1:title "Hello world" .
+
+<https://w3id.org/clef/1649337895-820798/> rdfs:label "Hello world" ;
+    ns2:currentStatus "published"^^xsd:string ;
+    ns1:title "Hello world" ;
+    prov:generatedAtTime "2022-04-07T15:28:15.930413"^^xsd:dateTime ;
+    prov:wasAttributedTo <https://w3id.org/clef/anonymous> ;
+    prov:wasInfluencedBy <https://w3id.org/clef/anonymous> .
+
+<http://example.org/female> rdfs:label "female"^^xsd:string .
+
+<http://example.org/unibo> rdfs:label "University of Bologna"^^xsd:string .
+
+<http://www.wikidata.org/entity/Q254> rdfs:label "Wolfgang Amadeus Mozart"^^xsd:string .
+
+<https://sws.geonames.org/3181928> rdfs:label "Bologna"^^xsd:string .
+
+<https://w3id.org/clef/anonymous> rdfs:label "anonymous" .
+

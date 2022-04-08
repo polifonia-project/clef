@@ -1,0 +1,54 @@
+$def with (user,is_git_auth,project,payoff,github_repo_name)
+
+$var user = user
+$var is_git_auth = is_git_auth
+$var project = project
+$var payoff = payoff
+
+
+<section class="row homepage">
+    <h1 class="col-md-16 col-sm-16"><span class="logo_homepage text-center">$project</span><br/>$payoff</h1>
+    <section class="col-md-6">
+    </section>
+</section>
+
+<section class="corners row">
+  <section class="homeheading col-md-4 col-sm-12">
+    <p class="caption">WHAT</p>
+    <h2>Create Linked Open Data easily</h2>
+  </section>
+  <section class="homeheadingtext col-md-7 col-sm-12">
+    <h3>Populate $project catalogue in a few easy steps</h3>
+    <ol>
+      <li>
+        <p>Go to the <button class="btn btn-dark" onclick="window.location.href='welcome-1'">Member area</button> and setup your application.</p>
+      </li>
+      <li>
+        <p>Create the templates to describe your resources. Choose what data you want to create, e.g. texts, links to Wikidata entities, or controlled vocabularies.</p>
+      </li>
+      <li>
+        <p><button class="btn btn-dark" onclick="window.location.href='record-$time_now()'">Add a new resource</button> to your collection via easy to use web forms. If you have doubts, read the <a href="documentation">documentation</a> for help.</p>
+      </li>
+      <li>
+        <p>Review and publish your records from the backend.</p>
+      </li>
+      <li>
+        <p>Finally, enjoy the catalogue of $project in the page <button class="btn btn-dark" onclick="window.location.href='records'">Explore $project</button>. You can select more filters to be activated when customising the template of your resources.</p>
+      </li>
+      $if github_repo_name:
+        <li>
+          <p>You have activated GitHub synchronisation, see your data growing in your repository.
+            New collaborators can request an account by posting a request on github.</p>
+            <button class="btn btn-dark" onclick="window.location.href='https://github.com/polifonia-project/registry/issues/new'"></button>
+        </li>
+      $else:
+        <li>
+          <p>If you have a github account and a repository you own, you can activate GitHub synchronisation, backup your data and allow repository contributors to authenticate to CLEF. Follow the instruction in the setup page.</p>
+        </li>
+    </ol>
+
+
+
+  </section>
+
+</section>

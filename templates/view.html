@@ -1,0 +1,74 @@
+$def with (user, graphdata, graphID, title, stage, base,properties,is_git_auth,project)
+
+$var user = user
+$var is_git_auth = is_git_auth
+$var project = project
+
+<section class="row articleBox" vocab="https://schema.org/" typeof="Thing">
+	<section class="col-md-8 row">
+			<h2 class="articleTitle col-md-12" property="name">$title
+			$if 'modified' in stage:
+				<span>draft</span>
+			</h2>
+			$for field,value in graphdata.items():
+				$ width_class = "col-md-5 col-sm-12" if (value and len(value[0]) <= 100) else 'col-md-12'
+				<section class="info-item $width_class">
+						$if isinstance(value[0],str):
+							<h4 class="articleSubtitle">$field </h4>
+							<p property="$properties[field]">$value[0]</p>
+						$else:
+							$if len(value[0][1]) > 0:
+								<h4 class="articleSubtitle">$field </h4>
+								$for uri_value in value:
+									$if uri_value[0].startswith('Q'):
+										<!-- wikidata uri -->
+										<p property="$properties[field]">
+											<link property="sameAs" url="http://www.wikidata.org/entity/$uri_value[0]"/>
+											<a class="wikiEntity" target='_blank' href="http://www.wikidata.org/entity/$uri_value[0]">
+												$uri_value[1]
+											</a>
+										</p>
+									$elif isnumeric(uri_value[0]):
+										<!-- geonames uri -->
+										<p property="$properties[field]">
+											<link property="sameAs" url="https://sws.geonames.org/$uri_value[0]"/>
+											<a class="geoEntity" target='_blank' href="https://sws.geonames.org/$uri_value[0]">
+												$uri_value[1]
+											</a>
+										</p>
+									$else:
+										$if 'http' in uri_value[0]:
+											<!-- external uri or external vocabulary terms -->
+											$ here = uri_value[1] if (uri_value[0] != uri_value[1] or (uri_value[0] == uri_value[1] and len(uri_value[0]) <= 30) ) else "here"
+											<p property="$properties[field]">
+												<link property="url" url="$uri_value[0]"/>
+												<a target='_blank' href="$uri_value[0]">$here</a>
+											</p>
+										$else:
+											<!-- local resource -->
+											<p property="$properties[field]">
+												<link property="url" url="$base$uri_value[0]"/>
+												<a target='_blank' href="term-$uri_value[0]">$uri_value[1]</a>
+											</p>
+				</section>
+
+	</section>
+	<section class="col-md-4 sideBoxes">
+		<section class="biblio">
+			<h3 class="biblio-label">Permalink</h3>
+				<p>$base$graphID</p>
+		</section>
+		<section class="biblio">
+			<h3 class="biblio-label">Would you like to modify this record?</h3>
+				<p>If you already have an account on $project</p>
+				<button type="button" class="btn btn-dark" name="button" onclick="window.location.href='modify-$graphID'">Click here</button>
+		</section>
+	</section>
+	<hr/>
+	<!-- <section class="info-item">
+		<h4 class="articleSubtitle">URI</h4>
+		<span class="small"></span>
+		<p></p>
+	</section> -->
+
+</section>

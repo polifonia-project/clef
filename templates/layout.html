@@ -1,0 +1,100 @@
+$def with (content)
+
+<html>
+	<head>
+	    <title>$content.project</title>
+	    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	    <meta name="viewport" content="width=device-width, initial-scale=1" />
+			<script type="text/javascript" src="static/js/conf.js"></script>
+			<script src="static/js/popper.min.js"></script>
+			<script type="text/javascript" src="static/js/jquery.min.js"></script>
+			<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+			<script type="text/javascript" src="static/js/bootstrap.min.js"></script>
+			<script type="text/javascript" src="static/js/wikidata-sdk.min.js"></script>
+			<script type="text/javascript" src="static/js/main.js"></script>
+			<script type="text/javascript" src="static/js/classie.js"></script>
+			<script type="text/javascript" src="static/js/lodash-core.js"></script>
+			<script src="static/js/anime.min.js"></script>
+			<link rel="icon" type="image/png" href="static/imgs/favicon.png">
+			<link rel="stylesheet" type="text/css" href="static/css/bootstrap.min.css">
+			<link rel="stylesheet" type="text/css" href="static/css/main.css">
+			<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.13/css/all.css" integrity="sha384-DNOHZ68U8hZfKXOrtjWvjxusGo9WQnrNx2sqG0tfsghAvtVlRW3tvkXWZh58N9jp" crossorigin="anonymous">
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+			<link href="https://fonts.googleapis.com/css2?family=Karla:wght@500&display=swap" rel="stylesheet">
+			<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;500&display=swap" rel="stylesheet">
+			<!-- Global site tag (gtag.js) - Google Analytics -->
+			<script async src="https://www.googletagmanager.com/gtag/js?id=G-16VHX9EJD5"></script>
+			<script src="static/js/compromise.js"></script>
+			<script>
+			  window.dataLayer = window.dataLayer || [];
+			  function gtag(){dataLayer.push(arguments);}
+			  gtag('js', new Date());
+
+			  gtag('config', 'G-16VHX9EJD5');
+			</script>
+	</head>
+	<body class="cbp-spmenu-push">
+		<section class="container-fluid main_content">
+			<section class="cbp-spmenu cbp-spmenu-vertical cbp-spmenu-right" id="cbp-spmenu-s2">
+			</section>
+			<nav class="row navbar navbar-expand-lg sticky-top">
+				<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+			    <span>$content.project</span>
+			  </button>
+				<!-- <span class="logo"><a href="/"><img src="static/imgs/logo.svg"></a></span> -->
+				<!-- <a href="about">about</a> -->
+				<section class="col-md-8 col-sm-12 collapse navbar-collapse" id="navbarSupportedContent">
+					<span><a href="/" class="logo_header">$content.project</a>
+					<a href="records">Explore</a></span>
+					$if content.user == 'anonymous' or content.user == 'unknown':
+						$if content.is_git_auth == True:
+							<button class="btn btn-dark" onclick="window.location.href='gitauth'"  role="button" id="dropdownMenuLink">Member area <i class="fab fa-github"></i></button>
+						$else:
+							<button class="btn btn-dark" onclick="window.location.href='welcome-1'" role="button" id="dropdownMenuLink">Member area</button>
+					$else:
+							<button class="btn btn-dark" onclick="window.location.href='logout'" role="button" id="dropdownMenuLink">Logout</button>
+
+					<form action='' method='POST' id="create_form_menu">
+				    <button class="btn btn-dark" name="action" value="createRecord$time_now()" type="submit">Add a resource</button>
+				  </form>
+				</section>
+				<div class="searchmenu col-md-3 col-sm-12">
+					<!-- <i class="fas fa-search" aria-hidden="true"></i> -->
+					<input autocomplete="off" class="searchGeneral" placeholder="search..." id="search" name="search" type="text">
+				</div>
+				<div id="searchresultmenu"></div>
+
+			</nav>
+			<main class="">
+				$:content
+				<!-- <div class="push"></div> -->
+			</main>
+
+			<footer class="row justify-content-md-center">
+
+				<section class="col-md-4 col-sm-12">
+						<p>$content.project is part of</p>
+						<p><a target="_blank" href="https://polifonia-project.eu/"><img src="static/imgs/logo.svg"></a> <img src="static/imgs/logoeu.jpg"></p>
+						<p>Polifonia has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement N. 101004746</p>
+						<p></p>
+				</section>
+
+				<section class="col-md-2 col-sm-10">
+					<p><a href="/">Home</a></p>
+					<p><a href="records">Explore</a></p>
+					<p><a href="sparql">SPARQL endpoint</a></p>
+					<p><a href="model">Data model</a></p>
+					<p><a href="documentation">Editorial guidelines</a></p>
+				</section>
+				<section class="col-md-2 col-sm-10">
+
+					<p><a href="https://github.com/polifonia-project/registry_app"><i class="fab fa-github"></i></a>
+						<a href="https://twitter.com/PolifoniaH2020"><i class="fab fa-twitter"></i></a>
+						<a href="https://www.linkedin.com/company/polifonia-h2020/"><i class="fab fa-linkedin-in"></i></a> </p>
+					<p>Become a collaborator! send us a request on <a href="https://github.com/polifonia-project/registry_app/issues">github</a></p>
+				</section>
+			</footer>
+		</section>
+	</body>
+
+</html>

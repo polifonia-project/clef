@@ -1,0 +1,100 @@
+$def with (user, data, title,r_base,alll,filters,is_git_auth,project)
+
+$var user = user
+$var is_git_auth=is_git_auth
+$var project=project
+
+
+<header class="row">
+	<h3 class="col-md-12 col-lg-12 col-sm-12">Explore $project</h3>
+</header>
+<ul class="corners nav nav-tabs mb-3" id="resource_classes_tab" role="tablist">
+	$ first_class=list(data.keys())[0]
+	$for res_class, data_val in data.items():
+		$if len(data_val) > 0:
+			$ res_id = res_class.replace(' ','_').lower()
+			$ attributes = "active" if first_class == res_class else ""
+			$ aria = "true" if first_class == res_class else "false"
+				<li class="nav-item" role="presentation">
+					<a class="nav-link $attributes"
+						id="$res_id"
+						data-mdb-toggle="tab"
+						href="#tab_$res_id"
+						role="tab"
+						aria-controls="tab_$res_id"
+						aria-selected="$aria">$res_class ($alll[res_class])</a>
+				</li>
+</ul>
+
+<div class="tab-content" id="resource_classes_tabs">
+	$ first_class=list(data.keys())[0]
+	$for res_class, data_val in data.items():
+		$if len(data_val) > 0:
+			$ res_id = res_class.replace(' ','_').lower()
+			$ attributes = "show active" if first_class == res_class else ""
+			$ res_owl_class = list(data_val)[0][6] if len(data_val) > 0 else None
+			<div class="tab-pane fade $attributes" id="tab_$res_id" role="tabpanel" aria-labelledby="$res_id">
+				<section class="row articleBox">
+					<section class="col-md-12 col-sm-12">
+						$if res_class in filters and len(filters[res_class]) > 0:
+							$for filter in filters[res_class]:
+								<section class="row change_background">
+									<section class="homeheading col-md-4 col-sm-12">
+										<p class="caption">$filter[1]</p>
+										<h2>Browse by $filter[1]</h2>
+									</section>
+									<section class="homeheadingtext col-md-7 col-sm-12">
+										$if filter[2] == 'Textbox' and filter[3] == 'Literal':
+											<p>Filter alphabetically</p>
+												<section class="wrapAllparent" id="toc_resources_$res_id">
+													<section class="alphabet" id="alphabet_$res_id">
+													</section>
+													$for record in data[res_class]:
+														$if record[5] != 'not modified':
+															$ new_id = res_id+"_"+upper(record[1][0])
+															<section class="list $new_id" id="$new_id">
+																<a href="view-$record[0].rsplit('/')[-2]" class="resource_collapse">$record[1]</a>
+															</section>
+
+												</section>
+										$elif filter[2] == 'Textbox' and (filter[3] == 'URI' or filter[3] == 'Place'):
+											<p>Filter by most recurring values</p>
+											$ elemID = filter[1].replace(' ','')
+											$ results = elemID+"results"
+											<section id="$elemID" class="indexURI">
+											</section>
+											<button class="showMore" type="button">show more</button>
+											<script type="text/javascript">
+												getPropertyValue("$elemID", "$filter[0]", "$filter[3]", "$filter[2]", "$res_owl_class");
+											</script>
+											<section class="resultAccordion">
+												<section id="$results" class="$results collapse"></section>
+											</section>
+
+										$elif filter[2] in ['Dropdown','Checkbox'] and filter[3] == 'URI':
+											<p>Filter by most recurring values</p>
+											$ elemID = filter[1].replace(' ','')
+											$ results = elemID+"results"
+											<section id="$elemID" class="indexURI">
+											</section>
+											<button class="showMore" type="button">show more</button>
+											<script type="text/javascript">
+												getPropertyValue("$elemID", "$filter[0]", "$filter[3]", "$filter[2]","$res_owl_class");
+											</script>
+											<section class="resultAccordion">
+												<section id="$results" class="$results collapse"></section>
+											</section>
+										$else:
+											<p>-</p>
+									</section>
+								</section>
+					</section>
+					<section class="col-md-2 col-sm-12">
+
+
+					</section>
+				</section>
+
+
+			</div>
+</div>

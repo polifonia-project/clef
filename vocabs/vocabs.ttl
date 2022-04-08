@@ -1,0 +1,14 @@
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<http://example.org/dharc> rdfs:label "Digital Humanities Research Centre" .
+
+<http://example.org/female> rdfs:label "female" .
+
+<http://example.org/male> rdfs:label "male" .
+
+<http://example.org/other> rdfs:label "other" .
+
+<http://example.org/polifonia> rdfs:label "Polifonia H2020" .
+
+<http://example.org/unibo> rdfs:label "University of Bologna" .
+

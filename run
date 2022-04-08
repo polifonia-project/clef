@@ -1,0 +1,20 @@
+#!/bin/sh
+# open folder
+APP_PATH="/Users/$USER/Desktop/"
+APP_FOLDER=$APP_PATH'crowdsourcing'
+BLAZEGRAPH_PORT=3000
+APP_PORT=8080
+
+# activate virtualenv
+cd $APP_FOLDER
+# activate virtualenv
+source $APP_FOLDER/bin/activate
+# launch blazegraph
+lsof -ti tcp:$BLAZEGRAPH_PORT | xargs kill
+java -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -server -Xmx2g -Djetty.port=$BLAZEGRAPH_PORT -Dbigdata.propertyFile=blaze.properties -jar blazegraph.jar &
+# launch app
+sleep 3
+lsof -ti tcp:$APP_PORT | xargs kill
+python3 app.py $APP_PORT
+# kill everything when exiting terminal
+trap 'kill $(ps -o pid= --ppid $$) 2>/dev/null' exit

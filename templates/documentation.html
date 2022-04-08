@@ -1,0 +1,38 @@
+$def with (user,is_git_auth,project)
+
+$var user = user
+$var is_git_auth=is_git_auth
+$var project = project
+
+<section class="row articleBox">
+	<section class="col-md-7 documentation" id="documentation">
+		<h2 class="articleTitle">Documentation</h2>
+		<h3 class="articleSubtitle">Before you start... </h3>
+		<p>Thank you for contributing to $project!</p>
+
+		<h4>Guidelines for creating new records</h4>
+		<p>First, select a template from the list, which correspond to the types of resources that can be described in $project. Press <em>Save</em>.</p>
+		<p>You can contribute to $project with any information you know, no need to fill in all fields, just pay attention to those fields that are flagged with a red *, which are mandatory.
+			Once you submit a record, if you do not have an account, you'll not be allowed to modify it. But don't worry, our editorial board will review your suggestions before publishing the record.</p>
+		<p><em>Please, use Chrome, Firefox or Safari!</em></p>
+
+		<h4>Tips: Autocompletion</h4>
+		<p>Some fields have autocomplete functionalities! You recognise them because they have an icon next to the field name.
+			A dropdown pops up while typing, including best candidate matches with the term you typed (powered by Wikidata and $project).</p>
+		<img src="static/imgs/autocomplete.png" alt="screenshot entry form autocomplete"/>
+		<p>If you found a match in the list, you can click on the icon to be redirected to the page of the term.
+			To select a term from the list, click on the label, and it will appear below the text area.</p>
+		<img src="static/imgs/matchfound.png" alt="match found in the list of suggestions"/>
+		<p>If you don't find any term that matches your search, just click on return to add a new one to $project.
+			It will appear below the text area.
+			Other contributors will be able to use it in new records.</p>
+		<img src="static/imgs/orangeList.png" alt="create a new term"/>
+		<p>You can always remove values by clicking on the X.</p>
+
+		<p><i class="fas fa-exclamation-circle"></i> <em>Suggestions are retrieved on-the-fly. The search starts on keyup (after few milliseconds) and can take few seconds if the connection is unstable (so be patient!).
+			Secondly, results may reload slowly, meaning that refinements of the search might take time. If no relevant results are found at the first attempt, please try to remove the last character and re-type it.
+			Lastly, when looking for two or more words (e.g. people names, place names, types of objects) be aware that you may have to try several combinations of words (e.g. <code>firstname+lastname</code> rather than <code>lastname+firstname</code>)</em>.</p>
+		<hr/>
+
+	</section>
+</section>

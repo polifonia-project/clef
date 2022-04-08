@@ -1,0 +1,71 @@
+$def with(f,user,data, is_git_auth, project)
+$var user = user
+$var is_git_auth = is_git_auth
+$var project= project
+
+<header class="row">
+	<h3>Setup your application</h3>
+</header>
+<section class="corners row">
+	<section class="col-md-6 col-lg-6 col-sm-6">
+		<form id="setupForm" class="col-md-12 col-sm-12 col-lg-12" action="" method="POST">
+			<section class="row">
+				<section class="homeheading col-md-12 col-lg-12 col-sm-12">
+					$for input in f.inputs:
+						<section class=" form_row">
+						$ id = input.get_default_id()
+						$if type(input) == Checkbox:
+							<section class="col-md-12 col-sm-12 col-lg-12">
+								$:input.pre
+								$:input.render()
+								$:input.description
+							</section>
+						$else:
+							<section class="label col-12">
+								$:input.description
+							</section>
+							<section class="col-md-12 col-sm-12 col-lg-12">
+								$:input.pre
+								$if id in data:
+									$:input.set_value(data[id])
+								$:input.render()
+							</section>
+						</section>
+				</section>
+			</section>
+			<section class="buttonsSection">
+				<input class="btn btn-dark" type="submit" value="Save"/>
+			</section>
+		</form>
+	</section>
+	<section class="homeheading col-md-6 col-sm-6 col-lg-6">
+		<p class="caption">Tips</p>
+		<p>Personalise the project name and the payoff in the homepage.</p>
+		<p>The local SPARQL endpoint runs on port 3000. To modify the port, read the documentation.
+			If you deploy $project on a remote server, a public SPARQL REST API and GUI will be available at <code>YOUR-DOMAIN/sparql</code> (come back here to add the full URL).</p>
+		<p>The URI base is the persistent URI of new entities. You can use external services such as <a target="_blank" href="https://w3id.org/">w3id</a>.
+			Be aware that content negotiation is not automatically enabled. See an <a target="_blank" href="https://github.com/perma-id/w3id.org/tree/master/musow">example</a> on how to enable it with w3id.</p>
+		<p>You can limit the number of daily contributions per user by setting a limit for requests coming from the same IP address.</p>
+		<p>Choose the number of records to be shown in the backend and frontend (pagination of results).</p>
+		<h5>Github synchronisation and authentication</h5>
+		<p>$project can be synchronised with a GitHub repository to <code>(1)</code> create a versioned backup of your data and <code>(2)</code> to create a team to collaborate to the catalogue.</p>
+		<p>For <code>(1)</code> you will need:</p>
+		<ul>
+			<li><a target="_blank" href="https://github.com/join">a github account</a></li>
+			<li><a target="_blank" href="https://docs.github.com/en/get-started/quickstart/create-a-repo">a github repository</a></li>
+			<li><a target="_blank" href="https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token">to get a github bearer token</a></li>
+		</ul>
+		<p>Enable Github backup (<code>True</code>), record your GitHub username as <code>COMMITS DEFAULT AUTHOR</code> and the email you used to register on Github as <code>COMMITS DEFAULT AUTHOR EMAIL</code>.</p>
+		<p>The repository must be either yours or one where you have been accredited as a collaborator with admin privileges. If the repository is yours, use your username as <code>REPOSITORY OWNER</code>, and the name of the repository as <code>REPOSITORY NAME</code>.</p>
+		<p>Follow the instructions to create a bearer token. When selecting the scopes of the permissions, ensure <b>repo</b> is selected. $project needs it to commit changes on your repository on your behalf. Copy and paste the code in the field <code>GITHUB BEARER TOKEN</code>.
+			Be aware you may need to change this code over time according to the expiry date you choose.</p>
+		<p>For <code>(2)</code> you will need (in addition):</p>
+		<ul>
+			<li><a target="_blank" href="https://docs.github.com/en/developers/apps/building-oauth-apps/creating-an-oauth-app">to create a github OAuth application</a></li>
+		</ul>
+		<p>GitHub authentication is recommended for applications that run online. If you do not enable it, any user will be able to access the backend of your application.</p>
+		<p>Follow the instructions for creating the OAuth app, and select as <b>Authorization callback URL</b> the following path: <code>YOURDOMAIN/oauth-callback</code>. At the end, come back here and paste the <code>CLIENT ID</code> and <code>SECRET KEY</code>.</p>
+		<p>Done, time to enjoy.</p>
+	</section>
+
+</section>

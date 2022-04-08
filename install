@@ -1,0 +1,79 @@
+#!/bin/sh
+p='\033[0;35m'
+APP_PATH="/Users/$USER/Desktop/"
+APP_FOLDER=$APP_PATH'crowdsourcing'
+APP_FILE=$APP_FOLDER'/app.py'
+
+echo "${p}Hello there! let's have a look at what we need to install"
+
+# check the path exists, else throw error
+if [ -d $APP_PATH ]; then
+  # if python is not installed, install it
+  if ! hash python; then
+      echo "${p}python is not installed, let me install it first!"
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+      brew update
+      brew install python
+      brew install git
+      pip install --user pipenv
+      pip install virtualenv
+      exit 1
+  else
+    echo "${p}Ok, python is installed"
+  fi
+
+  # if an older version of python exists, create a venv and install it
+  ver=$(python3 -V 3>&1 | sed 's/.* \([0-9]\).\([0-9]\).*/\1\2/')
+  if [ "$ver" -lt "36" ]; then
+      echo "${p} Python 3.6 or greater is required, let me istall it"
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+      brew update
+      brew upgrade python3
+      brew install git
+      pip3 install --user pipenv
+      pip3 install virtualenv
+      exit 1
+  else
+    echo "${p}...and it is updated"
+  fi
+else
+  echo 'Where should we install the application? Provide a full path (e.g. /Users/YOURNAME/Desktop/)'
+  read $APP_PATH
+fi
+
+# create the folder
+if [ ! -d $APP_FOLDER ]; then
+  mkdir -p $APP_FOLDER;
+  echo "$APP_FOLDER created"
+fi
+
+cd $APP_FOLDER
+
+if [ ! -f $APP_FILE ]; then
+  # download repo
+  echo "downloading github repo"
+  git clone https://github.com/polifonia-project/registry_app $APP_FOLDER
+  echo "cloned repo"
+fi
+
+# create venv
+virtualenv .
+source bin/activate
+# install requirements
+pip3 install -r $APP_FOLDER'/requirements.txt'
+
+# executable run
+chmod 755 $APP_FOLDER'/run'
+
+if [ ! -f $APP_FOLDER'/blazegraph.jar' ]; then
+  # download blazegraph
+  echo "no blazegraph"
+  curl -L "https://github.com/blazegraph/database/releases/download/BLAZEGRAPH_2_1_6_RC/blazegraph.jar" --output blazegraph.jar
+  echo "downloaded blazegraph"
+fi
+
+deactivate
+
+echo "done!"
+
+exit 1

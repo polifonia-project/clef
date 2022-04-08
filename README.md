@@ -23,4 +23,6 @@ credits: Marilena Daquino (UNIBO), Martin Hlosta (FFHS, external collaborator), 
 
 Working demo: https://projects.dharc.unibo.it/musow/.
 
-Documentation: https://polifonia-project.github.io/clef/
+Documentation: https://polifonia-project.github.io/clef/.
+
+Moved from: https://github.com/polifonia-project/registry_app.

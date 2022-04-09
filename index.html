@@ -67,7 +67,7 @@
         <p><strong>From source code (No virtualenv)</strong></p>
         <ul>
           <li>download the source code from the latest release or clone the repository</li>
-          <li>install <code>requirements.txt</code> with pip (<code>pip3 install requirements.txt</code>)</li>
+          <li>install <code>requirements.txt</code> with pip (<code>pip3 install -r requirements.txt</code>)</li>
           <li>download the latest version of <a href="https://github.com/blazegraph/database/releases/tag/BLAZEGRAPH_2_1_6_RC">blazegraph</a></li>
           <li>move the file <code>blazegraph.jar</code> in the root folder of the cloned repository</li>
           <li>in the terminal, launch blazegraph <code>java -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -server -Xmx2g -Djetty.port=3000 -Dbigdata.propertyFile=blaze.properties -jar blazegraph.jar</code> (NB. <code>-Xmx2g</code> requires 2GB RAM, change according to your preference)</li>

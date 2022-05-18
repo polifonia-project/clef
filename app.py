@@ -647,7 +647,8 @@ class Modify(object):
 		session['ip_address'] = str(web.ctx['ip'])
 		is_git_auth = github_sync.is_git_auth()
 		templateID = recordData.templateID if 'templateID' in recordData else None
-
+		res_class = queries.getClass(conf.base+name)
+		res_template = u.get_template_from_class(res_class)
 
 		if 'action' in recordData:
 			create_record(recordData)

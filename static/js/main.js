@@ -569,7 +569,7 @@ function searchCatalogue(searchterm) {
   $('#'+searchterm).keyup(function(e) {
     $("#searchresultmenu").show();
     var q = $('#'+searchterm).val();
-    var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o ?desc "+in_graph+" where { ?o bds:search '"+q+"*'. ?s rdfs:label ?o ; a ?class .}"
+    var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o "+in_graph+" where { ?o bds:search '"+q+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o ; a ?class .}"
     var encoded = encodeURIComponent(query)
     if (q == '') { $("#searchresultmenu").hide();}
     $.ajax({

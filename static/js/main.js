@@ -880,7 +880,7 @@ function searchResources(event) {
               // exclude named graphs from results
               if ( myUrl.substring(myUrl.length-1) != "/") {
                 var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1)
-                var newItem = $("<div id='"+resID+"' class='wditem'><a class='blue orangeText' target='_blank' href='view-"+resID+"'><i class='fas fa-external-link-alt'></i></a> <span class='orangeText' data-id=" + returnedJson.results.bindings[i].o.value + "'>" + decodeURIComponent( escape(returnedJson.results.bindings[i].label.value)) + "</span></div>").hide();
+                var newItem = $("<div id='"+resID+"' class='wditem'><a class='blue orangeText' target='_blank' href='view-"+resID+"'><i class='fas fa-external-link-alt'></i></a> <span class='orangeText' data-id=" + returnedJson.results.bindings[i].o.value + "'>" + decodeURIComponent( unescape(returnedJson.results.bindings[i].label.value)) + "</span></div>").hide();
                 $(".relatedResources").prepend(newItem);
                 newItem.show('slow');
                 };

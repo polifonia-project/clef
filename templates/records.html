@@ -59,7 +59,7 @@ $var project=project
 												</section>
 										$elif filter[2] == 'Textbox' and (filter[3] == 'URI' or filter[3] == 'Place'):
 											<p>Filter by most recurring values</p>
-											$ elemID = filter[1].replace(' ','')
+											$ elemID = res_id+filter[1].replace(' ','')
 											$ results = elemID+"results"
 											<section id="$elemID" class="indexURI">
 											</section>
@@ -73,7 +73,7 @@ $var project=project
 
 										$elif filter[2] in ['Dropdown','Checkbox'] and filter[3] == 'URI':
 											<p>Filter by most recurring values</p>
-											$ elemID = filter[1].replace(' ','')
+											$ elemID = res_id+filter[1].replace(' ','')
 											$ results = elemID+"results"
 											<section id="$elemID" class="indexURI">
 											</section>

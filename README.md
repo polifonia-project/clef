@@ -1,3 +1,5 @@
+# CLEF, Crowdsourcing Linked Entities via web Form
+
 ---
 id: clef
 name: CLEF, Crowdsourcing Linked Entities via web Form
@@ -17,8 +19,6 @@ running-instance: https://projects.dharc.unibo.it/musow/
 credits: Marilena Daquino (UNIBO), Martin Hlosta (FFHS, external collaborator), Mari Wigham (NISV), Enrico Daga (OU)
 
 ---
-
-# CLEF
 
 [![DOI](https://zenodo.org/badge/479251315.svg)](https://zenodo.org/badge/latestdoi/479251315)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)

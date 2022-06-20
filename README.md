@@ -1,5 +1,3 @@
-# CLEF, Crowdsourcing Linked Entities via web Form
-
 ---
 id: clef
 name: CLEF, Crowdsourcing Linked Entities via web Form
@@ -20,6 +18,8 @@ credits: Marilena Daquino (UNIBO), Martin Hlosta (FFHS, external collaborator), 
 
 ---
 
+# CLEF, Crowdsourcing Linked Entities via web Form
+
 [![DOI](https://zenodo.org/badge/479251315.svg)](https://zenodo.org/badge/latestdoi/479251315)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 
@@ -37,8 +37,22 @@ Some highlights:
  * browse data immediately CLEF comes with an online browsable catalogue. You can create indexes with one click (no need to develop another application for showcasing your data!)
  * work locally or remote use CLEF from your desktop or on a remote server
 
-Working demo: https://projects.dharc.unibo.it/musow/.
+Full documentation: https://polifonia-project.github.io/clef/.
 
-Complete documentation: https://polifonia-project.github.io/clef/.
+See a working demo: https://projects.dharc.unibo.it/musow/.
 
-This repository moved from: https://github.com/polifonia-project/registry_app.
+
+CLEF is part of [Polifonia](https://polifonia-project.eu/) H2020 project (Deliverable 1.9). This repository moved from: https://github.com/polifonia-project/registry_app. 
+
+Cite this repository as:
+
+```
+Daquino Marilena et al. (2022). CLEF (v1.0.1). DOI: 10.5281/zenodo.6559445
+```
+
+or cite our journal paper:
+
+```
+Marilena Daquino, Mari Wigham, Enrico Daga, Lucia Giagnolini, and Francesca Tomasi (2022). CLEF. A Linked Open Data native system for Crowdsourcing. JOCCH (soon to be published). arXiv: https://arxiv.org/abs/2206.08259.
+```
+

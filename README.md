@@ -1,7 +1,7 @@
 ---
-id: clef
+component-id: clef
 name: CLEF, Crowdsourcing Linked Entities via web Form
-brief-description: CLEF is a lightweight Linked Open Data native cataloguing system tailored to small-medium crowdsourcing projects.
+description: CLEF is a lightweight Linked Open Data native cataloguing system tailored to small-medium crowdsourcing projects.
 type: Application
 release-date: 2021-10-27
 release-number: latest

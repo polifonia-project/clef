@@ -485,7 +485,7 @@ class Index:
 			types = [t['type'] for t in templates]
 			now_time = str(time.time()).replace('.','-')
 			# check for duplicates
-			res_n = actions.class_name if (res_type not in types and res_name not in names) else class_name+'_'+now_time
+			res_n = actions.class_name if (res_type not in types and res_name not in names) else actions.class_name+'_'+now_time
 			u.updateTemplateList(res_n,res_type)
 			raise web.seeother(prefixLocal+'template-'+res_name)
 

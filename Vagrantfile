@@ -41,13 +41,15 @@ APP_DIR="/app"
 WEBAPP_PORT=8080
 
 echo -n "Running Blazegraph..."
-lsof -ti tcp:${BLAZEGRAPH_PORT} | xargs kill
-java -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -server -Xmx2g -Djetty.port=${BLAZEGRAPH_PORT} -Dbigdata.propertyFile=$BLAZEGRAPH_PROPERTY_FILE -jar $BLAZEGRAPH_PATH &
-sleep 3
+lsof -ti tcp:${BLAZEGRAPH_PORT} | xargs --no-run-if-empty kill
+java -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -server -Xmx2g -Djetty.port=${BLAZEGRAPH_PORT} -Dbigdata.propertyFile=$BLAZEGRAPH_PROPERTY_FILE -Djetty.start.timeout=60 -jar $BLAZEGRAPH_PATH &
+sleep 10
 
 echo -n "Running webapp..."
 cd $APP_DIR
 python3 app.py $WEBAPP_PORT &
+echo -n "Webapp should be running..."
+sleep 5
 SCRIPT
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|

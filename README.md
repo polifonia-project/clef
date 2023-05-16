@@ -1,21 +1,29 @@
 ---
-component-id: clef
-name: CLEF, Crowdsourcing Linked Entities via web Form
-description: CLEF is a lightweight Linked Open Data native cataloguing system tailored to small-medium crowdsourcing projects.
-type: Application
-release-date: 2021-10-27
-release-number: latest
-work-package: WP1
-keywords:
-  - crowdsourcing
-  - linked open data
-  - registry
-licence: ISC
-release link: https://github.com/polifonia-project/clef/releases/latest
+component-id: clef-software
+type: WebApplication
+name: CLEF
+description: CLEF, Crowdsourcing Linked Entities via web Form, is a lightweight Linked Open Data native cataloguing system tailored to small-medium crowdsourcing projects.
+work-package:
+- WP1
+project: polifonia-project
+resource: https://github.com/polifonia-project/clef/releases
 demo: https://projects.dharc.unibo.it/musow/
-running-instance: https://projects.dharc.unibo.it/musow/
-credits: Marilena Daquino (UNIBO), Martin Hlosta (FFHS, external collaborator), Mari Wigham (NISV), Enrico Daga (OU)
-
+release-date: 2023/05/13
+release-number: v1.0.2
+release-link: https://github.com/polifonia-project/clef/releases/latest
+doi: 10.5281/zenodo.7906320
+changelog: https://github.com/polifonia-project/clef/releases/latest
+licence:
+- IscLicense
+contributors:
+- Marilena Daquino <https://github.com/marilenadaquino>
+- Martin Hlosta <https://github.com/hlostam>
+related-components:
+- persona:
+  - Laurent
+- story: Laurent#1_MusicArchives
+bibliography:
+- main-publication: Daquino, M., Wigham, M., Daga, E., Giagnolini, L., & Tomasi, F. (2023). Clef. a linked open data native system for crowdsourcing. JOCCH. DOI: https://dl.acm.org/doi/10.1145/3594721
 ---
 
 # CLEF, Crowdsourcing Linked Entities via web Form

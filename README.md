@@ -13,7 +13,7 @@ release-number: v1.0.2
 release-link: https://github.com/polifonia-project/clef/releases/latest
 doi: 10.5281/zenodo.7906320
 changelog: https://github.com/polifonia-project/clef/releases/latest
-licence:
+license:
 - IscLicense
 contributors:
 - Marilena Daquino <https://github.com/marilenadaquino>

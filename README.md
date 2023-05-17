@@ -20,7 +20,7 @@ contributors:
 - Martin Hlosta <https://github.com/hlostam>
 related-components:
 - persona: Laurent
-- story: "Laurent#1_MusicArchives"
+- story: Laurent#1_MusicArchives
 bibliography:
 - main-publication: Daquino, M., Wigham, M., Daga, E., Giagnolini, L., & Tomasi, F. (2023). Clef. a linked open data native system for crowdsourcing. JOCCH. DOI: https://dl.acm.org/doi/10.1145/3594721
 ---

@@ -18,6 +18,7 @@ u.reload_config()
 
 # NAMESPACES
 WD = Namespace("http://www.wikidata.org/entity/")
+VIAF = Namespace("http://www.viaf.org/viaf/")
 WDP = Namespace("http://www.wikidata.org/wiki/Property:")
 OL = Namespace("http://openlibrary.org/works/")
 ULAN = Namespace("http://vocab.getty.edu/ulan/")
@@ -39,10 +40,10 @@ def getValuesFromFields(fieldPrefix, recordData, fields=None, field_type=None):
 	returns a set of tuples including ID (for the URI) and label of values """
 	results = set()
 	for key, value in recordData.items():
-		if key.startswith(fieldPrefix+'-'): # multiple values from text box (wikidata)
+		if key.startswith(fieldPrefix+'-'): # multiple values from text box (wikidata) + URL 
 			values = value.split(',', 1)
 			results.add(( values[0].strip(), urllib.parse.unquote(values[1]) )) # (id, label)
-		elif key == fieldPrefix and field_type != 'Textarea': # uri from dropdown (single value from controlled vocabulary)
+		elif key == fieldPrefix and field_type != 'Textarea': # uri from dropdown (single value from controlled vocabulary) + URL
 			if fields:
 				field = next(field for field in fields if field["id"] == fieldPrefix)
 				label = field['values'][value] if value and value != 'None' and 'values' in field else None
@@ -53,8 +54,7 @@ def getValuesFromFields(fieldPrefix, recordData, fields=None, field_type=None):
 
 
 def getRightURIbase(value):
-	return WD if value.startswith('Q') else GEO if value.isdecimal() else '' if value.startswith("http") else base
-
+	return WD if value.startswith('Q') else GEO if value.isdecimal() else VIAF if value.startswith('viaf') else '' if value.startswith("http") else base
 
 def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 	""" transform input data into RDF, upload data to the triplestore, dump data locally """
@@ -107,7 +107,7 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 	for field in fields:
 		# URI, Textarea (only text at this stage), Literals
 		value = getValuesFromFields(field['id'], recordData, fields) \
-				if 'value' in field and field['value'] in ['URI','Place'] else recordData[field['id']]
+				if 'value' in field and field['value'] in ['URI','Place'] else getValuesFromFields(field['id'], recordData, field_type=field['type']) if 'value' in field and field['value'] == 'URL' else recordData[field['id']]
 		# TODO disambiguate as URI, value
 		if field["disambiguate"] == 'True': # use the key 'disambiguate' as title of the graph
 			wd.add(( URIRef(base+graph_name+'/'), URIRef(field['property']), Literal(value) ))
@@ -118,10 +118,30 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 
 		if isinstance(value,str) and len(value) >= 1: # data properties
 			value = value.replace('\n','').replace('\r','')
-			wd.add(( URIRef(base+graph_name), URIRef(field['property']), Literal(value) ))
+			if 'calendar' in field:
+				if field['calendar'] == 'Day':
+					wd.add((URIRef(base+graph_name), URIRef(field['property']), Literal(value, datatype=XSD.date)))
+				elif field['calendar'] == 'Month':
+					wd.add((URIRef(base+graph_name), URIRef(field['property']), Literal(value, datatype=XSD.gYearMonth)))
+				elif field['calendar'] == 'Year':
+					value = value.replace(" A.C.", "") if "A.C." in value else "-"+value.replace(" B.C.", "") if "B.C." in value else value
+					value = value if value.startswith("-") else "0000" + value.zfill(4) # e.g.: 23 B.C. = -23; 23 A.C. = 0023
+					wd.add((URIRef(base+graph_name), URIRef(field['property']), Literal(value, datatype=XSD.gYear)))
+			else:
+				wd.add(( URIRef(base+graph_name), URIRef(field['property']), Literal(value) ))
+		elif 'value' in field and field['value'] == 'URL':
+			for entity in value:
+				if entity[1] != "":
+					to_add = entity[1]
+					if not to_add.startswith("http"):
+						to_add = "http://" + to_add # this line avoids urls like <file:////app/records/wiki.it>
+					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(to_add) ))
 		else: # object properties
 			for entity in value:
-				entityURI = getRightURIbase(entity[0])+entity[0] # Wikidata or new entity
+				''' Next line may require to remove the first 4 characters ('viaf') of the value (entity[0]):
+				the string 'viaf' is added during the record creation to disambiguate VIAF and GEONAMES entities
+				whose identifiers are both numeric '''
+				entityURI = getRightURIbase(entity[0])+entity[0] if not entity[0].startswith('viaf') else getRightURIbase(entity[0])+entity[0][4:] # Wikidata/viaf or new entity
 				wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(entityURI) ))
 				wd.add(( URIRef( entityURI ), RDFS.label, Literal(entity[1].lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
 

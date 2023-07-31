@@ -20,7 +20,7 @@ lxml==4.8.0
 MarkupSafe==2.1.1
 more-itertools==8.12.0
 murmurhash==1.0.6
-numpy==1.22.3
+numpy
 packaging==21.3
 pathy==0.6.1
 preshed==3.0.6
@@ -46,7 +46,7 @@ srsly==2.4.2
 thinc==8.0.15
 tqdm==4.64.0
 typer==0.4.1
-typing_extensions==4.1.1
+typing_extensions
 urllib3==1.26.9
 wasabi==0.9.1
 web.py==0.62

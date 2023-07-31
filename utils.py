@@ -139,7 +139,7 @@ def toid(s):
 	s = s.replace(" ", "_")
 	return s
 
-def fields_to_json(data, json_file):
+def fields_to_json(data, json_file, skos_file):
 	""" setup/update the json file with the form template
 	as modified via the web page *template* """
 
@@ -165,6 +165,20 @@ def fields_to_json(data, json_file):
 		# default if missing
 		if d["type"] == "None":
 			d["type"] = "Textbox" if "values" not in d else "Dropdown"
+		# date value
+		if d["type"] == "Date":
+			if d["calendar"] == "Day":
+				d["value"] = "Date"
+			elif d["calendar"] == "Month":
+				d["value"] = "gYearMonth"
+			else:
+				d["value"] = "gYear"
+		# skos vocabulary
+		if d['type'] == "Vocab":
+			d["value"] = "URI"
+		# multimedia + website preview
+		if d['type'] in ["Multimedia", "WebsitePreview"]:
+			d['value'] = "URL"
 		# textarea value
 		if d["type"] == "Textarea":
 			d["value"] = "Literal"
@@ -174,9 +188,14 @@ def fields_to_json(data, json_file):
 			d["property"] = "http://example.org/"+d["id"]
 		# add default values
 		d['searchWikidata'] = "True" if d['type'] == 'Textbox' and d['value'] == 'URI' else "False"
+		d['searchVocab'] = "True" if d['type'] == 'Vocab' else "False"
 		d['searchGeonames'] = "True" if d['type'] == 'Textbox' and d['value'] == 'Place' else "False"
+		d['url'] = "True" if d['type'] == 'Textbox' and d['value'] == 'URL' else "False"
+		d['vocab'] = update_skos_vocabs(d, skos_file) # Add newly created skos vocabs to the corresponding JSON file
 		d["disabled"] = "False"
 		d["class"]= "col-md-11"
+		d['class']= d['class'] + " yearField" if d["type"] == "Date" and d["calendar"] == "Year" else d["class"]
+		d["class"]= d["class"] + " oneVocable" if "oneVocable" in d else d["class"]
 		d["cache_autocomplete"] ="off"
 	# add a default disambiguate if none is selected
 	is_any_disambiguate = ["yes" for n,d in list_dicts.items() if d['disambiguate'] == 'True']
@@ -379,3 +398,34 @@ def key(s):
 
 def isnum(s):
 	return s.isnumeric()
+
+# UPDATE THE LIST OF AVAILABLE SKOS VOCABS
+def update_skos_vocabs(d, skos):
+	if not os.path.isfile(skos):
+			skos_file = None
+	else:
+		with open(skos, 'r') as skos_list:
+			skos_file = json.load(skos_list)
+	selected_vocabs = []
+	for key in list(d.keys()):
+		if key.startswith("vocab") and key != "vocables":
+			number = int(re.search(r'\d+', key).group())
+			if number > len(skos_file):
+				label, url, query, endpoint = d[key].split("__")
+				skos_file[label] = {
+					"type": "SPARQL",
+					"url": url,
+					"endpoint": endpoint,
+					"query": query.replace("\n", "").replace("\r", ""),
+					"results": {
+						"array": "results.bindings", 
+						"label": "label.value", 
+						"uri": "uri.value"
+					}
+				}
+				selected_vocabs.append(label)
+				with open(skos, 'w') as file:
+					json.dump(skos_file, file)
+			else:
+				selected_vocabs.append(d[key])
+	return selected_vocabs

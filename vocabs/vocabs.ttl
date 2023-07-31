@@ -11,4 +11,3 @@
 <http://example.org/polifonia> rdfs:label "Polifonia H2020" .
 
 <http://example.org/unibo> rdfs:label "University of Bologna" .
-

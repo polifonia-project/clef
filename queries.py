@@ -205,8 +205,8 @@ def getData(graph,res_template):
 		fields = json.load(config_form)
 
 	res_class = getClass(graph[:-1])
-
-	patterns = [ 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'.}. '  if field['value'] == 'Literal' else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. ?'+field['id']+' rdfs:label ?'+field['id']+'_label .} .' for field in fields]
+	# New types of values: URL, Date, gYearMonth
+	patterns = [ 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'.}. '  if field['value'] in ['Literal','Date','gYearMonth','gYear','URL'] else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. ?'+field['id']+' rdfs:label ?'+field['id']+'_label .} .' for field in fields]
 	patterns_string = ''.join(patterns)
 
 	queryNGraph = '''
@@ -246,6 +246,8 @@ def getData(graph,res_template):
 				if k+'_label' in result:
 					if conf.base in v['value'] or 'wikidata' in v['value'] or 'geonames' in v['value']:
 						uri = v['value'].rsplit('/', 1)[-1]
+					elif 'viaf' in v['value']:
+						uri = "viaf"+v['value'].rsplit('/', 1)[-1] # Keep "viaf" at the beginning (both geonames and viaf identifiers have numeric values)
 					else:
 						uri = v['value']
 					label = [value['value'] for key,value in result.items() if key == k+'_label'][0]

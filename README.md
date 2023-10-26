@@ -10,10 +10,10 @@ resource: https://github.com/polifonia-project/clef/releases
 demo: https://projects.dharc.unibo.it/musow/
 release-date: 2023/05/13
 release-number: v1.0.2
-release-link: https://github.com/polifonia-project/clef/releases/latest
+release-link: https://github.com/polifonia-project/clef/releases/tag/v1.0.2
 doi: 10.5281/zenodo.7906320
 changelog: https://github.com/polifonia-project/clef/releases/latest
-license:
+licence:
 - IscLicense
 contributors:
 - Marilena Daquino <https://github.com/marilenadaquino>

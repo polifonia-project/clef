@@ -30,6 +30,8 @@ IP_LOGS = "ip_logs.log"
 RESOURCE_TEMPLATES = 'resource_templates/'
 TEMPLATE_LIST = RESOURCE_TEMPLATES+"template_list.json"
 ASK_CLASS = RESOURCE_TEMPLATES+"ask_class.json"
+SKOS_VOCAB = conf.skos_list # access the JSON file containing available skos vocabs
+KNOWLEDGE_EXTRACTION = conf.knowledge_extraction
 NER = spacy.load("en_core_web_sm")
 
 # ROUTING
@@ -235,9 +237,15 @@ class Template:
 			with open(template_path,'r') as tpl_file:
 				fields = json.load(tpl_file)
 
+		if not os.path.isfile(SKOS_VOCAB):
+			skos_file = None
+		else:
+			with open(SKOS_VOCAB, 'r') as skos_list:
+				skos_file = json.load(skos_list)
+
 		return render.template(f=fields,user=session['username'],
 								res_type=res_type,res_name=res_full_name,
-								is_git_auth=is_git_auth,project=conf.myProject)
+								is_git_auth=is_git_auth,project=conf.myProject,skos_vocabs=skos_file)
 
 	def POST(self, res_name):
 		""" Save the form template for data entry and reload config files
@@ -254,7 +262,8 @@ class Template:
 				u.update_ask_class(template_path, res_name,remove=True) # update ask_class
 				raise web.seeother(prefixLocal+'/welcome-1')
 			else:
-				u.fields_to_json(data, template_path) # save the json template
+				print(data)
+				u.fields_to_json(data, template_path, SKOS_VOCAB) # save the json template
 				u.reload_config()
 				vocabs.import_vocabs()
 				u.update_ask_class(template_path, res_name) # modify ask_class json
@@ -523,7 +532,7 @@ class Record(object):
 		return render.record(record_form=f, pageID=name, user=user,
 							alert=block_user, limit=limit,
 							is_git_auth=is_git_auth,invalid=False,
-							project=conf.myProject, template=None)
+							project=conf.myProject,template=None,skos_vocabs=None)
 
 	def POST(self, name):
 		""" Submit a new record
@@ -551,9 +560,15 @@ class Record(object):
 			u.log_output('SUBMIT INVALID FORM', session['logged_in'], session['username'],name)
 			return render.record(record_form=f, pageID=name, user=user, alert=block_user,
 								limit=limit, is_git_auth=is_git_auth,invalid=True,
-								project=conf.myProject,template=None)
+								project=conf.myProject,template=None,skos_vocabs=None)
 		else:
 			recordData = web.input()
+
+			if not os.path.isfile(SKOS_VOCAB):
+				skos_file = None
+			else:
+				with open(SKOS_VOCAB, 'r') as skos_list:
+					skos_file = json.load(skos_list)
 
 			# load the template selected by the user
 			if 'res_name' in recordData:
@@ -561,7 +576,7 @@ class Record(object):
 					f = forms.get_form(recordData.res_name)
 					return render.record(record_form=f, pageID=name, user=user, alert=block_user,
 									limit=limit, is_git_auth=is_git_auth,invalid=False,
-									project=conf.myProject,template=recordData.res_name)
+									project=conf.myProject,template=recordData.res_name,skos_vocabs=skos_file)
 				else:
 					raise web.seeother(prefixLocal+'record-'+name)
 
@@ -574,7 +589,7 @@ class Record(object):
 
 			if recordID:
 				userID = user.replace('@','-at-').replace('.','-dot-')
-				file_path = mapping.inputToRDF(recordData, userID, 'not modified',tpl_form=templateID)
+				file_path = mapping.inputToRDF(recordData, userID, 'not modified', tpl_form=templateID)
 				if conf.github_backup == "True":
 					try:
 						github_sync.push(file_path,"main", session['gituser'], session['username'], session['bearer_token'])
@@ -622,10 +637,16 @@ class Modify(object):
 				fields = json.load(tpl_form)
 			ids_dropdown = u.get_dropdowns(fields)
 
+			if not os.path.isfile(SKOS_VOCAB):
+				skos_file = None
+			else:
+				with open(SKOS_VOCAB, 'r') as skos_list:
+					skos_file = json.load(skos_list)
+
 			return render.modify(graphdata=data, pageID=recordID, record_form=f,
 							user=session['username'],ids_dropdown=ids_dropdown,
 							is_git_auth=is_git_auth,invalid=False,
-							project=conf.myProject,template=res_template)
+							project=conf.myProject,template=res_template,skos_vocabs=skos_file)
 		else:
 			session['logged_in'] = 'False'
 			raise web.seeother(prefixLocal+'/')
@@ -665,10 +686,16 @@ class Modify(object):
 					fields = json.load(tpl_form)
 				ids_dropdown = u.get_dropdowns(fields)
 
+				if not os.path.isfile(SKOS_VOCAB):
+					skos_file = None
+				else:
+					with open(SKOS_VOCAB, 'r') as skos_list:
+						skos_file = json.load(skos_list)
+
 				return render.modify(graphdata=data, pageID=recordID, record_form=f,
 								user=session['username'],ids_dropdown=ids_dropdown,
 								is_git_auth=is_git_auth,invalid=True,
-								project=conf.myProject,template=res_template)
+								project=conf.myProject,template=res_template,skos_vocabs=skos_file)
 			else:
 				print(recordData)
 				recordID = recordData.recordID
@@ -899,7 +926,7 @@ class View(object):
 			except Exception as e:
 				title = "No title"
 
-			properties = {field["label"]:field["property"] for field in fields}
+			properties = {field["label"]:[field["property"], field["type"]] for field in fields}
 			data_labels = { field['label']:v for k,v in data.items() \
 							for field in fields if k == field['id']}
 		except Exception as e:

@@ -3,6 +3,10 @@ import web , datetime , os, time, re, cgi , json
 from web import form
 import conf
 
+class Month(form.Input):
+	def get_type(self):
+		return "month"
+
 def parse_config_variables(text:str, conf):
 	""" Parses and replace the variables in the text by their values from config.
 
@@ -58,9 +62,17 @@ def get_form(json_form, from_dict=False):
 		prepend = pre_a+field['prepend']+pre_b if 'prepend' in field and len(field['prepend']) > 0 else ''
 		disabled = 'disabled' if 'disabled' in field and field['disabled'] == "True" else ''
 		classes = field['class'] if 'class' in field and len(field['class']) > 0 else ''
+		if 'vocab' in field:
+			for vocab in field['vocab']:
+				classes = classes + " " + vocab
 		classes = classes+' searchWikidata' if 'searchWikidata' in field and field['searchWikidata'] == 'True' else classes
 		classes = classes+' searchGeonames' if 'searchGeonames' in field and field['searchGeonames'] == 'True' else classes
+		classes = classes+' url' if 'url' in field and field['url'] == 'True' else classes
 		classes = classes+' disambiguate' if "disambiguate" in field and field["disambiguate"] == 'True' else classes
+		classes = classes+' multimedia '+ field['multimedia'] if field['type'] == 'Multimedia' else classes
+		classes = classes+' vocab' if field['type'] == 'Vocab' else classes
+		classes = classes+' oneVocableAccepted' if 'vocables' in field and field['vocables'] == 'oneVocable' else classes
+		classes = classes+' websitePreview' if field['type'] == 'WebsitePreview' else classes
 		classes = classes+' ('+res_class+') '+disabled
 		autocomplete = field['cache_autocomplete'] if 'cache_autocomplete' in field and len(field['cache_autocomplete']) > 0 else ''
 
@@ -71,7 +83,7 @@ def get_form(json_form, from_dict=False):
 		dropdown_values = [(k,v) for k,v in field['values'].items()] if 'values' in field else None
 
 		# Text box
-		if field['type'] == 'Textbox':
+		if field['type'] in ['Textbox','Vocab', 'WebsitePreview']:
 			if "disambiguate" in field and field["disambiguate"] == 'True':
 				vpass = form.regexp(r".{1,200}$", 'must be between 1 and 200 characters')
 				params = params + (form.Textbox(myid, vpass,
@@ -90,6 +102,16 @@ def get_form(json_form, from_dict=False):
 				class_= classes,
 				value=default), )
 
+		# Multimedia Link
+		if field['type'] == 'Multimedia':
+			params = params + (form.Textbox(myid,
+			description = description,
+			id=myid,
+			pre = prepend,
+			class_= classes,
+			value=default) , )
+			
+
 		# Text box
 		if field['type'] == 'Textarea':
 			params = params + (form.Textarea(myid,
@@ -100,6 +122,27 @@ def get_form(json_form, from_dict=False):
 			class_= classes,
 			value=default), )
 
+		if field['type'] == 'Date':
+			if field['calendar'] == 'Month':
+				params = params + (Month(myid,
+				description = description,
+				id=myid,
+				pre = prepend,
+				class_= classes), )
+			elif field['calendar'] == 'Day':
+				params = params + (form.Date(myid,
+				description = description,
+				id=myid,
+				pre = prepend,
+				class_= classes), )
+			elif field['calendar'] == 'Year':
+				params = params + (form.Textbox(myid,
+				description = description,
+				id=myid,
+				pre = prepend,
+				class_= classes,
+				value=default), )
+
 		if field['type'] == 'Dropdown':
 			params = params + (form.Dropdown(myid,
 			description = description,
@@ -108,7 +151,7 @@ def get_form(json_form, from_dict=False):
 			id=myid,
 			pre = prepend,
 			class_= classes), )
-
+ 
 		if field['type'] == 'Checkbox':
 			prepend_title = '<section class="checkbox_group_label label col-12">'+description+'</section>'
 			i = 0

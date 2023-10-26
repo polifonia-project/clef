@@ -2,7 +2,7 @@
 if (graph.length) {var in_graph = "FROM <"+graph+">"} else {var in_graph = ""}
 const wd_img = ' <img src="https://upload.wikimedia.org/wikipedia/commons/d/d2/Wikidata-logo-without-paddings.svg" style="width:20px ; padding-bottom: 5px; filter: grayscale(100%);"/>'
 const geo_img = '<img src="https://www.geonames.org/img/globe.gif" style="width:20px ; padding-bottom: 5px; filter: grayscale(100%);"/>';
-
+const viaf_img = '<img src="https://upload.wikimedia.org/wikipedia/commons/1/19/Viaf_icon.png" style="width:20px ; padding-bottom: 5px; filter: grayscale(100%);"/>';
 $(document).ready(function() {
 
   // loader
@@ -67,7 +67,37 @@ $(document).ready(function() {
   tags.setAttribute('class','tags-nlp');
   areas.forEach(element => {  element.after(tags); nlpText(element.id); });
 
-	// search WD and my data
+  // Suggest vocabularies links
+  $("input[type='text'][class*=' vocab ']").each(function() {
+    const currentInput = $(this);
+    const vocabs_link = [];
+    const id = $(this).attr("id");
+    
+    selected_vocabs.split(" ").forEach(function(vocab_name) {
+      if (list_vocabs.includes(vocab_name)) {
+        const vocab_name_clean = vocab_name.replace("-", " ");
+        console.log(vocab_name);
+        const vocab_url = vocab_name_clean + "," + skos_vocabs_json[vocab_name].url;
+        vocabs_link.push(vocab_url);
+      } 
+    });
+  
+    const div = $("<div id='" + id + "__vocabsLink' style='margin-bottom: 10px; margin-top: -5px'>");
+    if ($(this).prev().length > 0) {
+      div.insertBefore($(this).prev());
+    } else {
+      div.insertBefore($(this));
+    }
+    div.append("<span style='font-weight:100'>Check available vocabularies:</span></br>");
+    
+    vocabs_link.forEach(function(link) {
+      const name = link.split(",")[0].toUpperCase();
+      const url = link.split(",")[1];
+      div.append("<a target='_blank' class='vocab_link' href='" + url + "'>" + name + "</a>");
+    });
+  });  
+
+	// search WD, VIAF, my data, vocabs, years + add URLs 
 	$("input[type='text']").click(function () {
 		searchID = $(this).attr('id');
 
@@ -87,12 +117,63 @@ $(document).ready(function() {
 			searchLOV(searchID);
 		};
 
+    if ( $(this).hasClass('url') ) {
+			addURL(searchID);
+		};
+
+    if ( $(this).hasClass('yearField') ) {
+			searchYear(searchID);
+		};
+
+    if ( $(this).hasClass('vocab') ) {
+			searchVocab(searchID);
+		};
+
+    if ( $(this).hasClass('multimedia')) {
+      addMultimedia(searchID);
+    }
+
+    if ( $(this).hasClass('websitePreview')) {
+      addURL(searchID, iframe=true);
+    }
 	});
+
+  // create preview buttons for multimedia urls (click on MMtag, i.e., MultiMediaTag)
+  $(document).on('click', '.MMtag', function () {
+    const element = $(this);
+    // retrieve the resource url
+		var url = decodeURIComponent($(this).attr("data-id"));
+    if (!url.startsWith("https://") && !url.startsWith("http://")) {
+      url = "https://" + url;
+    }
+    var mediaType = element.attr('class').replace("MMtag file_", "");
+    console.log(mediaType)
+    // create a modal preview
+    if (mediaType == "image") {
+      var modal = $("<div class='modal-previewMM'><span class='previewTitle'>This is a preview of your multimedia file:<br><a href='"+url+"'>"+url+"</a></span><span class='closePreview'></span><img src='" + url + "'></div>");
+    } else if (mediaType =="video") {
+      var modal = $("<div class='modal-previewMM'><span class='previewTitle'>This is a preview of your multimedia file:<br><a href='"+url+"'>"+url+"</a></span><span class='closePreview'></span><video controls name='media'><source src='" + url + "'></source></video></div>");
+    } else if (mediaType == 'audio') {
+      var modal = $("<div class='modal-previewMM'><span class='previewTitle'>This is a preview of your multimedia file:<br><a href='"+url+"'>"+url+"</a></span><span class='closePreview'></span><audio controls><source src='" + url + "'></source></audio></div>");
+    }
+    element.after(modal);
+    $('#showRight').hide();
+    });
+  
+  // remove modal preview
+  $(document).on('click', '.closePreview', function () {
+    $(".modal-previewMM").remove();
+    $('#showRight').show();
+  });
 
 	// remove tag onclick
 	$(document).on('click', '.tag', function () {
 		$(this).next().remove();
-		$(this).remove();
+    // remove multimedia previews and iframe previews along with their urls
+    if ($(this).prev().hasClass("MMtag") || $(this).prev().hasClass("iframePreview")) {
+      $(this).prev().remove();
+    }
+    $(this).remove();
 		//colorForm();
 	});
 
@@ -125,8 +206,10 @@ $(document).ready(function() {
 	// append WD icon to input fields
 	$('.searchWikidata').parent().prev().append(wd_img);
   $('.searchGeonames').parent().prev().append(geo_img);
+  $('.searchWikidata').parent().prev().append(viaf_img);
   $('.wikiEntity').append(wd_img);
   $('.geoEntity').append(geo_img);
+  $('.viafEntity').append(viaf_img); 
 	// hide placeholder if filled
 	//colorForm();
 
@@ -151,6 +234,17 @@ $(document).ready(function() {
   $('.wrapAllparent').each(function () {
     $(this).append("<section class='accordion-group'></section>");
   });
+
+  // hide intro message in explore section
+  $(".opentab").on("click", function(el) {
+    $(".intro_explore").hide();
+    $("main").css("background-color","#F5F6FA");
+  });
+
+	// tooltips
+	$('.tip').tooltip();
+
+
 
   $('.tab-content .list').each(function () {
       var letter = $('a', this).text().toUpperCase().charAt(0);
@@ -435,6 +529,36 @@ function searchGeonames(searchterm) {
 	});
 };
 
+// a function to look through the catalogue while querying Wikidata and VIAF
+function searchCatalogueIntermediate(q) {
+  return new Promise(function(resolve, reject) {
+    var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o "+in_graph+" where { ?o bds:search '"+q+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o ; a ?class .}"
+    var encoded = encodeURIComponent(query);
+    $.ajax({
+      type: 'GET',
+      url: myPublicEndpoint + '?query=' + encoded,
+      headers: { Accept: 'application/sparql-results+json' },
+      success: function (returnedJson) {
+        // $("#searchresult").empty();
+        var url = myPublicEndpoint + '?query=' + encoded
+        console.log(url);
+        console.log(returnedJson);
+        // if (!returnedJson.length) {
+        //       // $("#searchresult").empty();
+        //       $("#searchresult").append("<div class='wditem noresults'>No results in Wikidata and catalogue</div>");
+        //       // remove messages after 3 seconds
+        //       setTimeout(function(){ if ($('.noresults').length > 0) { $('.noresults').remove(); } }, 3000);
+        // };
+        resolve(returnedJson.results.bindings);
+      },
+      error: function (error) {
+        reject(error);
+      }
+    });
+  });
+}
+
+
 // search in wikidata and my catalogue
 function searchWD(searchterm) {
 	// wikidata autocomplete on keyup
@@ -449,6 +573,7 @@ function searchWD(searchterm) {
 	      uselang: "en",
 	      format: "json",
 	      strictlanguage: true,
+        limit: 5,
 	    },
 	    function(data) {
 	    	  // autocomplete positioning
@@ -471,82 +596,99 @@ function searchWD(searchterm) {
     			    'border-radius': '4px'
     			});
     	    $("#searchresult").empty();
+          
+          // VIAF lookup in case nothing is found in Wikidata
+          if (!data.search || !data.search.length) {
+            var http = "https://viaf.org/viaf/AutoSuggest?query=" + q + "&callback=?";
+            $.getJSON(http, function (viafData) {
+              if (viafData.result) {
+                // to avoid repetitions of the same element: $("#searchresult").find("[data-id="+item.viafid+"]").length === 0
+                $.each(viafData.result, function (i, item) {
+                  if ($("#searchresult").find("[data-id="+item.viafid+"]").length === 0 && $("#searchresult > .viafitem").length <5) {
+                    $("#searchresult").append("<div class='viafitem'><a class='blue' target='_blank' href='http://www.viaf.org/viaf/" + item.viafid + "'>" + viaf_img + "</a> <a class='blue' data-id='" + item.viafid + "'>" + item.term + "</a> " + "</div>"); // no item.DESCRIPTION!
+        
+                    // add tag if the user chooses an item from viaf
+                    $('a[data-id="' + item.viafid + '"]').each(function () {
+                      $(this).bind('click', function (e) {
+                        e.preventDefault();
+                        $('#' + searchterm).after("<span class='tag " + item.viafid + "' data-input='" + searchterm + "' data-id='" + item.viafid + "'>" + item.term + "</span><input type='hidden' class='hiddenInput " + item.viafid + "' name='" + searchterm + "-" + item.viafid + "' value=\"viaf" + item.viafid + "," + encodeURIComponent(item.term) + "\"/>");
+                        $("#searchresult").hide();
+                        $('#' + searchterm).val('');
+                        //colorForm();
+                      });
+                    });
+                    
+                  }
+                });
+              }
+              else if ($('#' + searchterm).val().length > 0) {
+                $("#searchresult").append("<div class='wditem noresults'>No matches in Wikidata and VIAF</div>");
+                // remove messages after 3 seconds
+                setTimeout(function () {
+                  if ($('.noresults').length > 0) {
+                    $('.noresults').remove();
+                  }
+                }, 3000);
+              }
+            });
+          } else {
+            // fill the dropdown with WD results
+            $.each(data.search, function (i, item) {
+              $("#searchresult").append("<div class='wditem'><a class='blue' target='_blank' href='http://www.wikidata.org/entity/" + item.title + "'>" + wd_img + "</a> <a class='blue' data-id='" + item.title + "'>" + item.label + "</a> - " + item.description + "</div>");
 
-  	      // catalogue lookup in case nothing is found
-  	      if(!data.search.length){
-  	      	$("#searchresult").append("<div class='wditem noresults'>No matches in Wikidata...looking into the catalogue</div>");
-  	      	// remove messages after 3 seconds
-            console.log("here first");
-      			setTimeout(function(){
-      			  if ($('.noresults').length > 0) {
-      			    $('.noresults').remove();
-      			  }
-      		  }, 3000);
+              // add tag if the user chooses an item from wd
+              $('a[data-id="' + item.title + '"]').each(function () {
+                $(this).bind('click', function (e) {
+                  e.preventDefault();
+                  $('#' + searchterm).after("<span class='tag " + item.title + "' data-input='" + searchterm + "' data-id='" + item.title + "'>" + item.label + "</span><input type='hidden' class='hiddenInput " + item.title + "' name='" + searchterm + "-" + item.title + "' value=\"" + item.title + "," + encodeURIComponent(item.label) + "\"/>");
+                  $("#searchresult").hide();
+                  $('#' + searchterm).val('');
+                  //colorForm();
+                });
+              });
+            });
+          }
 
-      			var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o ?desc "+in_graph+" where { ?s rdfs:label ?o . OPTIONAL { ?s rdfs:comment ?desc} . ?o bds:search '"+q+"*' .}"
-      			var encoded = encodeURIComponent(query)
-            console.log("here");
-      			$.ajax({
-      				    type: 'GET',
-      				    url: myPublicEndpoint+'?query=' + encoded,
-      				    headers: { Accept: 'application/sparql-results+json'},
-      				    success: function(returnedJson) {
-      				    	// $("#searchresult").empty();
-                    console.log(returnedJson);
-                    // if (!returnedJson.length) {
-        		      	// 			// $("#searchresult").empty();
-        					  //   		$("#searchresult").append("<div class='wditem noresults'>No results in Wikidata and catalogue</div>");
-        		      	// 			// remove messages after 3 seconds
-        						// 		  setTimeout(function(){ if ($('.noresults').length > 0) { $('.noresults').remove(); } }, 3000);
-        		      	// };
+          // look for the query term in the catalogue (regardless of VIAF and WD results)
 
-        						for (i = 0; i < returnedJson.results.bindings.length; i++) {
-        							var myUrl = returnedJson.results.bindings[i].s.value;
-        							// exclude named graphs from results
-        							if ( myUrl.substring(myUrl.length-1) != "/") {
-                        var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1)
-                        if (returnedJson.results.bindings[i].desc !== undefined) {var desc = '- '+returnedJson.results.bindings[i].desc.value} else {var desc = ''}
-        								$("#searchresult").append("<div class='wditem'><a class='blue orangeText' target='_blank' href='view-"+resID+"'><i class='fas fa-external-link-alt'></i></a> <a class='orangeText' data-id=" + returnedJson.results.bindings[i].s.value + "'>" + returnedJson.results.bindings[i].o.value + "</a> " + desc + "</div>");
-        							    };
-        							};
+          var cataloguePromise = searchCatalogueIntermediate(q)
+          cataloguePromise.then(function(catalogueEntries) {
+            $(".fromCatalogue").remove(); // to remove previously retrieved elements
+            for (i = 0; i < catalogueEntries.length; i++) {
+              var myUrl = catalogueEntries[i].s.value;
+              console.log(catalogueEntries)
+              // exclude named graphs from results
+              if (myUrl.substring(myUrl.length - 1) != "/") {
+                var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1);
+                if (catalogueEntries[i].desc !== undefined) {
+                  var desc = '- ' + catalogueEntries[i].desc.value;
+                } else {
+                  var desc = '';
+                }
+                if ($("#searchresult div.wditem  a[data-id='" + catalogueEntries[i].s.value + "']").length == 0) {
+                  $("#searchresult").append("<div class='wditem fromCatalogue'><a class='blue orangeText' target='_blank' href='view-" + resID + "'><i class='fas fa-external-link-alt'></i></a> <a class='blue orangeText' data-id=" + catalogueEntries[i].s.value + "'>" + catalogueEntries[i].o.value + "</a> " + desc + "</div>");
+                }
+              }
+            }
+            
+            // add tag if the user chooses an item from the catalogue
+            $('a[data-id^="' + base + '"]').each(function () {
+              $(this).bind('click', function (e) {
+                e.preventDefault();
+                var oldID = this.getAttribute('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
+                var oldLabel = $(this).text();
+                $('#' + searchterm).after("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(oldLabel) + "\"/>");
+                $("#searchresult").hide();
+                $('#' + searchterm).val('');
+              });
 
-          						// add tag if the user chooses an item from the catalogue
-          						$('a[data-id^="'+base+'"]').each( function() {
-          					        $(this).bind('click', function(e) {
-          					        	e.preventDefault();
-          					        	var oldID = this.getAttribute('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
-          					        	var oldLabel = $(this).text();
-          					        	$('#'+searchterm).after("<span class='tag "+oldID+"' data-input='"+searchterm+"' data-id='"+oldID+"'>"+oldLabel+"</span><input type='hidden' class='hiddenInput "+oldID+"' name='"+searchterm+"-"+oldID+"' value=\" "+oldID+","+encodeURIComponent(oldLabel)+"\"/>");
-          					        	$("#searchresult").hide();
-          					        	$('#'+searchterm).val('');
-          					        });
+            });
+          })
 
-          					    });
-
-      				    }
-      			});
-      			// end my catalogue
-          };
-
-  	      // fill the dropdown
-  	      $.each(data.search, function(i, item) {
-  	        $("#searchresult").append("<div class='wditem'><a class='blue' target='_blank' href='http://www.wikidata.org/entity/"+item.title+"'>"+wd_img+"</a> <a class='blue' data-id='" + item.title + "'>" + item.label + "</a> - " + item.description + "</div>");
-
-            // add tag if the user chooses an item from wd
-  	      	$('a[data-id="'+ item.title+'"]').each( function() {
-  		        $(this).bind('click', function(e) {
-  		        	e.preventDefault();
-  		        	$('#'+searchterm).after("<span class='tag "+item.title+"' data-input='"+searchterm+"' data-id='"+item.title+"'>"+item.label+"</span><input type='hidden' class='hiddenInput "+item.title+"' name='"+searchterm+"-"+item.title+"' value=\""+item.title+","+encodeURIComponent(item.label)+"\"/>");
-  		        	$("#searchresult").hide();
-  		        	$('#'+searchterm).val('');
-  		        	//colorForm();
-  		        });
-
-  		    });
-	      });
-	  	}
-	  );
-	});
+          // end catalogue
+          
+        })
+  });
 
 	// if the user presses enter - create a new entity
 	$('#'+searchterm).keypress(function(e) {
@@ -642,7 +784,7 @@ function searchLOV(searchterm) {
 	      	var offset = $('#'+searchterm).offset();
     			var height = $('#'+searchterm).height();
     			var width = $('#'+searchterm).width();
-    			var top = offset.top + height - 230 + "px";
+    			var top = offset.top + height - 294 + "px"; // header's padding is now set to 2em (32px)
     			var right = offset.left + width + "px";
 
     			$('#'+searchres_div).css( {
@@ -677,6 +819,321 @@ function searchLOV(searchterm) {
     });
 	});
 };
+
+// addURL:URL value in textbox field + create iframe previews
+function addURL(searchterm, iframe=false) {
+  $('#'+searchterm).keypress(function(e) {    
+
+    let regexURL = /(http|https)?(:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/;
+    
+    if(e.which == 13 || e.which == 44) { // 44 code for commas
+      e.preventDefault();
+      var now = new Date().valueOf();
+      var newID = 'MD'+now;
+      // check the input value against the regex
+      if ($('#'+searchterm).val().length > 0 && regexURL.test($('#'+searchterm).val()) ) {
+        // generate iframe if requested 
+        if (iframe) {
+          $('#'+searchterm).after("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"-"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
+          if (!$('#'+searchterm).val().startsWith("https://") && !$('#'+searchterm).val().startsWith("http://")) {
+            var url = "https://" + $('#'+searchterm).val();
+          } else {
+            var url = $('#'+searchterm).val();
+          }
+          $('#'+searchterm).after("<iframe allow='autoplay' class='col-md-11 iframePreview' src='"+url+"' crossorigin></iframe>");
+        }
+        else {
+          $('#'+searchterm).after("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"-"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
+        }
+      }
+      else if ($('#'+searchterm).val().length > 0 && !regexURL.test($('#'+searchterm).val()) ) {
+        alert('Insert a valid URL');
+      }
+      $('#'+searchterm).val('');
+        //colorForm();
+    };
+  });
+}
+
+// searchYear: gYear Value in Date Field
+function searchYear(searchYear) {
+  $('#'+searchYear).keyup(function(e) {
+    // input values must be digits (47 → 58), backspace (8), enter (13)
+    if ((e.which > 47 && e.which < 58) || e.which == 8 || e.which == 13) {
+      $("#searchresult").show();
+
+      var position = $('#'+searchYear).position();
+      var leftpos = position.left+80;
+      var offset = $('#'+searchYear).offset();
+      var height = $('#'+searchYear).height();
+      var width = $('#'+searchYear).width();
+      var top = offset.top + height + "px";
+      var right = offset.left + width + "px";
+
+      $('#searchresult').css( {
+          'position': 'absolute',
+          'margin-left': leftpos+'px',
+          'top': top,
+          'z-index':1000,
+          'background-color': 'white',
+          'border':'solid 1px grey',
+          'max-width':'600px',
+          'border-radius': '4px',
+          'max-height': '300px',
+          'overflow-y': 'auto'
+      });
+      $("#searchresult").empty();
+
+      let options = []; // create an empty array to be populated with the 'year' options
+      let inputYearString = $('#'+searchYear).val();
+      // remove 'A.C.' or 'B.C.', if present, when the user presses backspace
+      if (e.which == 8 && (inputYearString.includes("A.C") || inputYearString.includes("B.C"))) {
+        var expression = / [AB].C/i;
+        var regex = new RegExp(expression);
+        var newValue = inputYearString.replace(regex, "");
+        $('#'+searchYear).val(newValue);
+        inputYearString = newValue;
+      }
+      // generate options for numbers containing 2→4 digits
+      if (inputYearString.length > 1 && inputYearString.length < 5) {
+        let inputYear = parseInt(inputYearString);
+        options.push(inputYearString); // suggests the input value
+        if (inputYear >= 10 && inputYear < 21) { 
+          // suggests numbers from 100 to 999 (two input digits requested)
+          for (let i=0; i<100; i++) {
+            options.push(inputYearString+parseInt(i));
+          }
+        } else if (inputYear >= 100 && inputYear < 206) { 
+          // suggest numbers from 1000 to 2050 (three input digits requested)
+          for (let i=0; i<10; i++) {
+            options.push(inputYearString+parseInt(i));
+          }
+        }
+      // generate options after one digit 'd' has been inserted (available options: 'd A.C.', 'd B.C.')
+      } else if (inputYearString.length == 1) {
+        options.push(inputYearString);
+      } else if (inputYearString.length > 4) {
+        $("#searchresult").hide();
+        $('#'+searchYear).val(inputYearString.substring(0, 4));
+        alert("Year out of range");
+      } else {
+        $("#searchresult").hide();
+      }
+      // add the options to a scrollable list and add a tag in case a year has been clicked
+      if (inputYearString.length > 0) {
+        $.each(options, function(i, item) {
+          $("#searchresult").append("<div class='yearOptions'><a data-id='"+item+"B.C.'>"+item+" B.C.</a></div>")
+          $("#searchresult").append("<div class='yearOptions'><a data-id='"+item+"A.C.'>"+item+" A.C.</div>")
+
+          $('a[data-id="'+ item +'B.C."], a[data-id="'+ item +'A.C."]').each(function () {
+            $(this).bind('click', function (e) {
+              e.preventDefault();
+              $("#searchresult").hide();
+              $('#' + searchYear).val($(this).text());
+            });
+          });
+        });
+      }
+    } else {
+      var newlength = $('#'+searchYear).val().length - 1;
+      $('#'+searchYear).val($('#'+searchYear).val().substring(0, newlength));
+      alert("Only digit accepted")
+    }
+  })
+}
+
+// search through SKOS vocabularies
+function searchVocab(searchterm) {
+  /* Some JS variables have been specified in the HTML pages record.html, modify.html:
+  var skos_vocabs_json = a JSON object containing all the information about each vocabulary;
+  var list_vocabs = an array conatining the name of each vocabulary in the JSON object
+  */
+  $('#' + searchterm).keyup(function(e) {
+    if ($('#' + searchterm).val().length > 1) {
+      $("#searchresult").hide();
+      var requests = []; // prepare an array to collect all the requests to the selected vocabs' endpoints
+      var path_to_results = []; // prepare an array to access the results returned by the query
+      var vocabs = $('#' + searchterm).attr('class').split(/\s+/); // SELECTED vocabs are specified as classes of the input field
+      vocabs.forEach(function(item) {
+        if (list_vocabs.includes(item)) {
+          if (skos_vocabs_json[item].type == "API") {
+            // retrieve the parameters of the request to properly call the API
+            var json_parameters = Object.assign({}, skos_vocabs_json[item].parameters);
+            // get the keys of the parameters object: the first key (keys[0]) must be associated with the query-term (i.e., input value)
+            var keys = Object.keys(json_parameters);
+            json_parameters[keys[0]] = $('#' + searchterm).val() + "*"; 
+            console.log(json_parameters);
+            const request = $.getJSON(skos_vocabs_json[item].endpoint, json_parameters);
+            requests.push(request);
+            // specify how to access the results of the query
+            path_to_results.push(skos_vocabs_json[item].results);
+          } else if (skos_vocabs_json[item].type == "SPARQL") {
+            // the string 'QUERY-TERM' inside the query must be replaced with the input value; special charachters must be checked 
+            var query = (skos_vocabs_json[item].query).replace("QUERY-TERM", ("^" + $('#' + searchterm).val())).replace("&gt;", ">").replace("&lt;", "<").replace(/&quot;/g, '"');
+            var request_parameters = {
+              type: 'GET',
+              url: skos_vocabs_json[item].endpoint+'?query=' + encodeURIComponent(query) + "&format=application%2Fsparql-results%2Bjson",
+              dataType: 'jsonp',
+              headers: { Accept: '*/*'}
+            }
+            console.log(request_parameters);
+            const request = $.ajax(request_parameters);
+            requests.push(request);
+            // specify how to access the results of the query
+            path_to_results.push(skos_vocabs_json[item].results);
+          }
+
+        }
+      });
+
+      Promise.all(requests)
+        .then(function(results) {
+          const options = []; // array to include ALL the resulting vocables of ALL the queries
+          console.log(results); // results = ALL the resulting objects of ALL the queries
+          results.forEach(function(data, index) {
+            console.log(data) // the resulting object of a query
+            var path = path_to_results[index];
+            var main_path = path.array.split(".");
+            let result = data;
+            main_path.forEach(key => {
+              result = result[key];
+            });
+
+            result.forEach(function(res) {
+              // extract a label for each vocable
+              let label_path = path.label.split(".");
+              let label = res;
+              label_path.forEach(key => {
+                label = label[key];
+              });
+              // extract the URI value for each vocable
+              let uri_path = path.uri.split(".");
+              let uri = res;
+              uri_path.forEach(key => {
+                uri = uri[key];
+              });
+              // create a variable to store all the relevant information about each vocable
+              let vocabulary = uri.split("/")[uri.split("/").length - 2];
+              let add = uri + "," + label + "," + vocabulary;
+              options.push(add);
+            });
+          });
+
+          $("#searchresult").show();
+
+          var position = $('#'+searchterm).position();
+          var leftpos = position.left+80;
+          var offset = $('#'+searchterm).offset();
+          var height = $('#'+searchterm).height();
+          var width = $('#'+searchterm).width();
+          var top = offset.top + height + "px";
+          var right = offset.left + width + "px";
+
+          $('#searchresult').css( {
+              'position': 'absolute',
+              'margin-left': leftpos+'px',
+              'top': top,
+              'z-index':1000,
+              'background-color': 'white',
+              'border':'solid 1px grey',
+              'max-width':'600px',
+              'border-radius': '4px',
+              'max-height': '300px',
+              'overflow-y': 'auto'
+          });
+          $("#searchresult").empty();
+          options.forEach(function(option) {
+            // each option (i.e., retrieved vocable) has this structure: URI,LABEL,VOCABULARY
+            const resource_uri = option.split(",");
+            var uri = resource_uri.shift(); 
+            var vocabulary = resource_uri.pop();
+            var label = resource_uri.join(","); // Join is needed for labels containing ","
+
+            // how to display the vocabulary name: e.g., 'vocab-one' → 'VOCAB ONE'
+            if (vocabulary.includes("-")) {
+              var vocabulary_noun = vocabulary.replace("-", " ").toUpperCase();
+            } else {
+              var vocabulary_noun = vocabulary.toUpperCase();
+            }
+            // create a list of options
+            $("#searchresult").append("<div class='vocableitem'><a class='blue' data-id='"+uri+"'>"+label+"</a> - "+vocabulary_noun+"</div>")
+
+            $('a[data-id="'+ uri +'"]').each(function () {
+              $(this).bind('click', function (e) {
+                e.preventDefault();
+                if (!vocabs.includes("oneVocableAccepted") || $('#' + searchterm).nextAll("span").length == 0) {
+                  $('#' + searchterm).after("<span class='tag " + uri + "' data-input='" + searchterm + "' data-id='" + uri + "'>" + label+" - "+vocabulary_noun + "</span><input type='hidden' class='hiddenInput " + uri + "' name='" + searchterm + "-" + uri + "' value=\"" + uri + "," + label + " - " + vocabulary_noun + "\"/>");
+                }
+                else if (vocabs.includes("oneVocableAccepted") && $('#' + searchterm).nextAll("span").length > 0) {
+                  alert("Only one vocable is accepted!");
+                }
+                $("#searchresult").hide();
+                $('#' + searchterm).val("");
+              });
+            });
+          });
+
+        })
+        .catch(function(error) {
+          console.error('Ajax Error:', error);
+        });
+    } else { $("#searchresult").hide();}
+  });
+}
+
+// multiple multimedia Links 
+function addMultimedia(searchterm) {
+  $('#'+searchterm).keypress(function(e) {    
+    let regexURL = /(http|https)?(:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z0-9]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/;
+    let imageFormats = ["jpg","jpeg","png","gif","bmp","svg","tiff","ico"];
+    let audioFormats = ["mp3","wav","flac","aac","ogg","wma","m4a","aiff","alac","ape","dts","mid","midi"];
+    let videoFormats = ["mp4","mov","avi","mkv","flv","wmv","webm","mpeg","mpg","3gp","rm","rmvb","vob","ts"];
+    if(e.which == 13 || e.which == 44) { // 44 code for , 
+      e.preventDefault();
+      var now = new Date().valueOf();
+      var newID = 'MM'+now; // id for multimedia tags
+
+
+      if ($('#'+searchterm).val().length > 0 && regexURL.test($('#'+searchterm).val()) ) {
+        // IMAGE
+        if ($('#'+searchterm).hasClass("Image") && stringEndsWith($('#'+searchterm).val(), imageFormats)) {
+          $('#'+searchterm).after("<div class='multimediaTag "+newID+"'></div>");
+          $('.multimediaTag.'+newID).prepend("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"-"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
+          $('.multimediaTag.'+newID).prepend("<span class='MMtag file_image' data-id='"+encodeURIComponent($('#'+searchterm).val())+"'><i class='fas fa-eye'></i></span>");
+        } // AUDIO
+        else if ($('#'+searchterm).hasClass("Audio") && stringEndsWith($('#'+searchterm).val(), audioFormats)) {
+          $('#'+searchterm).after("<div class='multimediaTag "+newID+"'></div>");
+          $('.multimediaTag.'+newID).prepend("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"-"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
+          $('.multimediaTag.'+newID).prepend("<span class='MMtag file_audio' data-id='"+encodeURIComponent($('#'+searchterm).val())+"'><i class='fas fa-eye'></i></span>");
+        } // VIDEO
+        else if ($('#'+searchterm).hasClass("Video") && stringEndsWith($('#'+searchterm).val(), videoFormats)) {
+          $('#'+searchterm).after("<div class='multimediaTag "+newID+"'></div>");
+          $('.multimediaTag.'+newID).prepend("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"-"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
+          $('.multimediaTag.'+newID).prepend("<span class='MMtag file_video' data-id='"+encodeURIComponent($('#'+searchterm).val())+"'><i class='fas fa-eye'></i></span>");
+        } 
+        else {
+          alert('Invalid File Format');
+        }
+      }
+      else if ($('#'+searchterm).val().length > 0 && !regexURL.test($('#'+searchterm).val()) ) {
+        alert('Insert a valid URL');
+      }
+      $('#'+searchterm).val('');
+        //colorForm();
+    };
+  });
+}
+
+// check whether the input url $('#'+searchterm).val() ends with a valid format
+function stringEndsWith(string, formatList) {
+  for (var i = 0; i < formatList.length; i++) {
+    var character = formatList[i];
+    if (string.endsWith(character)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 // NLP
 function nlpText(searchterm) {
@@ -917,8 +1374,10 @@ function sortList(ul) {
 function getPropertyValue(elemID, prop, typeProp, typeField, elemClass='') {
   if (elemClass.length) {var class_restriction = "?s a <"+elemClass+"> . "} else {var class_restriction = ''};
   // TODO extend for vocabulary terms
-  if ((typeProp == 'URI' || typeProp == 'Place') && (typeField == 'Textbox' || typeField == 'Dropdown'|| typeField == 'Checkbox') ) {
+  if ((typeProp == 'URI' || typeProp == 'Place' || typeProp == 'URL') && (typeField == 'Textbox' || typeField == 'Dropdown'|| typeField == 'Checkbox' || typeField == 'Vocab') ) {
     var query = "select distinct ?o ?oLabel (COUNT(?s) AS ?count) "+in_graph+" where { GRAPH ?g { ?s <"+prop+"> ?o. "+class_restriction+" ?o rdfs:label ?oLabel . } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } GROUP BY ?o ?oLabel ORDER BY DESC(?count) lcase(?oLabel)";
+  } else if ((typeProp=='Date' || typeProp=='gYear' || typeProp=='gYearMonth') && typeField == 'Date')  {
+    var query = "select distinct ?o (COUNT(?s) AS ?count) "+in_graph+" where { GRAPH ?g { ?s <"+prop+"> ?o. "+class_restriction+" } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } GROUP BY ?o ORDER BY DESC(?count) lcase(?o)";
   } else {var query = "none"};
 
   const len = 10;
@@ -934,9 +1393,15 @@ function getPropertyValue(elemID, prop, typeProp, typeField, elemClass='') {
           var results = [];
           for (i = 0; i < returnedJson.results.bindings.length; i++) {
             var res = returnedJson.results.bindings[i].o.value;
-            var resLabel = returnedJson.results.bindings[i].oLabel.value;
+            if (typeProp != 'Date' && typeProp != 'gYear' && typeProp != 'gYearMonth') {
+              var resLabel = returnedJson.results.bindings[i].oLabel.value;
+              var xsdProp = false;
+            } else {
+              var resLabel = returnedJson.results.bindings[i].o.value;
+              var xsdProp = typeProp;
+            }
             var count = returnedJson.results.bindings[i].count.value;
-            var result = "<button onclick=getRecordsByPropValue(this,'."+elemID+"results','"+elemClass+"') id='"+res+"' class='queryGroup' data-property='"+prop+"' data-value='"+res+"' data-toggle='collapse' data-target='#"+elemID+"results' aria-expanded='false' aria-controls='"+elemID+"results' class='info_collapse'>"+resLabel+" ("+count+")</button>";
+            var result = "<button onclick=getRecordsByPropValue(this,'."+elemID+"results','"+elemClass+"','"+xsdProp+"') id='"+res+"' class='queryGroup' data-property='"+prop+"' data-value='"+res+"' data-toggle='collapse' data-target='#"+elemID+"results' aria-expanded='false' aria-controls='"+elemID+"results' class='info_collapse'>"+resLabel+" ("+count+")</button>";
             if (allresults.indexOf(result) === -1) {
               allresults.push(result);
               results.push($(result).hide());
@@ -973,13 +1438,20 @@ function getPropertyValue(elemID, prop, typeProp, typeField, elemClass='') {
 };
 
 // get records by value and property in EXPLORE
-function getRecordsByPropValue(el, resElem, elemClass='') {
+function getRecordsByPropValue(el, resElem, elemClass='', typeProp=false) {
   if (elemClass.length) {var class_restriction = "?s a <"+elemClass+"> . "} else {var class_restriction = ''};
   $(el).toggleClass("alphaActive");
   if ($(resElem).length) {$(resElem).empty();}
   var prop = $(el).data("property");
-  var val = $(el).data("value");
-  var query = "select distinct ?s ?sLabel "+in_graph+" where { GRAPH ?g { ?s <"+prop+"> <"+val+">; rdfs:label ?sLabel . "+class_restriction+" } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } ORDER BY ?sLabel"
+  console.log(prop);
+  if (!typeProp) {
+    var val = $(el).data("value");
+    var query = "select distinct ?s ?sLabel "+in_graph+" where { GRAPH ?g { ?s <"+prop+"> <"+val+">; rdfs:label ?sLabel . "+class_restriction+" } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } ORDER BY ?sLabel"
+  } else {
+    var val = '"'+$(el).data("value")+ '"^^xsd:'+typeProp;
+    var query = "select distinct ?s ?sLabel "+in_graph+" where { GRAPH ?g { ?s <"+prop+"> "+val+"; rdfs:label ?sLabel . "+class_restriction+" } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } ORDER BY ?sLabel"
+  }
+  console.log(query);
   var encoded = encodeURIComponent(query);
   $.ajax({
         type: 'GET',
@@ -1067,7 +1539,8 @@ function is_selected(st, field) {
 };
 
 // add new field in template
-function add_field(field, res_type) {
+// backend_file argument is currently used to load the information about the available SKOS vocabularies
+function add_field(field, res_type, backend_file=null) {
   console.log(field);
   var contents = "";
   var temp_id = Date.now().toString(); // to be replaced with label id before submitting
@@ -1080,6 +1553,10 @@ function add_field(field, res_type) {
       <option value='Textarea' "+is_selected('Textarea',field)+">Textarea (long textual descriptions)</option>\
       <option value='Dropdown' "+is_selected('Dropdown',field)+">Dropdown (select one value from a list)</option>\
       <option value='Checkbox' "+is_selected('Checkbox',field)+">Checkbox (multiple choice)</option>\
+      <option value='Date' "+is_selected('Date',field)+">Date (select a day/month/year)</option>\
+      <option value='Multimedia' "+is_selected('Multimedia',field)+">Multimedia (audio, image, video)</option>\
+      <option value='Vocab' "+is_selected('Vocab',field)+">Vocabulary (SKOS)</option>\
+      <option value='WebsitePreview' "+is_selected('WebsitePreview',field)+">Website Preview (iframe)</option>\
     </select>\
   </section>";
 
@@ -1103,8 +1580,61 @@ function add_field(field, res_type) {
     <select class='col-md-8 ("+res_type+") custom-select' id='value__"+temp_id+"' name='value__"+temp_id+"' onchange='add_disambiguate("+temp_id+",this)'>\
       <option value='None'>Select</option>\
       <option value='Literal'>Free text (Literal)</option>\
-      <option value='URI'>Entity (URI from Wikidata or catalogue)</option>\
+      <option value='URI'>Entity (URI from Wikidata, VIAF or catalogue)</option>\
       <option value='Place'>Location (from geonames)</option>\
+      <option value='URL'>URL</option>\
+    </select>\
+  </section>";
+
+  var field_calendar = "<section class='row'>\
+    <label class='col-md-3'>CALENDAR TYPE</label>\
+    <select class='col-md-8 ("+res_type+") custom-select' id='calendar__"+temp_id+"' name='calendar__"+temp_id+"'>\
+      <option value='None'>Select</option>\
+      <option value='Day'>Full Date</option>\
+      <option value='Month'>Month and Year</option>\
+      <option value='Year'>Year</option>\
+    </select>\
+  </section>";
+
+  if (backend_file != null) {
+    // backend_file is a string containing all the labels of the available SKOS vocabularies joined by '//'
+    var skos_vocabs = backend_file.split("//");
+    var skos_labels = "";
+    for (let i = 0; i < skos_vocabs.length; i++) {
+      skos_labels = skos_labels + "<label for='vocab"+i+"__"+temp_id+"'>"+skos_vocabs[i].toUpperCase()+"<input type='checkbox' id='vocab"+i+"__"+temp_id+"' name='vocab"+i+"__"+temp_id+"' value='"+skos_vocabs[i]+"'></label></br>";
+    }
+  } else {
+    var skos_labels = "";
+  }
+  var field_available_vocabularies = "<section class='row'>\
+    <label class='col-md-3'>VOCABULARIES LIST</label>\
+    <section class='col-md-8'>"+skos_labels+"\
+    <label class='add_vocabulary_button'>ADD A NEW VOCABULARY <i class='fas fa-plus-circle' onclick='add_skos_vocab(this)'></i></label>\
+    </section>\
+  </section>";
+
+  var accepted_values_vocabularies =  "<section class='row'>\
+    <label class='col-md-3'>NUMBER OF VOCABLES</label>\
+    <section class='col-md-8'>\
+      <label for='oneVocable__"+temp_id+"'>\
+        Single vocable\
+        <input type='radio' id='oneVocable__"+temp_id+"' name='vocables__"+temp_id+"' value='oneVocable' checked>\
+      </label><br>\
+      <label for='multipleVocables__"+temp_id+"'>\
+        Multiple vocables\
+        <input type='radio' id='multipleVocables__"+temp_id+"' name='vocables__"+temp_id+"' value='multipleVocables'>\
+      </label><br>\
+    </section>\
+  </section>";
+
+  var field_multimedia = "<section class='row'>\
+    <label class='col-md-3'>MULTIMEDIA TYPE</label>\
+    <select class='col-md-8 ("+res_type+") custom-select' id='multimedia__"+temp_id+"' name='multimedia__"+temp_id+"'>\
+      <option value='None'>Select</option>\
+      <option value='Audio'>Audio</option>\
+      <option value='Image'>Image</option>\
+      <option value='Video'>Video</option>\
+      <option value='Audio Image Video'>All</option>\
     </select>\
   </section>";
 
@@ -1121,7 +1651,7 @@ function add_field(field, res_type) {
   var field_browse = "<section class='row'>\
     <label class='col-md-11 col-sm-6' for='browse__"+temp_id+"'>use this value as a filter in <em>Explore</em> page</label>\
     <input type='checkbox' id='browse__"+temp_id+"' name='browse__"+temp_id+"'>\
-  </section>"
+  </section>";
 
   var open_addons = "<section id='addons__"+temp_id+"'>";
   var close_addons = "</section>";
@@ -1130,6 +1660,10 @@ function add_field(field, res_type) {
   contents += field_type + field_name + field_prepend + field_property + open_addons;
   if (field =='Textbox') { contents += field_value + field_placeholder; }
   else if (field =='Textarea') { contents += field_placeholder; }
+  else if (field =='Date') { contents += field_calendar + field_browse; }
+  else if (field =='Vocab') { contents += field_available_vocabularies + accepted_values_vocabularies + field_browse; }
+  else if (field =='Multimedia') { contents += field_multimedia; }
+  else if (field =='WebsitePreview') { contents += field_placeholder; }
   else {contents += field_values + field_browse; };
   contents += close_addons + up_down;
   $(".sortable").append("<section class='block_field'>"+contents+"</section>");
@@ -1159,7 +1693,7 @@ function add_disambiguate(temp_id, el) {
       $(el).parent().parent().append(field_disambiguate);
       updateindex();
       moveUpAndDown() ;
-  } else if (el.value == 'URI') {
+  } else if (el.value == 'URI' || el.value == 'URL') {
     if ($("input[id*='disambiguate__"+temp_id+"']") != undefined) {
       $("input[id*='browse__"+temp_id+"']").parent().remove();
       $("section[id*='addons__"+temp_id+"']").after(field_browse);
@@ -1204,52 +1738,151 @@ function change_fields(sel) {
   var block_field = $(sel).parent().parent();
 
   var idx = sel.id;
+  var preserve_data_index = idx.split("__")[0]; // get the data-index value 
   var temp_id = idx.substr(idx.lastIndexOf("__")).replace('__', '');
 
   var regExp = /\(([^)]+)\)/;
   var matches = regExp.exec(sel.classList.value);
   var res_type = matches[1];
 
-  var field_value = "<section class='row'>\
-    <label class='col-md-3'>VALUE TYPE</label>\
-    <select class='col-md-8 ("+res_type+") custom-select' id='value__"+temp_id+"' name='value__"+temp_id+"' onchange='add_disambiguate("+temp_id+",this)'>\
-      <option value='None'>Select</option>\
-      <option value='Literal'>Free text (Literal)</option>\
-      <option value='URI'>Entity (URI from Wikidata or catalogue)</option>\
-      <option value='Place'>Location (from geonames)</option>\
-    </select>\
-  </section>";
+  // create a new field, associate it with a variable (new_field_block), assign it the correct data-index attr
+  add_field(new_field_type, res_type, available_skos_vocabularies);
+  const new_field_block = $('.sortable .block_field:last-child');
+  var new_field_block_idx = new_field_block.attr('data-index');
+  new_field_block.attr('data-index', preserve_data_index);
 
-  var field_placeholder = "<section class='row'>\
-    <label class='col-md-3'>PLACEHOLDER <br><span class='comment'>an example value to be shown to the user (optional)</span></label>\
-    <input type='text' id='placeholder__"+temp_id+"' class='col-md-8 align-self-start' name='placeholder__"+temp_id+"'/>\
-  </section>";
+  // get the sections of the substited field to preserve previously inserted values 
+  // (e.g.: Display name, RDF property, etc.) based on common labels, i.e. common inputs.
+  // each input field is associated with a section and a label.
+  const previous_field_sections = block_field.find("> section"); 
+  const previous_field_labels = previous_field_sections.map(function() {
+    return $(this).find("label:first-child").text();
+  }).get();
+  
+  // check the elements which make up the input fields of the new field:
+  // in case the element (the section's label) already exists in the substituted field, reuse it
+  // otherwise, keep the new input fields and associate them with the right index and identifier
+  new_field_block.find("section, a, label").each(function() {
+    const label = $(this).find("label:first-child").text();
+    const index = previous_field_labels.indexOf(label);
+    console.log(index, label);
+    if (index !== -1 && index !== 0) {
+      // N.B.: index = -1 means that an input field included in the original field form is not included in the new one.
+      // N.B.: index = 0 refers to the <select> element to change the field. If included it would show the previous field value.
+      const replacementSection = previous_field_sections.eq(index).clone();
+      $(this).replaceWith(replacementSection);
+    } else {
+      // fix the id/name attributes of the main sections (i.e. $('section.row'))
+      var new_section_id = $(this).attr('id');
+      var previous_id = new_section_id.replace(new_field_block_idx, preserve_data_index);
+      $(this).attr('id', previous_id);
+      $(this).attr('name', previous_id);
+      
+      // fix the id/name attributes of nested elements
+      $(this).find('[id^="' + new_field_block_idx + '__"]').each(function() {
+        const newId = $(this).attr('id').replace(new_field_block_idx + '__', preserve_data_index + '__');
+        if (newId.split("__").length === 3) {
+          const updatedId = newId.replace(newId.split("__")[2], temp_id);
+          $(this).attr('id', updatedId);
+        } else {
+          $(this).attr('id', newId);
+        }
+      });
 
-  var field_values = "<section class='row'>\
-    <label class='col-md-3'>VALUES <br><span class='comment'>write one value per row in the form uri, label</span></label>\
-    <textarea id='values__"+temp_id+"' class='col-md-8 values_area align-self-start' name='values__"+temp_id+"'></textarea>\
-  </section>";
+      $(this).find('[name^="' + new_field_block_idx + '__"]').each(function() {
+        const newName = $(this).attr('name').replace(new_field_block_idx + '__', preserve_data_index + '__');
+        if (newName.split("__").length === 3) {
+          const updatedName = newName.replace(newName.split("__")[2], temp_id);
+          $(this).attr('name', updatedName);
+        } else {
+          $(this).attr('name', newName);
+        }
+      });
 
-  if (new_field_type == 'Textbox'||new_field_type == 'Textarea') {
-    if (block_field.find('.row > textarea[id*="values__"]').length) {
-      block_field.find('.row > textarea[id*="values__"]').parent().after(field_value+field_placeholder);
-      block_field.find('.row > textarea[id*="values__"]').parent().detach();
     }
-    updateindex();
-    moveUpAndDown() ;
-  }
-  if (new_field_type == 'Dropdown' || new_field_type == 'Checkbox'){
-    if (block_field.find('.row > select[id*="value__"]').length) {
-      block_field.find('.row > select[id*="value__"]').parent().after(field_values);
-      block_field.find('.row > select[id*="value__"]').parent().detach();
-      if (block_field.find('.row > input[id*="disambiguate__"]').length) {
-        block_field.find('.row > input[id*="disambiguate__"]').parent().detach();
-      }
-      if (block_field.find('.row > input[id*="placeholder__"]').length) {
-        block_field.find('.row > input[id*="placeholder__"]').parent().detach();
-      }
-      updateindex();
-      moveUpAndDown() ;
-    }
+  });
+
+  block_field.replaceWith(new_field_block);
+};
+
+// add_SKOS_vocab: allow users to add a new SKOS vocabulabury with sparql endpoint
+
+function add_skos_vocab(element) {
+  $(element).closest('label').hide(); // remove the button "Add a new vocabulary"
+
+  // generate the form
+  var form = "<section class='row skos_vocab_generator'>\
+  <label class='col-md-3'><span class='comment'>label for the new vocabulary</span></label>\
+  <input type='text' id='vocabLabel' class='col-md-8' placeholder='e.g.: Example-label'></input>\
+  </section>\
+  <section class='row skos_vocab_generator'>\
+  <label class='col-md-3'><span class='comment'>vocabulary's webpage</span></label>\
+  <input type='text' id='vocabUrl' class='col-md-8' placeholder='e.g.: https://exampleSKOS.org'></input>\
+  </section>\
+  <section class='row skos_vocab_generator'>\
+  <label class='col-md-3'><span class='comment'>SPARQL query to get a label (?label) and a uri (?uri) for each vocable</span></label>\
+  <textarea id='vocabQuery' rows='5' placeholder='e.g.: select distinct ?label ?uri where' class='col-md-8'>select distinct ?label ?uri where {\n\n      ... ADD QUERY CONSTRAINTS  ...    \n\nFILTER(REGEX(?label, \"QUERY-TERM\", \"i\")) } LIMIT 100</textarea>\
+  </section>\
+  <section class='row skos_vocab_generator'>\
+  <label class='col-md-3'><span class='comment'>SPARQL query endpoint</span></label>\
+  <input type='text' id='vocabEndpoint' placeholder='e.g.: https://exampleSKOS.org/sparql#' class='col-md-8'></input>\
+  </section>\
+  <section class='row skos_vocab_generator'>\
+  <label class='col-md-3'></label>\
+  <input id='save_skos' class='btn btn-dark' style='margin-left:20px' value='Add Vocabulary' onClick='save_vocab(this)'>\
+  </section>"
+  $(element).closest('.row').after(form);
+}
+
+function save_vocab(element) {
+  // access the section containing the list of available vocabularies
+  var vocabs_section = $(element).parent().parent().children().eq(0).find(".col-md-8").eq(0);
+
+  // extract a label, a url, a query, and an endpoint to store a new vocab
+  var label = $('#vocabLabel').val();
+  var url = $('#vocabUrl').val();
+  var query = $('#vocabQuery').val();
+  var endpoint = $('#vocabEndpoint').val();
+  // combine the pieces of information together and check whether some info is missing
+  var infoArray = [label, url, query, endpoint];
+  var infoTogether = infoArray.join("__"); 
+  if (check_input_form(infoArray)) {
+    return null
+  };
+
+  // get the number of available vocabs (defined in template.html as a string)
+  var i = available_skos_vocabularies.split("//").length+1;
+  console.log(i);
+  // get the 'for' attribute of the label for the last vocab of the list (e.g.: "vocab6__1690443665556") 
+  // to retrieve the id number of the field (e.g.: "1690443665556")
+  var temp_id_list = vocabs_section.find("label").eq((i-2)).attr('for').split("__");
+  var temp_id = temp_id_list[temp_id_list.length - 1];
+  // get the index of the field in the template
+  var idx = parseInt(vocabs_section.find("label").eq((i-2)).attr('id'));
+  console.log(i, temp_id, idx);
+
+  // generate a new checkbox to select the vocabulary and add it at the end of the list
+  var new_voc = "<label class='newVocab' for='vocab"+i+"__"+temp_id+"'>"+label.toUpperCase()+"<input type='checkbox' id='"+idx+"__vocab"+i+"__"+temp_id+"' name='"+idx+"__vocab"+i+"__"+temp_id+"' value='"+infoTogether+"' checked></label></br>";
+  var lastChild = vocabs_section.children().last();
+  lastChild.prev().after(new_voc);
+
+  // delete the form
+  $('.skos_vocab_generator').remove(); 
+  $('.add_vocabulary_button').show();
+};
+
+function check_input_form(input_array) {
+  // check the name of the newly imported vocabulary (available_skos_vocabularies is defined in template.html)
+  if (available_skos_vocabularies.toUpperCase().includes(input_array[0].toUpperCase())) {
+    alert('A vocabulary named '+input_array[0]+' already exists: choose a new label');
+    return true;
+  } 
+  // check missing information
+  for (let i=0; i<input_array.length; i++) {
+    if (input_array[i] == "") {
+      var missing_datum = $('.skos_vocab_generator').eq(i).find('.comment').eq(0).text();
+      alert('Insert a '+ missing_datum);
+      return true;
+    } 
   }
 };

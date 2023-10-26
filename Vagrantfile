@@ -6,7 +6,7 @@ apt-get install -y bzip2
 apt-get install -y python-pip python-dev python3-pip
 apt-get install -y curl
 apt-get install -y xvfb
-apt-get -y install openjdk-8-jdk
+apt-get -y install openjdk-11-jdk
 
 apt install -y python3.7
 update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 1

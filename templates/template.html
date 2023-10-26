@@ -1,4 +1,4 @@
-$def with(f,user,res_type,res_name,is_git_auth, project)
+$def with(f,user,res_type,res_name,is_git_auth, project, skos_vocabs)
 $var user = user
 $var is_git_auth = is_git_auth
 $var project = project
@@ -26,11 +26,15 @@ $var project = project
 								<section class="row">
 									<label class='col-md-3'>FIELD TYPE</label>
 									<select onchange="change_fields(this)" class="col-md-8 ($res_type) custom-select" id='type__$id' name='type__$id'>
-										<option value="None">Select</option>
-										<option value="Textbox">Textbox (text values or name of entities)</option>
-										<option value="Textarea">Textarea (long textual descriptions)</option>
+									  <option value="None">Select</option>
+									  <option value="Textbox">Textbox (text values or name of entities)</option>
+									  <option value="Textarea">Textarea (long textual descriptions)</option>
 									  <option value="Dropdown">Dropdown (select one value from a list)</option>
 									  <option value="Checkbox">Checkbox (multiple choice)</option>
+									  <option value="Date">Date (select a day/month/year/timespan)</option>
+									  <option value="Multimedia">Multimedia (audio, image, video)</option>
+									  <option value="Vocab">Vocabulary (SKOS)</option>
+									  <option value='WebsitePreview'>Website Preview (iframe)</option>
 									</select>
 									<script type="text/javascript">
 										$$("#type__$id option[value$$=$field['type']").attr("selected","selected");
@@ -65,8 +69,9 @@ $var project = project
 											<select class="col-md-8 ($res_type) custom-select" id='value__$id' name='value__$id' onchange="add_disambiguate('$id',this)">
 												<option value="None">Select</option>
 												<option value="Literal">Free text (Literal)</option>
-											  <option value="URI">Entity (URI from Wikidata or catalogue)</option>
+											  	<option value="URI">Entity (URI from Wikidata, VIAF or catalogue)</option>
 												<option value="Place">Location (from geonames)</option>
+												<option value="URL">URL</option>
 											</select>
 											<script type="text/javascript">
 												$$("#value__$id option[value$$=$field['value']").attr("selected","selected");
@@ -84,6 +89,78 @@ $var project = project
 											<label class='col-md-3'>PLACEHOLDER <br><span class="comment">an example value to be shown to the user (optional)</span></label>
 											<input type='text' id='placeholder__$id' class='col-md-8 align-self-start' name='placeholder__$id' value="${field['placeholder']}"/>
 										</section>
+									$elif field['type'] == 'Date':
+										<!-- VALUE DATE -->
+										<section class="row">
+											<label class='col-md-3'>CALENDAR TYPE</label>
+											<select class="col-md-8 ($res_type) custom-select" id='calendar__$id' name='calendar__$id'>
+												<option value="None">Select</option>
+												<option value='Day'>Full Date</option>
+												<option value='Month'>Month and Year</option>
+												<option value='Year'>Year</option>
+											</select>
+											<script type="text/javascript">
+												$$("#calendar__$id option[value$$=$field['calendar']").attr("selected","selected");
+											</script>
+										</section>
+									$elif field['type'] == 'Multimedia':
+										<!-- VALUE MULTIMEDIA -->
+										<section class="row">
+											<label class='col-md-3'>MULTIMEDIA TYPE</label>
+											<select class="col-md-8 ($res_type) custom-select" id='multimedia__$id' name='multimedia__$id'>
+												<option value="None">Select</option>
+												<option value='Audio'>Audio</option>
+												<option value='Image'>Image</option>
+												<option value='Video'>Video</option>
+												<option value='Audio Image Video'>All</option>
+											</select>
+											<script type="text/javascript">
+												$$("#multimedia__$id option[value$$='"+"$field['multimedia']"+"']").attr("selected","selected");
+											</script>
+										</section>
+									$elif field['type'] == 'Vocab':
+										<!-- VOCABULARIES LIST -->
+										<section class='row'>
+											<label class='col-md-3'>VOCABULARIES LIST</label>
+											<section class="col-md-8">
+											$if len(skos_vocabs) > 0:
+												$ n = 0
+												$for voc in skos_vocabs:
+													$ n+=1
+													$ idx = str(n) + "__" + id
+													<label for='vocab$idx'>$voc.upper()<input type='checkbox' id='vocab$idx' name='vocab$idx' value='$voc'></label><br>
+												<label class="add_vocabulary_button">ADD A NEW VOCABULARY <i class='fas fa-plus-circle' onClick='add_skos_vocab(this)'></i></label>
+											</section>
+										</section>
+										$if len(field['vocab']) > 0:
+											$for voc in field['vocab']:
+												<script type="text/javascript">
+													$$('input[value="$voc"]').attr('checked','checked');
+												</script>
+										<section class='row'>
+											<label class='col-md-3'>NUMBER OF VOCABLES</label>
+											<section class='col-md-8'>
+												<label for='vocable1__$id'>
+													Single vocable
+													<input type='radio' id='oneVocable__$id' name='vocables__$id' value='oneVocable'>
+													</label><br>
+												<label for='vocable2__$id'>
+													Multiple vocables
+													<input type='radio' id='multipleVocables__$id' name='vocables__$id' value='multipleVocables'>
+													</label><br>
+											</section>
+										</section>
+										$if 'vocables' in field:
+											$ vocables = field['vocables']
+											<script type="text/javascript">
+												$$('input[value="$vocables"]').prop('checked', true);
+											</script>
+									$elif field['type'] == 'WebsitePreview':
+										<!-- PLACEHOLDER -->
+										<section class="row">
+											<label class='col-md-3'>PLACEHOLDER <br><span class="comment">an example value to be shown to the user (optional)</span></label>
+											<input type='text' id='placeholder__$id' class='col-md-8 align-self-start' name='placeholder__$id' value="${field['placeholder']}"/>
+										</section>
 									$else:
 										<!-- VALUES -->
 										<section class="row">
@@ -95,7 +172,7 @@ $var project = project
 											</textarea>
 										</section>
 
-									$if 'value' in field and field['value'] == 'URI':
+									$if 'value' in field and field['value'] in ['URI', 'URL', 'Date', 'gYear', 'gYearMonth']:
 										<!-- BROWSE -->
 										<section class="row">
 											$ checked_browse = "checked=checked" if 'browse'in field and field["browse"] == "True" else ""
@@ -119,6 +196,14 @@ $var project = project
 					<a class="link_btn" onclick="add_field('Textarea','$res_type')" name="add_textarea">Add Textarea</a>
 					<a class="link_btn" onclick="add_field('Dropdown','$res_type')" name="add_dropdown">Add Dropdown</a>
 					<a class="link_btn" onclick="add_field('Checkbox','$res_type')" name="add_checkbox">Add Checkbox</a>
+					<a class="link_btn" onclick="add_field('Date','$res_type')" name="add_date">Add Date</a>
+					<a class="link_btn" onclick="add_field('Multimedia','$res_type')" name="add_multimedia">Add Multimedia</a>
+					$ vocabs = "//".join(list(skos_vocabs.keys()))
+					<a class="link_btn" onclick="add_field('Vocab','$res_type', '$vocabs')" name="add_vocabulary">Add Vocabulary</a>
+					<a class="link_btn" onclick="add_field('WebsitePreview','$res_type')" name="add_preview">Add Website Preview</a>
+					<script type="text/javascript">
+						var available_skos_vocabularies = '$vocabs';
+					</script>
 				</section>
 			</section>
 			<section class="buttonsSection">

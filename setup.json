@@ -65,6 +65,22 @@
   },
   {
     "type":"Textbox",
+    "id":"sparqlAnythingEndpoint",
+    "label":"my sparql.anything endpoint",
+    "placeholder":"$sparqlAnythingEndpoint",
+    "prepend":"The local URL of the Sparql.Anything service, do not change for default settings",
+    "disabled":"False",
+    "class":"col-md-11",
+    "searchWikidata":"False",
+    "cache_autocomplete":"off",
+    "property":"http://rdfs.org/ns/void#sparqlEndpoint",
+    "value":"URI",
+    "defaultvalue":"$sparqlAnythingEndpoint",
+    "disambiguate":"False",
+    "browse":"False"
+  },
+  {
+    "type":"Textbox",
     "id":"base",
     "label":"URI base",
     "placeholder":"http://data.open.ac.uk/musow/",

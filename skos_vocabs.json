@@ -1,0 +1,104 @@
+{
+    "tadirah": {
+        "type": "API",
+        "url": "https://vocabs.dariah.eu/tadirah/en/",
+        "endpoint": "https://vocabs.acdh.oeaw.ac.at/rest/v1/search?",
+        "parameters": {
+            "query": "Query-term",
+            "vocab": "tadirah",
+            "lang": "en"
+        },
+        "results": {
+            "array": "results",
+            "label": "prefLabel",
+            "uri": "uri"
+        }
+    },
+    "frequency": {
+        "type": "API",
+        "url": "https://op.europa.eu/en/web/eu-vocabularies/concept-scheme/-/resource?uri=http://publications.europa.eu/resource/authority/frequency",
+        "endpoint": "https://data.europa.eu/api/hub/search/search?",
+        "parameters": {
+            "q": "Query-term",
+            "filter": "vocabulary",
+            "vocabulary": "frequency"
+        },
+        "results": {
+            "array": "result.results",
+            "label": "pref_label.en",
+            "uri": "resource"
+        }
+    },
+    "language": {
+        "type": "API",
+        "url": "https://op.europa.eu/en/web/eu-vocabularies/concept-scheme/-/resource?uri=http://publications.europa.eu/resource/authority/language",
+        "endpoint": "https://data.europa.eu/api/hub/search/search?",
+        "parameters": {
+            "q": "Query-term",
+            "filter": "vocabulary",
+            "vocabulary": "language"
+        },
+        "results": {
+            "array": "result.results",
+            "label": "pref_label.en",
+            "uri": "resource"
+        }
+    },
+    "file-type": {
+        "type": "API",
+        "url": "https://op.europa.eu/en/web/eu-vocabularies/dataset/-/resource?uri=http://publications.europa.eu/resource/dataset/file-type",
+        "endpoint": "https://data.europa.eu/api/hub/search/search?",
+        "parameters": {
+            "q": "Query-term",
+            "filter": "vocabulary",
+            "vocabulary": "file-type"
+        },
+        "results": {
+            "array": "result.results",
+            "label": "pref_label.en",
+            "uri": "resource"
+        }
+    },
+    "data-theme": {
+        "type": "API",
+        "url": "https://op.europa.eu/en/web/eu-vocabularies/dataset/-/resource?uri=http://publications.europa.eu/resource/dataset/data-theme",
+        "endpoint": "https://data.europa.eu/api/hub/search/search?",
+        "query_term_key": "query",
+        "parameters": {
+            "q": "Query-term",
+            "filter": "vocabulary",
+            "vocabulary": "data-theme"
+        },
+        "results": {
+            "array": "result.results",
+            "label": "pref_label.en",
+            "uri": "resource"
+        }
+    },
+    "access-right": {
+        "type": "API",
+        "url": "https://op.europa.eu/en/web/eu-vocabularies/dataset/-/resource?uri=http://publications.europa.eu/resource/dataset/access-right",
+        "endpoint": "https://data.europa.eu/api/hub/search/search?",
+        "parameters": {
+            "q": "Query-term",
+            "filter": "vocabulary",
+            "vocabulary": "access-right"
+        },
+        "results": {
+            "array": "result.results",
+            "label": "pref_label.en",
+            "uri": "resource"
+        }
+    },
+    "licenses": {
+        "type": "SPARQL",
+        "url": "https://schema.gov.it/sparql",
+        "endpoint": "https://schema.gov.it/sparql",
+        "query": " PREFIX skos: <http://www.w3.org/2004/02/skos/core#> select distinct ?label ?uri where { SERVICE <https://schema.gov.it/sparql> {?uri skos:inScheme <https://w3id.org/italia/controlled-vocabulary/licences>. ?uri skos:prefLabel ?label. FILTER (lang(?label) = \"en\").FILTER(REGEX(?label, \"QUERY-TERM\", \"i\")) } } LIMIT 100",
+        "results": {
+            "array": "results.bindings",
+            "label": "label.value",
+            "uri": "uri.value"
+        }
+    }
+}

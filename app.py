@@ -14,6 +14,10 @@ import web
 from web import form
 import spacy
 from spacy import displacy
+from SPARQLWrapper import SPARQLWrapper, JSON
+from rdflib import Graph
+from rdflib.namespace import OWL, DC , DCTERMS, RDF , RDFS
+#import subprocess
 
 import forms, mapping, conf, queries , vocabs  , github_sync
 import utils as u
@@ -30,6 +34,8 @@ IP_LOGS = "ip_logs.log"
 RESOURCE_TEMPLATES = 'resource_templates/'
 TEMPLATE_LIST = RESOURCE_TEMPLATES+"template_list.json"
 ASK_CLASS = RESOURCE_TEMPLATES+"ask_class.json"
+SKOS_VOCAB = conf.skos_vocabularies 
+KNOWLEDGE_EXTRACTION = conf.knowledge_extraction
 NER = spacy.load("en_core_web_sm")
 
 # ROUTING
@@ -54,7 +60,8 @@ urls = (
 	prefix + '/term-(.+)', 'Term',
 	prefix + '/(sparql)','sparql',
 	prefix + '/savetheweb-(.+)','Savetheweb',
-	prefix + '/nlp','Nlp'
+	prefix + '/nlp','Nlp',
+	prefix + '/sparqlanything', 'Sparqlanything'
 )
 
 app = web.application(urls, globals())
@@ -195,9 +202,12 @@ class Setup:
 			file.writelines('resource_templates = "'+RESOURCE_TEMPLATES+'"\n')
 			file.writelines('template_list = "'+TEMPLATE_LIST+'"\n')
 			file.writelines('ask_form = "'+RESOURCE_TEMPLATES+'ask_class.json"\n')
+			file.writelines('skos_vocabularies = "skos_vocabs.json"\n')
+			file.writelines('knowledge_extraction = "knowledge_extraction.json"\n')
 			data = u.validate_setup(data)
 
 			for k,v in data.items():
+				print(k,v)
 				file.writelines(k+''' = "'''+v+'''"\n''')
 
 			# write the json config file for javascript
@@ -234,10 +244,15 @@ class Template:
 		else: # load template form
 			with open(template_path,'r') as tpl_file:
 				fields = json.load(tpl_file)
+		if not os.path.isfile(SKOS_VOCAB):
+			skos_file = None
+		else:
+			with open(SKOS_VOCAB, 'r') as skos_list:
+				skos_file = json.load(skos_list)
 
 		return render.template(f=fields,user=session['username'],
 								res_type=res_type,res_name=res_full_name,
-								is_git_auth=is_git_auth,project=conf.myProject)
+								is_git_auth=is_git_auth,project=conf.myProject,skos_vocabs=skos_file)
 
 	def POST(self, res_name):
 		""" Save the form template for data entry and reload config files
@@ -254,7 +269,7 @@ class Template:
 				u.update_ask_class(template_path, res_name,remove=True) # update ask_class
 				raise web.seeother(prefixLocal+'/welcome-1')
 			else:
-				u.fields_to_json(data, template_path) # save the json template
+				u.fields_to_json(data, template_path, SKOS_VOCAB) # save the json template
 				u.reload_config()
 				vocabs.import_vocabs()
 				u.update_ask_class(template_path, res_name) # modify ask_class json
@@ -523,7 +538,7 @@ class Record(object):
 		return render.record(record_form=f, pageID=name, user=user,
 							alert=block_user, limit=limit,
 							is_git_auth=is_git_auth,invalid=False,
-							project=conf.myProject, template=None)
+							project=conf.myProject,template=None,skos_vocabs=None,knowledge_extractor=False)
 
 	def POST(self, name):
 		""" Submit a new record
@@ -551,17 +566,24 @@ class Record(object):
 			u.log_output('SUBMIT INVALID FORM', session['logged_in'], session['username'],name)
 			return render.record(record_form=f, pageID=name, user=user, alert=block_user,
 								limit=limit, is_git_auth=is_git_auth,invalid=True,
-								project=conf.myProject,template=None)
+								project=conf.myProject,template=None,skos_vocabs=None,knowledge_extractor=False)
 		else:
 			recordData = web.input()
+			print("inputData", recordData)
+			if not os.path.isfile(SKOS_VOCAB):
+				skos_file = None
+			else:
+				with open(SKOS_VOCAB, 'r') as skos_list:
+					skos_file = json.load(skos_list)
 
 			# load the template selected by the user
 			if 'res_name' in recordData:
 				if recordData.res_name != 'None':
 					f = forms.get_form(recordData.res_name)
+					extractor = u.has_extractor(recordData.res_name) 
 					return render.record(record_form=f, pageID=name, user=user, alert=block_user,
 									limit=limit, is_git_auth=is_git_auth,invalid=False,
-									project=conf.myProject,template=recordData.res_name)
+									project=conf.myProject,template=recordData.res_name,skos_vocabs=skos_file,knowledge_extractor=extractor)
 				else:
 					raise web.seeother(prefixLocal+'record-'+name)
 
@@ -573,8 +595,9 @@ class Record(object):
 			u.log_output('CREATED RECORD', session['logged_in'], session['username'],recordID)
 
 			if recordID:
+				u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
 				userID = user.replace('@','-at-').replace('.','-dot-')
-				file_path = mapping.inputToRDF(recordData, userID, 'not modified',tpl_form=templateID)
+				file_path = mapping.inputToRDF(recordData, userID, 'not modified', KNOWLEDGE_EXTRACTION, tpl_form=templateID)
 				if conf.github_backup == "True":
 					try:
 						github_sync.push(file_path,"main", session['gituser'], session['username'], session['bearer_token'])
@@ -621,16 +644,23 @@ class Modify(object):
 			with open(res_template) as tpl_form:
 				fields = json.load(tpl_form)
 			ids_dropdown = u.get_dropdowns(fields)
+			if not os.path.isfile(SKOS_VOCAB):
+				skos_file = None
+			else:
+				with open(SKOS_VOCAB, 'r') as skos_list:
+					skos_file = json.load(skos_list)
+			extractor = queries.retrieve_extractions(conf.base+name) if u.has_extractor(name, modify=True) else False
 
 			return render.modify(graphdata=data, pageID=recordID, record_form=f,
 							user=session['username'],ids_dropdown=ids_dropdown,
 							is_git_auth=is_git_auth,invalid=False,
-							project=conf.myProject,template=res_template)
+							project=conf.myProject,template=res_template,skos_vocabs=skos_file,knowledge_extractor=extractor)
 		else:
 			session['logged_in'] = 'False'
 			raise web.seeother(prefixLocal+'/')
 
 	def POST(self, name):
+		print(name)
 		""" Modify an existing record
 
 		Parameters
@@ -665,16 +695,24 @@ class Modify(object):
 					fields = json.load(tpl_form)
 				ids_dropdown = u.get_dropdowns(fields)
 
+				if not os.path.isfile(SKOS_VOCAB):
+					skos_file = None
+				else:
+					with open(SKOS_VOCAB, 'r') as skos_list:
+						skos_file = json.load(skos_list)
+				extractor = queries.retrieve_extractions(conf.base+name) if u.has_extractor(name, modify=True) else False
+				
 				return render.modify(graphdata=data, pageID=recordID, record_form=f,
 								user=session['username'],ids_dropdown=ids_dropdown,
 								is_git_auth=is_git_auth,invalid=True,
-								project=conf.myProject,template=res_template)
+								project=conf.myProject,template=res_template,skos_vocabs=skos_file,knowledge_extractor=extractor)
 			else:
 				print(recordData)
 				recordID = recordData.recordID
+				u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
 				userID = session['username'].replace('@','-at-').replace('.','-dot-')
 				graphToClear = conf.base+name+'/'
-				file_path = mapping.inputToRDF(recordData, userID, 'modified', graphToClear,tpl_form=templateID)
+				file_path = mapping.inputToRDF(recordData, userID, 'modified', knowledge_extraction=KNOWLEDGE_EXTRACTION, graphToClear=graphToClear,tpl_form=templateID)
 				if conf.github_backup == "True":
 					try:
 						github_sync.push(file_path,"main", session['gituser'],
@@ -721,10 +759,18 @@ class Review(object):
 			with open(res_template) as tpl_form:
 				fields = json.load(tpl_form)
 			ids_dropdown = u.get_dropdowns(fields) # TODO CHANGE
+			if not os.path.isfile(SKOS_VOCAB):
+				skos_file = None
+			else:
+				with open(SKOS_VOCAB, 'r') as skos_list:
+					skos_file = json.load(skos_list)
+			extractor = queries.retrieve_extractions(conf.base+name) if u.has_extractor(name, modify=True) else False
+
 			return render.review(graphdata=data, pageID=recordID, record_form=f,
 								graph=graphToRebuild, user=session['username'],
 								ids_dropdown=ids_dropdown,is_git_auth=is_git_auth,
-								invalid=False,project=conf.myProject,template=res_template)
+								invalid=False,project=conf.myProject,template=res_template,
+								skos_vocabs=skos_file,knowledge_extractor=extractor)
 		else:
 			session['logged_in'] = 'False'
 			raise web.seeother(prefixLocal+'/')
@@ -766,9 +812,10 @@ class Review(object):
 			else:
 				recordData = web.input()
 				recordID = recordData.recordID
+				u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
 				userID = session['username'].replace('@','-at-').replace('.','-dot-')
 				graphToClear = conf.base+name+'/'
-				file_path = mapping.inputToRDF(recordData, userID, 'modified',graphToClear,templateID)
+				file_path = mapping.inputToRDF(recordData, userID, 'modified',KNOWLEDGE_EXTRACTION,graphToClear,templateID)
 				if conf.github_backup == "True":
 					try:
 						github_sync.push(file_path,"main", session['gituser'],
@@ -790,15 +837,23 @@ class Review(object):
 				with open(templateID) as tpl_form:
 					fields = json.load(tpl_form)
 				ids_dropdown = u.get_dropdowns(fields)
+				if not os.path.isfile(SKOS_VOCAB):
+					skos_file = None
+				else:
+					with open(SKOS_VOCAB, 'r') as skos_list:
+						skos_file = json.load(skos_list)
+				extractor = queries.retrieve_extractions(conf.base+name) if u.has_extractor(name, modify=True) else False
 				return render.review(graphdata=data, pageID=recordID, record_form=f,
 									graph=graphToRebuild, user=session['username'],
 									ids_dropdown=ids_dropdown,is_git_auth=is_git_auth,
-									invalid=True,project=conf.myProject,template=templateID)
+									invalid=True,project=conf.myProject,template=templateID,
+									skos_vocabs=skos_file,knowledge_extractor=extractor)
 			else:
 				recordData = web.input()
+				u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
 				userID = session['username'].replace('@','-at-').replace('.','-dot-')
 				graphToClear = conf.base+name+'/'
-				file_path= mapping.inputToRDF(recordData, userID, 'published',graphToClear,templateID)
+				file_path= mapping.inputToRDF(recordData, userID, 'published',KNOWLEDGE_EXTRACTION,graphToClear,templateID)
 				if conf.github_backup == "True":
 					try:
 						github_sync.push(file_path,"main", session['gituser'],
@@ -884,7 +939,7 @@ class View(object):
 		record = base+name
 		res_class = queries.getClass(conf.base+name)
 		data, stage, title, properties, data_labels = None, None, None, None, {}
-
+		extractor = queries.retrieve_extractions(conf.base+name) if u.has_extractor(name, modify=True) else False
 		try:
 			res_template = u.get_template_from_class(res_class)
 			data = dict(queries.getData(record+'/',res_template))
@@ -898,8 +953,7 @@ class View(object):
 					and k == field['id'])][0]
 			except Exception as e:
 				title = "No title"
-
-			properties = {field["label"]:field["property"] for field in fields}
+			properties = {field["label"]:[field["property"], field["type"]] for field in fields if 'property' in field}
 			data_labels = { field['label']:v for k,v in data.items() \
 							for field in fields if k == field['id']}
 		except Exception as e:
@@ -909,7 +963,7 @@ class View(object):
 
 		return render.view(user=session['username'], graphdata=data_labels,
 						graphID=name, title=title, stage=stage, base=base,properties=properties,
-						is_git_auth=is_git_auth,project=conf.myProject)
+						is_git_auth=is_git_auth,project=conf.myProject,knowledge_extractor=extractor)
 
 	def POST(self,name):
 		""" Record web page
@@ -1129,8 +1183,35 @@ class Nlp(object):
 			results.append(result)
 		return json.dumps(results)
 
+class Sparqlanything(object):
+	def GET(self):
+		web.header('Content-Type', 'application/json')
+		web.header('Access-Control-Allow-Origin', '*')
+		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
 
+		query_string = web.input()
+		print(query_string)
 
+		try:
+			query_str_decoded = query_string.q.decode('utf-8').strip()
+		except Exception as e:
+			query_str_decoded = query_string.q.strip()
+		
+		sparql = SPARQLWrapper(conf.sparqlAnythingEndpoint)
+		query_str_decoded = """PREFIX xyz: <http://sparql.xyz/facade-x/data/>
+		PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+		PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+		PREFIX sa: <http://w3id.org/sparql-anything#>
+		PREFIX ex: <http://example.org/>
+		"""+query_str_decoded.replace("&lt;", "<").replace("&gt;", ">")
+
+		# Retrieve all results so that user can verify them
+		print("sparql.anything query: ", query_str_decoded)
+		sparql.setQuery(query_str_decoded)
+		sparql.setReturnFormat(JSON)
+		results = sparql.query().convert()
+		print("results: \n",results, "\n ---------------------- \n")
+		return json.dumps(results)
 
 if __name__ == "__main__":
 	app.run()

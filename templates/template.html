@@ -1,4 +1,4 @@
-$def with(f,user,res_type,res_name,is_git_auth, project)
+$def with(f,user,res_type,res_name,is_git_auth, project, skos_vocabs)
 $var user = user
 $var is_git_auth = is_git_auth
 $var project = project
@@ -22,94 +22,178 @@ $var project = project
 						$for field in f:
 							<section class="block_field">
 								$ id = field["id"]
-								<!-- TYPE -->
-								<section class="row">
-									<label class='col-md-3'>FIELD TYPE</label>
-									<select onchange="change_fields(this)" class="col-md-8 ($res_type) custom-select" id='type__$id' name='type__$id'>
+								$if field['type'] != "KnowledgeExtractor":
+									<!-- TYPE -->
+									<section class="row">
+										<label class='col-md-3'>FIELD TYPE</label>
+										<select onchange="change_fields(this)" class="col-md-8 ($res_type) custom-select" id='type__$id' name='type__$id'>
 										<option value="None">Select</option>
 										<option value="Textbox">Textbox (text values or name of entities)</option>
 										<option value="Textarea">Textarea (long textual descriptions)</option>
-									  <option value="Dropdown">Dropdown (select one value from a list)</option>
-									  <option value="Checkbox">Checkbox (multiple choice)</option>
-									</select>
-									<script type="text/javascript">
-										$$("#type__$id option[value$$=$field['type']").attr("selected","selected");
-									</script>
-								</section>
+										<option value="Dropdown">Dropdown (select one value from a list)</option>
+										<option value="Checkbox">Checkbox (multiple choice)</option>
+										<option value="Date">Date (select a day/month/year/timespan)</option>
+										<option value="Multimedia">Multimedia (audio, image, video)</option>
+										<option value="Vocab">Vocabulary (SKOS)</option>
+										<option value='WebsitePreview'>Website Preview (iframe)</option>
+										</select>
+										<script type="text/javascript">
+											$$("#type__$id option[value$$=$field['type']").attr("selected","selected");
+										</script>
+									</section>
 
-								<!-- LABEL -->
-								<section class="row">
-									<label class='col-md-3'>DISPLAY NAME</label>
-									<input type='text' id='label__$id' class='col-md-8' name='label__$id' value='${field["label"]}'/>
-								</section>
+									<!-- LABEL -->
+									<section class="row">
+										<label class='col-md-3'>DISPLAY NAME</label>
+										<input type='text' id='label__$id' class='col-md-8' name='label__$id' value='${field["label"]}'/>
+									</section>
 
-								<!-- PREPEND -->
-								<section class="row">
-									<label class='col-md-3'>DESCRIPTION <br><span class="comment">a short explanation of the expected value</span></label>
-									<textarea id='prepend__$id' class='col-md-8 align-self-start' name='prepend__$id' rows="5">$:field["prepend"]</textarea>
-								</section>
+									<!-- PREPEND -->
+									<section class="row">
+										<label class='col-md-3'>DESCRIPTION <br><span class="comment">a short explanation of the expected value</span></label>
+										<textarea id='prepend__$id' class='col-md-8 align-self-start' name='prepend__$id' rows="5">$:field["prepend"]</textarea>
+									</section>
 
-								<!-- PROPERTY -->
-								<section class="row">
-									<label class='col-md-3'>RDF PROPERTY <br><span class='comment'>start typing to get suggestions from LOV</span></label>
-									<input type='text' id='property__$id' class='col-md-8 searchLOV' name='property__$id' value='${field["property"]}'/>
-									<div id="searchresult"> </div>
-								</section>
+									<!-- PROPERTY -->
+									<section class="row">
+										<label class='col-md-3'>RDF PROPERTY <br><span class='comment'>start typing to get suggestions from LOV</span></label>
+										<input type='text' id='property__$id' class='col-md-8 searchLOV' name='property__$id' value='${field["property"]}'/>
+										<div id="searchresult"> </div>
+									</section>
 
 
-								<section id="addons__$id">
-									$if field['type'] == 'Textbox':
-										<!-- VALUE -->
-										<section class="row">
-											<label class='col-md-3'>VALUE TYPE</label>
-											<select class="col-md-8 ($res_type) custom-select" id='value__$id' name='value__$id' onchange="add_disambiguate('$id',this)">
-												<option value="None">Select</option>
-												<option value="Literal">Free text (Literal)</option>
-											  <option value="URI">Entity (URI from Wikidata or catalogue)</option>
-												<option value="Place">Location (from geonames)</option>
-											</select>
-											<script type="text/javascript">
-												$$("#value__$id option[value$$=$field['value']").attr("selected","selected");
-											</script>
-										</section>
+									<section id="addons__$id">
+										$if field['type'] == 'Textbox':
+											<!-- VALUE -->
+											<section class="row">
+												<label class='col-md-3'>VALUE TYPE</label>
+												<select class="col-md-8 ($res_type) custom-select" id='value__$id' name='value__$id' onchange="add_disambiguate('$id',this)">
+													<option value="None">Select</option>
+													<option value="Literal">Free text (Literal)</option>
+													<option value="URI">Entity (URI from Wikidata, VIAF, or catalogue)</option>
+													<option value="Place">Location (from geonames)</option>
+													<option value="URL">URL</option>
+												</select>
+												<script type="text/javascript">
+													$$("#value__$id option[value$$=$field['value']").attr("selected","selected");
+												</script>
+											</section>
 
-										<!-- PLACEHOLDER -->
-										<section class="row">
-											<label class='col-md-3'>PLACEHOLDER <br><span class="comment">an example value to be shown to the user (optional)</span></label>
-											<input type='text' id='placeholder__$id' class='col-md-8 align-self-start' name='placeholder__$id' value="${field['placeholder']}"/>
-										</section>
-									$elif field['type'] == 'Textarea':
-										<!-- PLACEHOLDER -->
-										<section class="row">
-											<label class='col-md-3'>PLACEHOLDER <br><span class="comment">an example value to be shown to the user (optional)</span></label>
-											<input type='text' id='placeholder__$id' class='col-md-8 align-self-start' name='placeholder__$id' value="${field['placeholder']}"/>
-										</section>
-									$else:
-										<!-- VALUES -->
-										<section class="row">
-											<label class='col-md-3'>VALUES <br><span class="comment">write one pair uri, label (comma separated) per row</span></label>
-											$ num_rows = len(field["values"])*2
-											<textarea id='values__$id' class='col-md-8 values_area' name='values__$id' rows="$num_rows">
-											$for uri,lab in field["values"].items():
-												$uri.strip(), $:lab.strip()
-											</textarea>
-										</section>
+											<!-- PLACEHOLDER -->
+											<section class="row">
+												<label class='col-md-3'>PLACEHOLDER <br><span class="comment">an example value to be shown to the user (optional)</span></label>
+												<input type='text' id='placeholder__$id' class='col-md-8 align-self-start' name='placeholder__$id' value="${field['placeholder']}"/>
+											</section>
+										$elif field['type'] == 'Textarea':
+											<!-- PLACEHOLDER -->
+											<section class="row">
+												<label class='col-md-3'>PLACEHOLDER <br><span class="comment">an example value to be shown to the user (optional)</span></label>
+												<input type='text' id='placeholder__$id' class='col-md-8 align-self-start' name='placeholder__$id' value="${field['placeholder']}"/>
+											</section>
+										$elif field['type'] == 'Date':
+											<!-- VALUE DATE -->
+											<section class="row">
+												<label class='col-md-3'>CALENDAR TYPE</label>
+												<select class="col-md-8 ($res_type) custom-select" id='calendar__$id' name='calendar__$id'>
+													<option value="None">Select</option>
+													<option value='Day'>Full Date</option>
+													<option value='Month'>Month and Year</option>
+													<option value='Year'>Year</option>
+												</select>
+												<script type="text/javascript">
+													$$("#calendar__$id option[value$$=$field['calendar']").attr("selected","selected");
+												</script>
+											</section>
+										$elif field['type'] == 'Multimedia':
+											<!-- VALUE MULTIMEDIA -->
+											<section class="row">
+												<label class='col-md-3'>MULTIMEDIA TYPE</label>
+												<select class="col-md-8 ($res_type) custom-select" id='multimedia__$id' name='multimedia__$id'>
+													<option value="None">Select</option>
+													<option value='Audio'>Audio</option>
+													<option value='Image'>Image</option>
+													<option value='Video'>Video</option>
+													<option value='Audio Image Video'>All</option>
+												</select>
+												<script type="text/javascript">
+													$$("#multimedia__$id option[value$$='"+"$field['multimedia']"+"']").attr("selected","selected");
+												</script>
+											</section>
+										$elif field['type'] == 'Vocab':
+											<!-- VOCABULARIES LIST -->
+											<section class='row'>
+												<label class='col-md-3'>VOCABULARIES LIST</label>
+												<section class="col-md-8">
+												$if len(skos_vocabs) > 0:
+													$ n = 0
+													$for voc in skos_vocabs:
+														$ n+=1
+														$ idx = str(n) + "__" + id
+														<label for='vocab$idx'>$voc.upper()<input type='checkbox' id='vocab$idx' name='vocab$idx' value='$voc'></label><br>
+														$if voc in field['vocab']:
+															<script type="text/javascript">
+																$$('#vocab$idx').attr('checked','checked');
+															</script>
+													<label class="add_vocabulary_button">ADD A NEW VOCABULARY <i class='fas fa-plus-circle' onClick='add_skos_vocab(this)'></i></label>
+												</section>
+											</section>
+											<section class='row'>
+												<label class='col-md-3'>NUMBER OF TERMS</label>
+												<section class='col-md-8'>
+													<label for='vocable1__$id'>
+														Single term
+														<input type='radio' id='oneVocable__$id' name='vocables__$id' value='oneVocable'>
+														</label><br>
+													<label for='vocable2__$id'>
+														Multiple terms
+														<input type='radio' id='multipleVocables__$id' name='vocables__$id' value='multipleVocables'>
+														</label><br>
+												</section>
+											</section>
+											$if 'vocables' in field:
+												$ vocables = field['vocables'] + "__" + id
+												<script type="text/javascript">
+													console.log('$vocables')
+													$$('input[id*="$vocables"]').prop('checked', true);
+												</script>
+										$elif field['type'] == 'WebsitePreview':
+											<!-- PLACEHOLDER -->
+											<section class="row">
+												<label class='col-md-3'>PLACEHOLDER <br><span class="comment">an example value to be shown to the user (optional)</span></label>
+												<input type='text' id='placeholder__$id' class='col-md-8 align-self-start' name='placeholder__$id' value="${field['placeholder']}"/>
+											</section>
+										$else:
+											<!-- VALUES -->
+											<section class="row">
+												<label class='col-md-3'>VALUES <br><span class="comment">write one pair uri, label (comma separated) per row</span></label>
+												$ num_rows = len(field["values"])*2
+												<textarea id='values__$id' class='col-md-8 values_area' name='values__$id' rows="$num_rows">
+												$for uri,lab in field["values"].items():
+													$uri.strip(), $:lab.strip()
+												</textarea>
+											</section>
 
-									$if 'value' in field and field['value'] == 'URI':
-										<!-- BROWSE -->
-										<section class="row">
-											$ checked_browse = "checked=checked" if 'browse'in field and field["browse"] == "True" else ""
-											<label class="left col-md-11 col-sm-6" for="browse__$id">use this value as a filter in <em>Explore</em> page</label>
-											<input $checked_browse type="checkbox" id="browse__$id" name="browse__$id">
-										</section>
-									$if 'value' in field and field['value'] == 'Literal' and field['type'] == 'Textbox':
-										$ checked_disambiguate = "checked=checked" if 'disambiguate'in field and field["disambiguate"] == "True" else ""
-										<!-- DISAMBIGUATE -->
-										<section class="row">
-											<label class="left col-md-11 col-sm-6" for="disambiguate__$id">use this value as primary label (e.g. book title)</label>
-											<input $checked_disambiguate class='disambiguate' onClick='disable_other_cb(this)' type="checkbox" id="disambiguate__$id" name="disambiguate__$id">
-										</section>
-								</section>
+										$if 'value' in field and field['value'] == 'URI':
+											<!-- BROWSE -->
+											<section class="row">
+												$ checked_browse = "checked=checked" if 'browse'in field and field["browse"] == "True" else ""
+												<label class="left col-md-11 col-sm-6" for="browse__$id">use this value as a filter in <em>Explore</em> page</label>
+												<input $checked_browse type="checkbox" id="browse__$id" name="browse__$id">
+											</section>
+										$if 'value' in field and field['value'] == 'Literal' and field['type'] == 'Textbox':
+											$ checked_disambiguate = "checked=checked" if 'disambiguate'in field and field["disambiguate"] == "True" else ""
+											<!-- DISAMBIGUATE -->
+											<section class="row">
+												<label class="left col-md-11 col-sm-6" for="disambiguate__$id">use this value as primary label (e.g. book title)</label>
+												<input $checked_disambiguate class='disambiguate' onClick='disable_other_cb(this)' type="checkbox" id="disambiguate__$id" name="disambiguate__$id">
+											</section>
+									</section>
+								$else:
+									<!-- KNOWLEDGE EXTRACTOR -->
+									<section class='row'>\
+										<label class='col-md-3'>KNOWLEDGE EXTRACTOR</label>\
+										<p class='col-md-8'>A Knowledge Extractor will be available during the record's creation</p>\
+									</section>
 								<a href="#" class="up"><i class="fas fa-arrow-up"></i></a> <a href="#" class="down"><i class="fas fa-arrow-down"></i></a>
 								<a href="#" class="trash"><i class="far fa-trash-alt"></i></a>
 							</section>
@@ -119,6 +203,15 @@ $var project = project
 					<a class="link_btn" onclick="add_field('Textarea','$res_type')" name="add_textarea">Add Textarea</a>
 					<a class="link_btn" onclick="add_field('Dropdown','$res_type')" name="add_dropdown">Add Dropdown</a>
 					<a class="link_btn" onclick="add_field('Checkbox','$res_type')" name="add_checkbox">Add Checkbox</a>
+					<a class="link_btn" onclick="add_field('Date','$res_type')" name="add_date">Add Date</a>
+					<a class="link_btn" onclick="add_field('Multimedia','$res_type')" name="add_multimedia">Add Multimedia</a>
+					$ vocabs = "//".join(list(skos_vocabs.keys()))
+					<a class="link_btn" onclick="add_field('Vocab','$res_type', '$vocabs')" name="add_vocabulary">Add Vocabulary</a>
+					<a class="link_btn" onclick="add_field('WebsitePreview','$res_type')" name="add_preview">Add Website Preview</a>
+					<a class="link_btn" onclick="add_field('KnowledgeExtractor','$res_type')" name="add_extractor">Add Knowledge Extraction</a>
+					<script type="text/javascript">
+						var available_skos_vocabularies = '$vocabs';
+					</script>
 				</section>
 			</section>
 			<section class="buttonsSection">
@@ -139,10 +232,11 @@ $var project = project
 			<code>Free text</code>: any free text descriptions. You can use this field value as the main title the record (use the checkbox below).
 			You <b>must</b> select one field as a title.</p>
 		<p>
-			<code>Entity</code>: a term that can be reused in other records. When creating a record, you'll get autocompletion suggestions from <a href="https://www.wikidata.org/wiki/Wikidata:Main_Page">Wikidata</a> and the catalogue.
+			<code>Entity</code>: a term that can be reused in other records. When creating a record, you'll get autocompletion suggestions from <a href="https://www.wikidata.org/wiki/Wikidata:Main_Page">Wikidata</a>, <a href="https://viaf.org/">VIAF</a>, and the catalogue.
 			 You can select this field to be used as a filter in the page Explore. You can create as many filters as you want.
 			 </p>
 		<p><code>Location</code>: a place that can be geolocalised. Similarly to entities, autocompletion suggestions from <a href="http://www.geonames.org/">geonames</a> will appear.</p>
+		<p><code>URL</code>: the address of a web resource.</p>
 		<h5>Text area</h5>
 		<p>A Textarea allows for longer text descriptions to be annotated.
 			When filling in, press return to enable entity extraction from text (e.g. people names, places, organizations).
@@ -150,6 +244,23 @@ $var project = project
 		<h5>Dropdown and checkbox</h5>
 		<p>Create your own controlled vocabulary in <code>VALUES</code>.
 			For each line include the full URI and the label of a term separated by comma. URIs can be from external vocabularies or reuse the URI base that you <a href="setup">setup</a>.</p>
+		<h5>Date</h5>
+		<p><code>Full Date</code>: a complete date corresponding to the <code>xsd:Date</code> type, i.e.: YYYY/MM/DD. You can select the value from a calendar.</p>
+		<p><code>Month and Year</code>: a date corresponding to the <code>xsd:gYearMonth</code> type, i.e.: YYYY/MM. You can select the value from a calendar.</p>
+		<p><code>Year</code>: a date corresponding to the <code>xsd:gYear</code> type, i.e.: YYYY. You can select a year from a dropdown.</p>
+		<h5>Multimedia</h5>
+		<p>Specify the path to an external multimedia resource. The url <b>must</b> end with the resource format. You can either select the type of resource (audio, video, image) or allow any type of multimedia to be linked (all).</p>
+		<p><code>Audio</code>: provide a path to external audio resources. The allowed formats are ".mp3", ".wav", ".wma", ".ogg".</p>
+		<p><code>Image</code>: provide a path to external image resources. The allowed formats are ".apng", ".avif", ".gif", ".ico", ".jpg", ".jpeg", ".jfif", ".pjpeg", ".pjp", ".png", ".svg", ".webp".</p>
+		<p><code>Video</code>: provide a path to external videoaudio resources. The allowed formats are ".mp4", ".ogg", ".webm".</p>
+		<p><code>All</code>: provide a path to external multimedia resources (audio, images, video). Make sure the formats of these resources comply with the allowed formats for each respective type.</p>
+		<h5>Vocabulary</h5>
+		<p>Import vocabularies from selected SKOS vocabularies. Currently the following vocabularies are supported:</p> 
+		<p>You can add new vocabularies by specifying a label, a link to the vocabulary webpage, and the URL of its SPARQL endpoint. Additionally, include the SPARQL query constraints to get a <code>?label</code> and a <code>?uri</code> for each retrieved term of the vocabulary. New vocabularies will be stored for later reuse.</p>
+		<h5>Website Preview</h5>
+		<p>Provide the url to embed a webpage's preview within a record.</p>
+		<h5>Knowledge Extraction</h5>
+		<p>Automatic extraction of Key Entities through queries (API, SPARQL, Static Files)</p>
 	</section>
 
 </section>

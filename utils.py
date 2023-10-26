@@ -10,6 +10,7 @@ import conf
 from collections import defaultdict,OrderedDict
 from importlib import reload
 from json.decoder import JSONDecodeError
+import urllib.parse
 
 
 RESOURCE_TEMPLATES = 'resource_templates/'
@@ -139,7 +140,7 @@ def toid(s):
 	s = s.replace(" ", "_")
 	return s
 
-def fields_to_json(data, json_file):
+def fields_to_json(data, json_file, skos_file):
 	""" setup/update the json file with the form template
 	as modified via the web page *template* """
 
@@ -165,19 +166,44 @@ def fields_to_json(data, json_file):
 		# default if missing
 		if d["type"] == "None":
 			d["type"] = "Textbox" if "values" not in d else "Dropdown"
-		# textarea value
-		if d["type"] == "Textarea":
+		# date value
+		if d["type"] == "Date":
+			if d["calendar"] == "Day":
+				d["value"] = "Date"
+			elif d["calendar"] == "Month":
+				d["value"] = "gYearMonth"
+			else:
+				d["value"] = "gYear"
+		if d['type'] == "Vocab":
+			d["value"] = "URI"
+		# multimedia
+		if d['type'] in ["Multimedia", "WebsitePreview"]:
+			d['value'] = "URL"
+ 		# textarea value
+		if d["type"] in ["Textarea"]:
 			d["value"] = "Literal"
-		if len(d["label"]) == 0:
-			d["label"] = "no label"
-		if len(d["property"]) == 0:
-			d["property"] = "http://example.org/"+d["id"]
+		if d['type'] == 'KnowledgeExtractor':
+			d['knowledgeExtractor'] = "True"
+		else:
+			if len(d["label"]) == 0:
+				d["label"] = "no label"
+			if len(d["property"]) == 0:
+				d["property"] = "http://example.org/"+d["id"]
 		# add default values
 		d['searchWikidata'] = "True" if d['type'] == 'Textbox' and d['value'] == 'URI' else "False"
+		d['searchVocab'] = "True" if d['type'] == 'Vocab' else "False"
 		d['searchGeonames'] = "True" if d['type'] == 'Textbox' and d['value'] == 'Place' else "False"
+		d['url'] = "True" if d['type'] == 'Textbox' and d['value'] == 'URL' else "False"
+		vocab_data = update_skos_vocabs(d, skos_file)
+		d['vocab'] = vocab_data[0]
+		for idx in range(len(vocab_data[1])):
+			d['vocab'+vocab_data[1][idx]] = d['vocab'][idx] 
 		d["disabled"] = "False"
-		d["class"]= "col-md-11"
+		d["class"]= "col-md-11 yearField" if d["type"] == "Date" and d["calendar"] == "Year" else "col-md-11"
+		d["class"]= d["class"] + " oneVocable" if "oneVocable" in d else d["class"]
 		d["cache_autocomplete"] ="off"
+
+		
 	# add a default disambiguate if none is selected
 	is_any_disambiguate = ["yes" for n,d in list_dicts.items() if d['disambiguate'] == 'True']
 	if len(is_any_disambiguate) == 0:
@@ -196,6 +222,7 @@ def validate_setup(data):
 
 	data["myEndpoint"] = data["myEndpoint"] if "myEndpoint" in data and data["myEndpoint"].startswith("http") else "http://127.0.0.1:3000/blazegraph/sparql"
 	data["myPublicEndpoint"] = data["myPublicEndpoint"] if data["myPublicEndpoint"].startswith("http") else "http://127.0.0.1:3000/blazegraph/sparql"
+	data["sparqlAnythingEndpoint"] = data["sparqlAnythingEndpoint"] if data["sparqlAnythingEndpoint"].startswith("http") else "http://127.0.0.1:8081/sparql.anything"
 	data["base"] = data["base"] if data["base"].startswith("http") else "http://example.org/base/"
 	# data["main_entity"] = data["main_entity"] if data["main_entity"].startswith("http") else "http://example.org/entity/"
 	data["limit_requests"] = data["limit_requests"] if isinstance(int(data["limit_requests"]), int) else "50"
@@ -379,3 +406,89 @@ def key(s):
 
 def isnum(s):
 	return s.isnumeric()
+
+
+# UPDATE THE LIST OF AVAILABLE SKOS VOCABS
+def update_skos_vocabs(d, skos):
+	if not os.path.isfile(skos):
+			skos_file = None
+	else:
+		with open(skos, 'r') as skos_list:
+			skos_file = json.load(skos_list)
+	
+	print(d)
+	selected_vocabs = []
+	number_list = []
+	for key in list(d.keys()):
+		if key.startswith("vocab") and key != "vocables":
+			number = int(re.search(r'\d+', key).group())
+			if number > len(skos_file):
+				number_list.append(str(number))
+				label, url, query, endpoint = d[key].split("__")
+				query = urllib.parse.unquote(query)
+				query = "} }".join(query.rsplit("}", 1))
+				skos_file[label] = {
+					"type": "SPARQL",
+					"url": url,
+					"endpoint": endpoint,
+					"query": query.replace("\n", "").replace("\r", "").replace("{", "{ SERVICE <"+url+"> {", 1),
+					"results": {
+						"array": "results.bindings", 
+						"label": "label.value", 
+						"uri": "uri.value"
+					}
+				}
+				selected_vocabs.append(label)
+				with open(skos, 'w') as file:
+					json.dump(skos_file, file)
+			else:
+				selected_vocabs.append(d[key])
+	return [selected_vocabs, number_list]
+
+
+# KNOWLEDGE EXTRACTION
+def has_extractor(id, modify=False):
+	# checks whether a template allows some knowledge extraction
+	if modify:
+		with open(conf.knowledge_extraction,'r') as ke_file:
+			data = json.load(ke_file)
+			if id in data:
+				return True
+			else:
+				return False
+	else:
+		with open(id,'r') as tpl_file:
+			data = json.load(tpl_file)
+		
+		print(data)
+		if data:
+			for field in data:
+				if 'knowledgeExtractor' in field and field['knowledgeExtractor'] == 'True':
+					return True
+		return False
+
+def update_knowledge_extraction(data, KE_file):
+	# stores the knowledge extractions set by the user
+	extractor = False
+	template_id = data['templateID']
+	with open(template_id,'r') as tpl_file:
+		template_data = json.load(tpl_file)
+	extractor = any(field['type'] == "KnowledgeExtractor" for field in template_data)
+	if extractor==True:
+		with open(KE_file, 'r') as knowledge_extractors:
+			knowledge_extractor = json.load(knowledge_extractors)
+		
+			importer_id = data['recordID']
+			knowledge_extractor[importer_id] = [] if importer_id not in knowledge_extractor else knowledge_extractor[importer_id]
+			extractors = [k.replace("-TYPE", "") for k in data.keys() if k.endswith("-TYPE")]
+			for extractor in extractors:
+				temporary_dict = {"internalID": extractor, "type":data[extractor+"-TYPE"]}
+				if temporary_dict['type'] == 'sparql':
+					temporary_dict['url'] = data[extractor+"-URL"]
+					temporary_dict['query'] = data[extractor+"-QUERY"]
+				elif temporary_dict['type'] == 'file':
+					temporary_dict['file'] = "v"
+				knowledge_extractor[importer_id].append(temporary_dict)
+			with open(KE_file, 'w') as file:
+				json.dump(knowledge_extractor, file)
+			print("Knowledge extractor: successfully updated!")

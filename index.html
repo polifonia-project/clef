@@ -70,7 +70,10 @@
           <li>install <code>requirements.txt</code> with pip (<code>pip3 install -r requirements.txt</code>)</li>
           <li>download the latest version of <a href="https://github.com/blazegraph/database/releases/tag/BLAZEGRAPH_2_1_6_RC">blazegraph</a></li>
           <li>move the file <code>blazegraph.jar</code> in the root folder of the cloned repository</li>
+          <li>download the latest version of <a href="https://github.com/SPARQL-Anything/sparql.anything/releases/latest">SPARQL Anything server</a></li>
+          <li>move the file <code>sparql-anything-server.jar</code> in the root folder of the cloned repository</li>
           <li>in the terminal, launch blazegraph <code>java -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -server -Xmx2g -Djetty.port=3000 -Dbigdata.propertyFile=blaze.properties -jar blazegraph.jar</code> (NB. <code>-Xmx2g</code> requires 2GB RAM, change according to your preference)</li>
+          <li>then, launch SPARQL Anything <code>java -jar sparql-anything-server-0.8.2.jar --port=8081</code> (NB. change 0.8.2 according to your version of the .jar file)</li>
           <li>launch the web application <code>python3 app.py 8080</code></li>
           <li>open your browser at <code>http://0.0.0.0:8080/</code></li>
           <li>follow the instructions for <a href="#customization">customization</a></li>
@@ -204,13 +207,13 @@
           <p>You can modify the order of fields or delete fields using the icons that appear at the bottom of each field box.</p>
         <p></p>
         <p><strong>TEXT BOX</strong></p>
-        <p>Text boxes can be used to record 3 types of information. In the <strong>VALUE TYPE</strong> field you can choose between:</p>
+        <p>Text boxes can be used to record 4 types of information. In the <strong>VALUE TYPE</strong> field you can choose between:</p>
         <ul>
           <li><strong>Free text (Literal):</strong> short texts (e.g. a title). When this value is selected, a checkbox appears on the bottom of the box, asking whether to use this value as primary label. <span class='red'>At least one free text field</span> must be included in the template and <span class='red'>at most one free text field</span> must be flagged as primary label to associate a title to the record.</li>
-          <li><strong>Entity URI (from Wikidata or catalogue):</strong> the final field will provide autocompletion suggestions from wikidata or, if nothing is found on Wikidata, from the catalogue. Users may accept or reject the suggestions. (<em>NB. this field is not meant to record URLs of web resources. Use Free text instead.</em>). When this value is selected, a checkbox appears on the bottom of the box, asking whether to use this field value as a filter in the <strong>Explore</strong> page, i.e. it creates an index of catalogued resources by values of the selected field. You can create as many filters as you want.</li>
+          <li><strong>Entity URI (from Wikidata, VIAF, or catalogue):</strong> the final field will provide autocompletion suggestions from wikidata or, if nothing is found on Wikidata, from the catalogue. Users may accept or reject the suggestions. (<em>NB. this field is not meant to record URLs of web resources. Use Free text instead.</em>). When this value is selected, a checkbox appears on the bottom of the box, asking whether to use this field value as a filter in the <strong>Explore</strong> page, i.e. it creates an index of catalogued resources by values of the selected field. You can create as many filters as you want.</li>
           <li><strong>Location (from geonames):</strong> the final field will provide autocompletion suggestions from <a href="https://www.geonames.org/">geonames</a>, a specialised service for administrative and geographical locations. Like with <strong>Entity URI</strong>, when this value is selected, a checkbox appears on the bottom of the box, and this field can be used as filter in the <strong>Explore</strong> page.</li>
+          <li><strong>URL:</strong> to record URLs of web resources (e.g. an online video or a blog post). In the final form you will be asked if a copy of the website should be preserved in the long term. While you cannot store external documents in CLEF, CLEF sends a request to the Internet archive <a href="https://archive.org/web/">Wayback machine</a> to store a copy of your favourite webpages.</li>
         </ul>
-        <p><span class='tip'>Tip!</span> Fields of type <strong>Free text (Literal)</strong> can be used to record URLs of web resources (e.g. an online video or a blog post). In the final form you will be asked if a copy of the website should be preserved in the long term. While you cannot store external documents in CLEF, CLEF sends a request to the Internet archive <a href="https://archive.org/web/">Wayback machine</a> to store a copy of your favourite webpages.</p>
         <p><strong>TEXT AREA</strong></p>
         <p>A text area can include a long textual description. </p>
         <section class='row'>
@@ -226,6 +229,38 @@
             <img src="docs/2checkbox.png" style='max-width:100%;' alt="">
           </section>
           <p class='col-md-5 col-sm-5'>In the field <strong>VALUES</strong> you must provide a comma-separated list of terms to fill in the final list in dropdown or checkbox. List of terms are URIs associated with a label. Both internal and external vocabularies can be used (and mixed). In each line, write the URI of a resource, followed by comma and the label.</p>
+        </section>
+        <p><strong>DATE</strong></p>
+        <p>Date fields allow the final user to insert a date in a predefined format.</p>
+        <section class='row'>
+          <section class='col-md-7 col-sm-7'>
+            <img src="docs/2date.png" style='max-width:100%;' alt="">
+          </section>
+          <p class='col-md-5 col-sm-5'>Specifically, the format must be chosen among the available options in the field <strong>CALENDAR</strong>, which include: YYYY/MM/DD (Full Date: <code>xsd:gDate</code>), YYYY/MM (Month and Year: <code>xsd:gYearMonth</code>), YYYY (Year: <code>xsd:gYear</code>). The first two formats will be displayed as a calendar input, while the last one will function as a textbox, generating a dropdown of suggestions based on user input.</p>
+        </section>
+        <p><strong>MULTIMEDIA AND WEBSITE PREVIEW</strong></p>
+        <p>The Multimedia and Website preview fields operate similarly, enabling end users to insert links to external resources: Image, Audio and Video for the former, Webpages for the latter. A preview of the chosen resources will be displayed in the final record.</p>
+        <section class='row'>
+          <section class='col-md-7 col-sm-7'>
+            <img src="docs/2multimedia.png" style='max-width:100%;' alt="">
+          </section>
+          <p class='col-md-5 col-sm-5'>Multimedia fields have an extra parameter, <strong>MULTIMEDIA TYPE</strong>, which permits the selection of the desired type of multimedia resource, namely: Image (".jpg", ".jpeg", ".png", ".gif", ".ico", ".svg", etc.), Audio (".mp3", ".wav", ".ogg"), Video (".mp4", ".ogg", ".webm"), or All (including all the formats mentioned before). </p>
+        </section>
+        <p><strong>VOCABULARY</strong></p>
+        <p>A Vocabulary field behaves similarly to Entity URI (Text Box), i.e. suggestions are provided while typing. In this case, suggestions are terms gathered from available SKOS vocabularies.</p>
+        <section class='row'>
+          <section class='col-md-7 col-sm-7'>
+            <img src="docs/2vocabulary.png" style='max-width:100%;' alt="">
+          </section>
+          <p class='col-md-5 col-sm-5'>A collection of predefined SKOS vocabularies is already available (<strong>VOCABULARIES LIST</strong>), which include <a href="https://vocabs.dariah.eu/tadirah/en/">TaDiRAH</a>, <a href="https://op.europa.eu/en/web/eu-vocabularies/dataset/-/resource?uri=http://publications.europa.eu/resource/dataset/data-theme">Data theme</a>, <a href="https://op.europa.eu/en/web/eu-vocabularies/dataset/-/resource?uri=http://publications.europa.eu/resource/dataset/file-type">File type</a>, <a href="https://op.europa.eu/en/web/eu-vocabularies/dataset/-/resource?uri=http://publications.europa.eu/resource/dataset/access-right">Access right</a>, <a href="https://op.europa.eu/en/web/eu-vocabularies/concept-scheme/-/resource?uri=http://publications.europa.eu/resource/authority/language">Language</a>, <a href="https://schema.gov.it/lodview/controlled-vocabulary/licences">Licenses</a>, <a href="https://op.europa.eu/en/web/eu-vocabularies/dataset/-/resource?uri=http://publications.europa.eu/resource/dataset/frequency">Frequency</a>. Still, you can add a new vocabulary by clicking on the <span class='red'>ADD A NEW VOCABULARY</span> button. To add a new vocabulary you must provide a label, a link to the vocabulary webpage, a SPARQL endpoint, and a SPARQL query to retrieve terms. The query must return two default variables, i.e. ?uri and ?label, which respectively return the URI and a string label for the term. Once added, the new vocabulary will be saved and made available for later reuse. Additionally, it is possible to specify whether the final user can select more than one term for that particular field (<strong>NUMBER OF TERMS</strong>).</p>
+        </section>
+        <p><strong>KNOWLEDGE EXTRACTION</strong></p>
+        <p>A Knowledge Extraction field enables automatically extracting key Named Entities (URI-label pairs). To perform this task, users must provide one or more queries to be sent to specific APIs and SPARQL endpoints or to parse Static Files.</p>
+        <section class="row">
+          <section class="col-md-7 col-sm-7">
+            <img src="docs/2extractor.png" style="max-width: 100%;" alt ="">
+          </section>
+          <p class='col-md-5 col-sm-5'>Unlike other fields, this prototypical Knowledge Extraction tool does not allow specifying custom parameters. However, a much higher degree of flexibility is provided to Record creators.</p>
         </section>
         <h6>Data model</h6>
         <section class='row'>

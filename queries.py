@@ -7,6 +7,7 @@ from rdflib.namespace import OWL, DC , DCTERMS, RDF , RDFS
 from rdflib.plugins.sparql import prepareQuery
 from pymantic import sparql
 import utils as u
+import urllib.parse
 
 u.reload_config()
 
@@ -155,7 +156,7 @@ def countAll(res_class=None, exclude_unpublished=False):
 			"""+class_restriction+"""
 		}
 		"""+exclude+"""
-			FILTER( str(?g) != '"""+conf.base+"""vocabularies/' ) .
+			FILTER( str(?g) != '"""+conf.base+"""vocabularies/' && !CONTAINS(STR(?g), "/extraction-")) .
 		}
 		"""
 	sparql = SPARQLWrapper(conf.myEndpoint)
@@ -205,8 +206,8 @@ def getData(graph,res_template):
 		fields = json.load(config_form)
 
 	res_class = getClass(graph[:-1])
-
-	patterns = [ 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'.}. '  if field['value'] == 'Literal' else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. ?'+field['id']+' rdfs:label ?'+field['id']+'_label .} .' for field in fields]
+	# Added new types of values: URL, Date, gYearMonth
+	patterns = [ 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'.}. '  if field['value'] in ['Literal','Date','gYearMonth','gYear','URL'] else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. ?'+field['id']+' rdfs:label ?'+field['id']+'_label .} .' for field in fields if 'value' in field]
 	patterns_string = ''.join(patterns)
 
 	queryNGraph = '''
@@ -246,6 +247,8 @@ def getData(graph,res_template):
 				if k+'_label' in result:
 					if conf.base in v['value'] or 'wikidata' in v['value'] or 'geonames' in v['value']:
 						uri = v['value'].rsplit('/', 1)[-1]
+					elif 'viaf' in v['value']:
+						uri = "viaf"+v['value'].rsplit('/', 1)[-1] # Keep "viaf" at the beginning: needed in mapping.py (getRightURIbase)
 					else:
 						uri = v['value']
 					label = [value['value'] for key,value in result.items() if key == k+'_label'][0]
@@ -300,21 +303,52 @@ def getBrowsingFilters(res_template_path):
 def deleteRecord(graph):
 	""" delete a named graph and related record """
 	if graph:
-		clearGraph = ' CLEAR GRAPH <'+graph+'> '
-		deleteGraph = ' DROP GRAPH <'+graph+'> '
-		sparql = SPARQLWrapper(conf.myEndpoint)
-		sparql.setQuery(clearGraph)
-		sparql.method = 'POST'
-		sparql.query()
-		sparql.setQuery(deleteGraph)
-		sparql.method = 'POST'
-		sparql.query()
+		q = """PREFIX schema: <https://schema.org/> SELECT DISTINCT ?extraction WHERE {<"""+graph+"""> schema:keywords ?extraction}"""
+		results = hello_blazegraph(q)
+		res_extraction = [result["extraction"]["value"] for result in results["results"]["bindings"]]
+		res_extraction.append(graph)
+		for to_clear in res_extraction:
+			clearGraph = ' CLEAR GRAPH <'+to_clear+'> '
+			deleteGraph = ' DROP GRAPH <'+to_clear+'> '
+			sparql = SPARQLWrapper(conf.myEndpoint)
+			sparql.setQuery(clearGraph)
+			sparql.method = 'POST'
+			sparql.query()
+			sparql.setQuery(deleteGraph)
+			sparql.method = 'POST'
+			sparql.query()
 
 
 def clearGraph(graph):
 	if graph:
-		clearGraph = ' CLEAR GRAPH <'+graph+'> '
-		sparql = SPARQLWrapper(conf.myEndpoint)
-		sparql.setQuery(clearGraph)
-		sparql.method = 'POST'
-		sparql.query()
+		q = """PREFIX schema: <https://schema.org/> SELECT DISTINCT ?extraction WHERE {<"""+graph+"""> schema:keywords ?extraction}"""
+		results = hello_blazegraph(q)
+		res_extraction = [result["extraction"]["value"] for result in results["results"]["bindings"]]
+		res_extraction.append(graph)
+		for to_clear in res_extraction:
+			clearGraph = ' CLEAR GRAPH <'+to_clear+'> '
+			sparql = SPARQLWrapper(conf.myEndpoint)
+			sparql.setQuery(clearGraph)
+			sparql.method = 'POST'
+			sparql.query()
+
+def retrieve_extractions(res_uri):
+	q = """PREFIX schema: <https://schema.org/> SELECT DISTINCT ?extraction WHERE {<"""+res_uri+"""/> schema:keywords ?extraction}"""
+	results = hello_blazegraph(q)
+	res_extraction = []
+	for result in results["results"]["bindings"]:
+		res_extraction.append(result["extraction"]["value"])
+	res_dict = {}
+	for extraction in res_extraction:
+		id = extraction.split("-")[-1].replace("/", "")
+		retrieve_graph = """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+			SELECT DISTINCT ?uri ?label WHERE {GRAPH <"""+extraction+""">
+			{	?uri rdfs:label ?label .  }}"""
+		graph_results = hello_blazegraph(retrieve_graph)["results"]["bindings"]
+		res_dict[id] = [{"uri": urllib.parse.unquote(res["uri"]["value"]), "label": res["label"]["value"]} for res in graph_results]
+	if len(res_dict) > 0:
+		with open(conf.knowledge_extraction, 'r') as ke_file:
+			ke_dict = json.load(ke_file)
+		next_id = max(ke_dict[res_uri.split("/")[-1]], key=lambda x: int(x["internalID"]))
+		res_dict['next_id'] = int(next_id['internalID']) + 1
+	return res_dict

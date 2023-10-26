@@ -1,4 +1,4 @@
-$def with (graphdata, pageID, record_form, graph, user,ids_dropdown,is_git_auth,invalid,project,template)
+$def with (graphdata, pageID, record_form, graph, user,ids_dropdown,is_git_auth,invalid,project,template,skos_vocabs,knowledge_extractor)
 $var user = user
 $var is_git_auth = is_git_auth
 $var project = project
@@ -51,7 +51,14 @@ $var project = project
 									$if id in graphdata:
 										<!-- string value -->
 										$if isinstance(graphdata[id][0],str):
-											$:input.set_value(graphdata[id][0])
+											$if "yearField" in input.attrs["class"]:
+												$if graphdata[id][0].startswith("-"):
+													$ value =  graphdata[id][0][1:] + " B.C."
+												$else:
+													$ value = graphdata[id][0].lstrip("0") + " A.C."
+												$:input.set_value(value)
+											$else:
+												$:input.set_value(graphdata[id][0])
 											$:input.render()
 										$elif id in ids_dropdown:
 											<!-- dropdown -->
@@ -62,19 +69,77 @@ $var project = project
 													$$("#$id option[value$$='$graphdata[id][0][0]']").attr("selected","selected");
 												</script>
 										$else:
-											<!-- text box with URI,label -->
-											$:input.render()
-											$if len(graphdata[id]) > 0:
-												$for k_v in graphdata[id]:
-														<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$k_v[1]</span>
-														<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value='$k_v[0],${k_v[1]}'/>
+										$:input.render()
+										<!-- SKOS vocabs -->
+										$if " vocab " in input.attrs["class"]:
+											$ list_vocabs = "//".join(list(skos_vocabs.keys()))
+											$ selectedVocabs = str(skos_vocabs)
+											<script type="text/javascript">
+												var skos_to_string = '$selectedVocabs'.replace(/&#39;/g, '"');
+												var list_vocabs = '$list_vocabs'.split("//")
+												var skos_vocabs_json = JSON.parse(skos_to_string)
+											</script>
+										<!-- text box with URI,label -->
+										$if len(graphdata[id]) > 0 and "multimedia" not in input.attrs["class"] and "websitePreview" not in input.attrs["class"]:
+											$for k_v in graphdata[id]:
+													<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>
+													<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
+										$elif "multimedia" in input.attrs["class"]:
+											<!-- multimedia -->
+											$for k_v in graphdata[id]:
+												<div class='multimediaTag $k_v[0]'>
+													$ format = k_v[1].split(".")[-1]
+													$if format in ["mp3", "wav", "wma", "ogg"]:
+														<span class="MMtag file_audio" data-id="$:k_v[1]"><i class="fas fa-eye"></i></span>
+													$elif format in ["apng", "avif", "gif", "ico", "jpg", "jpeg", "jfif", "pjpeg", "pjp", "png", "svg", "webp"]:
+														<span class="MMtag file_image" data-id="$:k_v[1]"><i class="fas fa-eye"></i></span>
+													$else:
+														<span class="MMtag file_video" data-id="$:k_v[1]"><i class="fas fa-eye"></i></span>													
+													<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>
+													<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
+												</div>
+										$else:
+											<!-- iframes -->
+											$for k_v in graphdata[id]:
+												<iframe allow='autoplay' class='col-md-11 iframePreview' src='$:k_v[1]' crossorigin></iframe>
+												<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>
+												<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
 									$else:
 										$:input.render()
-										$if len(graphdata[id]) == 0:
+										$if type(input) == Dropdown:
 											<script type="text/javascript">
 												$$('#$id').prepend($$('<option selected=selected value="None">Select from the list</option>'));
 											</script>
+										$elif " vocab " in input.attrs["class"]:
+											$ list_vocabs = "//".join(list(skos_vocabs.keys()))
+											$ selectedVocabs = str(skos_vocabs)
+											<script type="text/javascript">
+												var skos_to_string = '$selectedVocabs'.replace(/&#39;/g, '"');
+												var list_vocabs = '$list_vocabs'.split("//")
+												var skos_vocabs_json = JSON.parse(skos_to_string)
+											</script>
 								</section>
+						</section>
+					$if knowledge_extractor != False:
+						<section class="row import_form">
+							<section class="col-md-12 col-sm-12 col-lg-12">KEYWORDS</section>
+							<ul class="imported_graphs" id="imported_graphs">
+									$for extraction in knowledge_extractor:
+										$if extraction == "next_id":
+											<script>
+												var extraction_number = $knowledge_extractor[extraction];
+											</script>
+										$else:
+											<li id="graph-$extraction">
+												<label>Extraction Graph: <i class='fas fa-trash' onclick='delete_extractor("$extraction")'></i></label><br>
+												$for extracted_keyword in knowledge_extractor[extraction]:
+													<span class="tag" data-id="$extracted_keyword['uri']">$extracted_keyword['label']</span>
+													$ keyword_id = "keyword_" + extraction + "_" + extracted_keyword['label']
+													<input type="hidden" name="$keyword_id" value="$extracted_keyword['uri']">
+											</li>
+								<li id="add_extractor"><label class="add_graph_button">Extract keywords  <i class="fas fa-plus-circle" onclick="extraction_form(this), window.scrollTo(0, 0)"></i></label></li>
+							</ul>
+
 						</section>
 				</section>
 				<section class="homeheading col-md-4 col-sm-4 col-lg-4">
@@ -98,5 +163,66 @@ $var project = project
 	</section>
 	<section id="searchresult">
 	</section>
-
+	<section class="homeheading extraction_documentation col-md-4 col-sm-4 col-lg-4" style="display: none;">
+		<p class="caption">Tips</p>
+		<section class="extraction_documentation_api">
+			<p>To properly handle retrieved results, you must provide the keys pointing to the desired values (a URI and its label) within the query output. Results are usually organised as an array of sub-dictionaries within the query output dictionary. Consequently, three paths are needed: one to reach the array of results and the remaining two to access URIs and labels. In case of multiple keys to be accessed, they must be separated by a dot. Example:</p>
+			<p><code>  array</code>,results.results<br>
+			<code>  uri</code>,uri<br>
+			<code>  label</code>,prefLabel<br>
+			</p>
+		</section>
+		<section class="extraction_documentation_sparql">
+			<p>Remember to include necessary prefixes at the beginning of the query. Example: <code>PREFIX skos: &lt;http://www.w3.org/2004/02/skos/core#&gt;</code></p>
+		</section>
+		<section class="extraction_documentation_file">
+			<p>SPARQL Anything queries are based on the Facade-X meta-model, converting Static Files to RDF.</p>
+			<p>Given a <code>.json</code> file, each key corresponds to an <code>xyz:</code> property. Example:</code></p>
+			<div>
+			Data:<br>
+			<code>{</code><br>
+			<code>	"stringArg": "stringValue",</code><br>
+			<code>	"intArg": 1,</code><br>
+			<code>	"booleanArg": true,</code><br>
+			<code>  "nullArg": null,</code><br>
+			<code>  "arr": [ 0, 1 ]</code><br>
+			<code>}</code><br><br>
+			Facade-X RDF:<br>
+			<code>@prefix xyz: &lt;http://sparql.xyz/facade-x/data/&gt; .</code><br>																					
+			<code>@prefix fx: &lt;http://sparql.xyz/facade-x/ns/&gt; .</code><br>
+			<code>@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .</code><br>
+			<code>@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .</code><br>
+			<code>[ a fx:root ; </code><br>
+			<code>	xyz:arr [</code><br>
+			<code>	rdf:_1  "0"^^xsd:int ;</code><br>
+			<code>	rdf:_2  "1"^^xsd:int ] ;</code><br>
+			<code>	xyz:booleanArg  true ;</code><br>
+			<code>	xyz:intArg "1"^^xsd:int ;</code><br>
+			<code>	xyz:stringArg "stringValue"</code><br>
+			<code>] .</code><br><br>
+						<p>Given a <code>.csv</code> file, each column corresponds to a numbered property starting from <code>rdf:_1</code>. Example:</code></p>
+						Data:<br>
+			<code>laura@example.com,2070,Laura</code><br>	
+			<code>craig@example.com,4081,Craigz</code><br>
+			<code>mary@example.com,9346,Mary</code><br><br>
+			Facade-X RDF:<br>
+			<code>@prefix fx: &lt;http://sparql.xyz/facade-x/ns/&gt; .</code><br>
+			<code>@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .</code><br>
+			<code>[ a fx:root ; </code><br>
+			<code>	rdf:_1  [ rdf:_1  "laura@example.com" ;</code><br>
+			<code>            rdf:_2  "2070" ;</code><br>
+			<code>            rdf:_3  "Laura" ;</code><br>
+			<code>          ] ;</code><br>
+			<code>	rdf:_2  [ rdf:_1  "craig@example.com" ;</code><br>
+			<code>            rdf:_2  "4081" ;</code><br>
+			<code>            rdf:_3  "Craig" ;</code><br>
+			<code>          ] ;</code><br>
+			<code>	rdf:_3  [ rdf:_1  "mary@example.com" ;</code><br>
+			<code>            rdf:_2  "9346" ;</code><br>
+			<code>            rdf:_3  "Mary" ;</code><br>
+			<code>          ] ;</code><br>
+			<code>] .</code><br>
+		</div>
+		</section>
+	</section>
 </section>

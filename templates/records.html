@@ -57,7 +57,7 @@ $var project=project
 															</section>
 
 												</section>
-										$elif filter[2] == 'Textbox' and (filter[3] == 'URI' or filter[3] == 'Place'):
+										$elif filter[2] in ['Textbox', 'Vocab'] and (filter[3] == 'URI' or filter[3] == 'Place' or filter[3] == 'URL'):
 											<p>Filter by most recurring values</p>
 											$ elemID = res_id+filter[1].replace(' ','')
 											$ results = elemID+"results"
@@ -72,6 +72,19 @@ $var project=project
 											</section>
 
 										$elif filter[2] in ['Dropdown','Checkbox'] and filter[3] == 'URI':
+											<p>Filter by most recurring values</p>
+											$ elemID = res_id+filter[1].replace(' ','')
+											$ results = elemID+"results"
+											<section id="$elemID" class="indexURI">
+											</section>
+											<button class="showMore" type="button">show more</button>
+											<script type="text/javascript">
+												getPropertyValue("$elemID", "$filter[0]", "$filter[3]", "$filter[2]","$res_owl_class");
+											</script>
+											<section class="resultAccordion">
+												<section id="$results" class="$results collapse"></section>
+											</section>
+										$elif filter[2] in ['Date'] and filter[3] in ['gYear', 'gYearMonth', 'Date']:
 											<p>Filter by most recurring values</p>
 											$ elemID = res_id+filter[1].replace(' ','')
 											$ results = elemID+"results"

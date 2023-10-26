@@ -1,4 +1,4 @@
-$def with (user, graphdata, graphID, title, stage, base,properties,is_git_auth,project)
+$def with (user, graphdata, graphID, title, stage, base,properties,is_git_auth,project,knowledge_extractor)
 
 $var user = user
 $var is_git_auth = is_git_auth
@@ -11,18 +11,22 @@ $var project = project
 				<span>draft</span>
 			</h2>
 			$for field,value in graphdata.items():
-				$ width_class = "col-md-5 col-sm-12" if (value and len(value[0]) <= 100) else 'col-md-12'
+				$ width_class = "col-md-12" if properties[field][1]=="WebsitePreview" else "col-md-5 col-sm-12" if (value and len(value[0]) <= 100) else 'col-md-12'
 				<section class="info-item $width_class">
 						$if isinstance(value[0],str):
 							<h4 class="articleSubtitle">$field </h4>
-							<p property="$properties[field]">$value[0]</p>
+							$if properties[field][1]=="Date" and (value[0].startswith("-") or len(value[0]) == 4):
+								$ value = value[0].replace("-", "") + " B.C." if value[0].startswith("-") else value[0].lstrip('0')
+							$else:
+								$ value = value[0]
+							<p property="$properties[field][0]">$value</p>
 						$else:
 							$if len(value[0][1]) > 0:
 								<h4 class="articleSubtitle">$field </h4>
 								$for uri_value in value:
 									$if uri_value[0].startswith('Q'):
 										<!-- wikidata uri -->
-										<p property="$properties[field]">
+										<p property="$properties[field][0]">
 											<link property="sameAs" url="http://www.wikidata.org/entity/$uri_value[0]"/>
 											<a class="wikiEntity" target='_blank' href="http://www.wikidata.org/entity/$uri_value[0]">
 												$uri_value[1]
@@ -30,28 +34,76 @@ $var project = project
 										</p>
 									$elif isnumeric(uri_value[0]):
 										<!-- geonames uri -->
-										<p property="$properties[field]">
+										<p property="$properties[field][0]">
 											<link property="sameAs" url="https://sws.geonames.org/$uri_value[0]"/>
 											<a class="geoEntity" target='_blank' href="https://sws.geonames.org/$uri_value[0]">
+												$uri_value[1]
+											</a>
+										</p>
+									$elif uri_value[0].startswith("viaf"):
+										<!-- viaf uri -->
+										<p property="$properties[field][0]">
+											<link property="sameAs" url="http://www.viaf.org/viaf/$uri_value[0][4:]"/>
+											<a class="viafEntity" target='_blank'\
+											 href="http://www.viaf.org/viaf/$uri_value[0][4:]">
 												$uri_value[1]
 											</a>
 										</p>
 									$else:
 										$if 'http' in uri_value[0]:
 											<!-- external uri or external vocabulary terms -->
-											$ here = uri_value[1] if (uri_value[0] != uri_value[1] or (uri_value[0] == uri_value[1] and len(uri_value[0]) <= 30) ) else "here"
-											<p property="$properties[field]">
-												<link property="url" url="$uri_value[0]"/>
-												<a target='_blank' href="$uri_value[0]">$here</a>
+											$ here = uri_value[1] if (uri_value[0] != uri_value[1] or (uri_value[0] == uri_value[1] and len(uri_value[0]) <= 30) ) else "link"
+											<p property="$properties[field][0]">
+												$if properties[field][1] == 'Multimedia':
+													<!-- multimedia -->
+													$ format = uri_value[1].split(".")[-1]
+													$if format in ["jpg","jpeg","png","gif","bmp","svg","tiff","ico"]:  
+														<link property="url" url="$uri_value[0]"/>
+														<img src='$uri_value[0]'>
+													$elif format in ["mp3","wav","flac","aac","ogg","wma","m4a","aiff","alac","ape","dts","mid","midi"]:
+														<audio controls><source src='$uri_value[0]''></source></audio>
+													$elif format in ["mp4","mov","avi","mkv","flv","wmv","webm","mpeg","mpg","3gp","rm","rmvb","vob","ts"]:
+														<video controls name='media'><source src='$uri_value[0]'></source></video>
+												$elif properties[field][1] == 'WebsitePreview':
+													<!-- website previews (iframe) -->
+													<link property="url" url="$uri_value[0]"/>
+													<a target='_blank' href="$uri_value[0]">$here</a>
+													$if properties[field][1] == "WebsitePreview":
+														<iframe allow='autoplay' class='col-md-11 iframePreview' src='$uri_value[0]' crossorigin></iframe>
+												$elif properties[field][1] == 'Vocab':
+													$ val = " - ".join(uri_value[1].split(" - ")[:-1])
+													<!-- skos Vocable -->
+													<link property="sameAs" url="$uri_value[0]"/>
+													<a class="skosEntity" target='_blank' href="$uri_value[0]">
+														$val
+													</a>
+												$else:
+													<!-- urls -->
+													<link property="url" url="$uri_value[0]"/>
+													<a target='_blank' href="$uri_value[0]">
+														$here
+													</a>
 											</p>
 										$else:
 											<!-- local resource -->
-											<p property="$properties[field]">
+											<p property="$properties[field][0]">
 												<link property="url" url="$base$uri_value[0]"/>
 												<a target='_blank' href="term-$uri_value[0]">$uri_value[1]</a>
 											</p>
+					</section>
+			$if knowledge_extractor:
+				<section class="info-item col-md-5 col-sm-12">
+					<h4 class="articleSubtitle">ENTITIES </h4>
+					$for extraction in knowledge_extractor:
+						$if extraction != "next_id":
+							$for extracted_keyword in knowledge_extractor[extraction]:
+								<p property="https://schema.org/keywords">
+									<link property="sameAs" url="$extracted_keyword['uri']"/>
+									<a class="uri" target='_blank' href="$extracted_keyword['uri']">
+										$extracted_keyword['label']
+									</a>
+								</p>
 				</section>
-
 	</section>
 	<section class="col-md-4 sideBoxes">
 		<section class="biblio">

@@ -28,8 +28,17 @@ $(document).ready(function() {
         Swal.fire({ title: 'choose a template please'});
         setTimeout(function() { document.getElementById('recordForm').submit();}, 500);
       } else {
-        Swal.fire({ title: 'Saved!'});
-        setTimeout(function() { document.getElementById('recordForm').submit();}, 500);
+        // when creating and saving the record
+        var check_mandatory = check_mandatory_fields()
+        if (check_mandatory) {
+          Swal.fire({ title: 'Saved!'});
+          if ($('#recordForm').length) {
+            var element_id = 'recordForm';
+          } else {
+            var element_id = 'modifyForm';
+          }
+          setTimeout(function() { document.getElementById(element_id).submit();}, 500);
+        } 
       }
     }
     else {
@@ -214,7 +223,7 @@ $(document).ready(function() {
 	//colorForm();
 
   // style mandatory fields
-  $(".disambiguate").parent().prev(".label").append("<span class='mandatory'>*</span>")
+  $("[note='True']").parent().prev(".label").append("<span class='mandatory'>*</span>")
 
 	// prevent POST when deleting records
 	$('.delete').click(function(e) {
@@ -248,19 +257,27 @@ $(document).ready(function() {
 
   $('.tab-content .list').each(function () {
       var letter = $('a', this).text().toUpperCase().charAt(0);
+      var encoded_letter = letter;
       var data_target = this.id; // e.g. web_resource_T
       var res_id = data_target.substring(0, data_target.length - 2); // e.g. web_resource
-      if (!$(this).parent().find('[data-letter="'+ letter +'"][id="'+ data_target +'"]').length) {
-        $(this).parent().append('<section data-letter="'+ letter+'" id="'+ data_target+'" class="collapse toBeWrapped '+res_id+'"></section>');
-      	$(this).parent().parent().find($('.alphabet')).append('<span data-toggle="collapse" data-target="#'+ data_target+'" aria-expanded="false" aria-controls="'+ letter+'" class="info_collapse" data-parent="#toc_resources_'+res_id+'">'+ letter +'</span>');
+      if (!/[A-Za-z0-9]/.test(letter)) {
+        // bootstrap.min.js cannot handle non-alphanumerical characters, including %
+        //→ replace them with an encoded string.
+        encoded_letter = encodeURIComponent(letter).replace("%", "_");
+        data_target = res_id + "_" + encoded_letter;
+      } 
+      if (!$(this).parent().find('[data-letter="'+ encoded_letter +'"][id="'+ data_target +'"]').length) {
+        console.log("here")
+        $(this).parent().append('<section data-letter="'+ encoded_letter+'" id="'+ data_target+'" class="collapse toBeWrapped '+res_id+'"></section>');
+      	$(this).parent().parent().find($('.alphabet')).append('<span data-toggle="collapse" data-target="#'+ data_target+'" aria-expanded="false" aria-controls="'+ encoded_letter+'" class="info_collapse" data-parent="#toc_resources_'+res_id+'">'+ letter +'</span>');
       };
-      $(this).parent().find('[data-letter="'+ letter +'"]').append(this);
+      $(this).parent().find('[data-letter="'+ encoded_letter +'"]').append(this);
       $('.toBeWrapped.'+res_id).find('.accordion-group').append(this);
-      // $('.toBeWrapped.'+res_id).each(function() {
-      //   if (!$(this).parent().hasClass('accordion-group')) {
-      //     $('.toBeWrapped.'+res_id).wrapAll("<section class='accordion-group'></section>");
-      //   }
-      // });
+      $('.toBeWrapped.'+res_id).each(function() {
+      if (!$(this).parent().hasClass('accordion-group')) {
+        $('.toBeWrapped.'+res_id).wrapAll("<section class='accordion-group'></section>");
+      }
+      });
 
     });
     //$(".wrapAllparent").children(".toBeWrapped").wrapAll("<section class='accordion-group'></section>");
@@ -1657,18 +1674,22 @@ function add_field(field, res_type, backend_file=null) {
     <p class='col-md-8'>A Knowledge Extractor will be available during the record's creation</p>\
   </section>";
 
+  var field_mandatory = "<section class='row'>\
+    <label class='col-md-11 col-sm-6' for='mandatory__"+temp_id+"'>make this value mandatory</label>\
+    <input type='checkbox' id='mandatory__"+temp_id+"' name='mandatory__"+temp_id+"'>\
+  </section>"
 
   var open_addons = "<section id='addons__"+temp_id+"'>";
   var close_addons = "</section>";
   var up_down = '<a href="#" class="up"><i class="fas fa-arrow-up"></i></a> <a href="#" class="down"><i class="fas fa-arrow-down"></i></a><a href="#" class="trash"><i class="far fa-trash-alt"></i></a>';
 
   contents += field_type + field_name + field_prepend + field_property + open_addons;
-  if (field =='Textbox') { contents += field_value + field_placeholder; }
-  else if (field =='Textarea') { contents += field_placeholder; }
-  else if (field =='Date') { contents += field_calendar + field_browse; }
-  else if (field =='Vocab') { contents += field_available_vocabularies + accepted_values_vocabularies + field_placeholder + field_browse; }
-  else if (field =='Multimedia') { contents += field_multimedia + field_placeholder; }
-  else if (field =='WebsitePreview') { contents += field_placeholder; }
+  if (field =='Textbox') { contents += field_value + field_placeholder + field_mandatory; }
+  else if (field =='Textarea') { contents += field_placeholder + field_mandatory; }
+  else if (field =='Date') { contents += field_calendar + field_browse + field_mandatory; }
+  else if (field =='Vocab') { contents += field_available_vocabularies + accepted_values_vocabularies + field_placeholder + field_browse + field_mandatory; }
+  else if (field =='Multimedia') { contents += field_multimedia + field_placeholder + field_mandatory; }
+  else if (field =='WebsitePreview') { contents += field_placeholder + field_mandatory; }
   else if (field =='KnowledgeExtractor') {
     if ($("select option:selected[value='KnowledgeExtractor']").length > 0) {
       alert("Max. 1 Knowledge Extraction field allowed");
@@ -1742,6 +1763,11 @@ function disable_other_cb(ckType) {
         ckName[i].disabled = false;
       }
     }
+
+  // make the field mandatory
+  var mandatory_checkbox_id = ckType.id.replace("disambiguate", "mandatory");
+  console.log(mandatory_checkbox_id)
+  $('#'+mandatory_checkbox_id).prop('checked', true); 
 };
 
 // when changing field type, change the form
@@ -2219,4 +2245,21 @@ function next_extractor(element, id, type) {
       call_sparqlanything(encodeURIComponent(object_item["-QUERY"].replace("{", "{ SERVICE <"+object_item["-URL"]+"> {").replace("}", "}}")), id, element_id, type);
     }
   }
+}
+
+
+// TODO: bring it to the right position within this file
+function check_mandatory_fields(){
+  var is_valid = true;
+
+  $('[note="True"]').each(function() {
+    if ($(this).val() === '' && !$('[data-input="'+$(this).attr('id')+'"]').length) {
+      /* in principle, the header could be changed through the back-end application. 
+      However, this would cause the loss of all inserted values. */
+      $('header').find('h3').eq(0).text("The form is not valid, please check mandatory fields")
+      window.scrollTo(0, 0);
+      is_valid = false;
+    }
+  })
+  return is_valid;
 }

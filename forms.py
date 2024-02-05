@@ -57,8 +57,8 @@ def get_form(json_form, from_dict=False):
 		# all
 		myid = field['id']
 		description = field['label'] if 'label' in field and len(field['label']) > 0 else 'input'
-		pre_a = "<span class='tip' data-toggle='tooltip' data-placement='bottom' title='"
-		pre_b = "'><i class='fas fa-info-circle'></i></span>"
+		pre_a = '<span class="tip" data-toggle="tooltip" data-placement="bottom" title="'
+		pre_b = '"><i class="fas fa-info-circle"></i></span>'
 		prepend = pre_a+field['prepend']+pre_b if 'prepend' in field and len(field['prepend']) > 0 else ''
 		disabled = 'disabled' if 'disabled' in field and field['disabled'] == "True" else ''
 		classes = field['class'] if 'class' in field and len(field['class']) > 0 else ''
@@ -75,6 +75,7 @@ def get_form(json_form, from_dict=False):
 		classes = classes+' websitePreview' if field['type'] == 'WebsitePreview' else classes
 		classes = classes+' ('+res_class+') '+disabled
 		autocomplete = field['cache_autocomplete'] if 'cache_autocomplete' in field and len(field['cache_autocomplete']) > 0 else ''
+		mandatory = field['mandatory'] if 'mandatory' in field and field['mandatory'] == 'True' else 'False'
 
 		# text box
 		placeholder = field['placeholder'] if 'placeholder' in field else None
@@ -92,7 +93,8 @@ def get_form(json_form, from_dict=False):
 				placeholder=placeholder,
 				pre = prepend,
 				class_= classes,
-				value=default) , )
+				value=default,
+				note = mandatory) , )
 			else:
 				params = params + (form.Textbox(myid,
 				description = description,
@@ -100,7 +102,8 @@ def get_form(json_form, from_dict=False):
 				placeholder=placeholder,
 				pre = prepend,
 				class_= classes,
-				value=default), )
+				value=default,
+				note = mandatory), )
 
 		# Multimedia Link
 		if field['type'] == 'Multimedia':
@@ -109,7 +112,8 @@ def get_form(json_form, from_dict=False):
 			id=myid,
 			pre = prepend,
 			class_= classes,
-			value=default) , )
+			value=default,
+			note = mandatory) , )
 			
 
 		# Text box
@@ -120,7 +124,8 @@ def get_form(json_form, from_dict=False):
 			placeholder=placeholder,
 			pre = prepend,
 			class_= classes,
-			value=default), )
+			value=default,
+			note = mandatory), )
 
 		if field['type'] == 'Date':
 			if field['calendar'] == 'Month':

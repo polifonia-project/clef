@@ -38,7 +38,7 @@ $var project = project
 										<option value='WebsitePreview'>Website Preview (iframe)</option>
 										</select>
 										<script type="text/javascript">
-											$$("#type__$id option[value$$=$field['type']").attr("selected","selected");
+											$$("#type__$id option[value$$=$field['type']]").attr("selected","selected");
 										</script>
 									</section>
 
@@ -61,7 +61,6 @@ $var project = project
 										<div id="searchresult"> </div>
 									</section>
 
-
 									<section id="addons__$id">
 										$if field['type'] == 'Textbox':
 											<!-- VALUE -->
@@ -75,7 +74,7 @@ $var project = project
 													<option value="URL">URL</option>
 												</select>
 												<script type="text/javascript">
-													$$("#value__$id option[value$$=$field['value']").attr("selected","selected");
+													$$("#value__$id option[value$$=$field['value']]").attr("selected","selected");
 												</script>
 											</section>
 
@@ -101,7 +100,7 @@ $var project = project
 													<option value='Year'>Year</option>
 												</select>
 												<script type="text/javascript">
-													$$("#calendar__$id option[value$$=$field['calendar']").attr("selected","selected");
+													$$("#calendar__$id option[value$$=$field['calendar']]").attr("selected","selected");
 												</script>
 											</section>
 										$elif field['type'] == 'Multimedia':
@@ -187,6 +186,12 @@ $var project = project
 												<label class="left col-md-11 col-sm-6" for="disambiguate__$id">use this value as primary label (e.g. book title)</label>
 												<input $checked_disambiguate class='disambiguate' onClick='disable_other_cb(this)' type="checkbox" id="disambiguate__$id" name="disambiguate__$id">
 											</section>
+										<!-- mandatory fields -->
+										<section class="row">
+											$ checked_mandatory = "checked=checked" if 'mandatory'in field and field["mandatory"] == "True" else ""
+											<label class="left col-md-11 col-sm-6" for="mandatory__$id">make this value mandatory</label>
+											<input $checked_mandatory type="checkbox" id="mandatory__$id" name="mandatory__$id">
+										</section>
 									</section>
 								$else:
 									<!-- KNOWLEDGE EXTRACTOR -->

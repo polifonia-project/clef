@@ -69,48 +69,49 @@ $var project = project
 													$$("#$id option[value$$='$graphdata[id][0][0]']").attr("selected","selected");
 												</script>
 										$else:
-										$:input.render()
-										<!-- SKOS vocabs -->
-										$if " vocab " in input.attrs["class"]:
-											$ list_vocabs = "//".join(list(skos_vocabs.keys()))
-											$ selectedVocabs = str(skos_vocabs)
-											<script type="text/javascript">
-												var skos_to_string = '$selectedVocabs'.replace(/&#39;/g, '"');
-												var list_vocabs = '$list_vocabs'.split("//")
-												var skos_vocabs_json = JSON.parse(skos_to_string)
-											</script>
-										<!-- text box with URI,label -->
-										$if len(graphdata[id]) > 0 and "multimedia" not in input.attrs["class"] and "websitePreview" not in input.attrs["class"]:
-											$for k_v in graphdata[id]:
+											$:input.render()
+											<!-- SKOS vocabs -->
+											$if " vocabularyField " in input.attrs["class"]:
+												$ list_vocabs = "//".join(list(skos_vocabs.keys()))
+												$ selectedVocabs = str(skos_vocabs)
+												<script type="text/javascript">
+													var skos_to_string = '$selectedVocabs'.replace(/&#39;/g, '"');
+													var selected_vocabs = "$input.attrs['class']";
+													var list_vocabs = '$list_vocabs'.split("//")
+													var skos_vocabs_json = JSON.parse(skos_to_string)
+												</script>
+											<!-- text box with URI,label -->
+											$if len(graphdata[id]) > 0 and "multimedia" not in input.attrs["class"] and "websitePreview" not in input.attrs["class"]:
+												$for k_v in graphdata[id]:
+														<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>
+														<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
+											$elif "multimedia" in input.attrs["class"]:
+												<!-- multimedia -->
+												$for k_v in graphdata[id]:
+													<div class='multimediaTag $k_v[0]'>
+														$ format = k_v[1].split(".")[-1]
+														$if format in ["mp3", "wav", "wma", "ogg"]:
+															<span class="MMtag file_audio" data-id="$:k_v[1]"><i class="fas fa-eye"></i></span>
+														$elif format in ["apng", "avif", "gif", "ico", "jpg", "jpeg", "jfif", "pjpeg", "pjp", "png", "svg", "webp"]:
+															<span class="MMtag file_image" data-id="$:k_v[1]"><i class="fas fa-eye"></i></span>
+														$else:
+															<span class="MMtag file_video" data-id="$:k_v[1]"><i class="fas fa-eye"></i></span>													
+														<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>
+														<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
+													</div>
+											$else:
+												<!-- iframes -->
+												$for k_v in graphdata[id]:
+													<iframe allow='autoplay' class='col-md-11 iframePreview' src='$:k_v[1]' crossorigin></iframe>
 													<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>
 													<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
-										$elif "multimedia" in input.attrs["class"]:
-											<!-- multimedia -->
-											$for k_v in graphdata[id]:
-												<div class='multimediaTag $k_v[0]'>
-													$ format = k_v[1].split(".")[-1]
-													$if format in ["mp3", "wav", "wma", "ogg"]:
-														<span class="MMtag file_audio" data-id="$:k_v[1]"><i class="fas fa-eye"></i></span>
-													$elif format in ["apng", "avif", "gif", "ico", "jpg", "jpeg", "jfif", "pjpeg", "pjp", "png", "svg", "webp"]:
-														<span class="MMtag file_image" data-id="$:k_v[1]"><i class="fas fa-eye"></i></span>
-													$else:
-														<span class="MMtag file_video" data-id="$:k_v[1]"><i class="fas fa-eye"></i></span>													
-													<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>
-													<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
-												</div>
-										$else:
-											<!-- iframes -->
-											$for k_v in graphdata[id]:
-												<iframe allow='autoplay' class='col-md-11 iframePreview' src='$:k_v[1]' crossorigin></iframe>
-												<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>
-												<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
 									$else:
 										$:input.render()
 										$if type(input) == Dropdown:
 											<script type="text/javascript">
 												$$('#$id').prepend($$('<option selected=selected value="None">Select from the list</option>'));
 											</script>
-										$elif " vocab " in input.attrs["class"]:
+										$elif "vocabularyField" in input.attrs["class"]:
 											$ list_vocabs = "//".join(list(skos_vocabs.keys()))
 											$ selectedVocabs = str(skos_vocabs)
 											<script type="text/javascript">
@@ -157,7 +158,7 @@ $var project = project
 
 			<section class="buttonsSection">
 				<button class="btn btn-dark" name="action" value="saveRecord$:graph" type="submit">Save</button>
-        <button class="btn btn-dark" name="action" value="publishRecord$:graph" type="submit">Publish</button>
+        		<button class="btn btn-dark" name="action" value="publishRecord$:graph" type="submit">Publish</button>
 			</section>
 		</form>
 	</section>
@@ -226,3 +227,4 @@ $var project = project
 		</section>
 	</section>
 </section>
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>

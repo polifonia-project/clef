@@ -163,6 +163,7 @@ def fields_to_json(data, json_file, skos_file):
 			d['values'] = { pair.split(",")[0].strip():pair.split(",")[1].strip() for pair in values_pairs }
 		d["disambiguate"] = "True" if 'disambiguate' in d else "False"
 		d["browse"] = "True" if 'browse' in d else "False"
+		d["mandatory"] = "True" if 'mandatory' in d else "False" # add mandatory fields
 		# default if missing
 		if d["type"] == "None":
 			d["type"] = "Textbox" if "values" not in d else "Dropdown"
@@ -492,3 +493,13 @@ def update_knowledge_extraction(data, KE_file):
 			with open(KE_file, 'w') as file:
 				json.dump(knowledge_extractor, file)
 			print("Knowledge extractor: successfully updated!")
+
+def check_mandatory_fields(recordData):
+	tpl_ID = recordData.templateID
+	with open(tpl_ID,'r') as tpl_file:
+		tpl_fields = json.load(tpl_file)
+	for field in tpl_fields:
+		if 'mandatory' in field and field['mandatory'] == 'True':
+			if recordData[field['id']] == '' and not any(key.startswith(field['id']) and recordData[key] != '' for key in recordData):
+				return False
+	return True

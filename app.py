@@ -264,7 +264,7 @@ class Template:
 		else:
 			template_path = RESOURCE_TEMPLATES+'template-'+res_name+'.json'
 			if 'action' in data and 'deleteTemplate' in data.action:
-				#os.remove(template_path) # remove json file
+				# os.remove(template_path) # remove json file
 				u.updateTemplateList(res_name,None,remove=True) # update tpl list
 				u.update_ask_class(template_path, res_name,remove=True) # update ask_class
 				raise web.seeother(prefixLocal+'/welcome-1')
@@ -592,19 +592,27 @@ class Record(object):
 
 			recordID = recordData.recordID if 'recordID' in recordData else None
 			templateID = recordData.templateID if 'templateID' in recordData else None
+			invalid_input = recordData.invalid_input if 'invalid_input' in recordData else None
 			u.log_output('CREATED RECORD', session['logged_in'], session['username'],recordID)
 
 			if recordID:
-				u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
-				userID = user.replace('@','-at-').replace('.','-dot-')
-				file_path = mapping.inputToRDF(recordData, userID, 'not modified', KNOWLEDGE_EXTRACTION, tpl_form=templateID)
-				if conf.github_backup == "True":
-					try:
-						github_sync.push(file_path,"main", session['gituser'], session['username'], session['bearer_token'])
-					except Exception as e:
-						print(e)
+				if invalid_input:
+					f = forms.get_form(templateID)
+					extractor = u.has_extractor(templateID) 
+					return render.record(record_form=f, pageID=name, user=user, alert=block_user,
+									limit=limit, is_git_auth=is_git_auth,invalid=True,
+									project=conf.myProject,template=templateID,skos_vocabs=skos_file,knowledge_extractor=extractor)
+				else:
+					u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
+					userID = user.replace('@','-at-').replace('.','-dot-')
+					file_path = mapping.inputToRDF(recordData, userID, 'not modified', KNOWLEDGE_EXTRACTION, tpl_form=templateID)
+					if conf.github_backup == "True":
+						try:
+							github_sync.push(file_path,"main", session['gituser'], session['username'], session['bearer_token'])
+						except Exception as e:
+							print(e)
 
-				raise web.seeother(whereto)
+					raise web.seeother(whereto)
 			else:
 				create_record(recordData)
 
@@ -795,7 +803,7 @@ class Review(object):
 
 		# save the new record for future publication
 		if actions.action.startswith('save'):
-			if not f.validates():
+			if not f.validates() or not u.check_mandatory_fields(web.input()):
 				graphToRebuild = conf.base+name+'/'
 				recordID = name
 				data = queries.getData(graphToRebuild,templateID)
@@ -805,10 +813,17 @@ class Review(object):
 				with open(templateID) as tpl_form:
 					fields = json.load(tpl_form)
 				ids_dropdown = u.get_dropdowns(fields) # TODO CHANGE
+				if not os.path.isfile(SKOS_VOCAB):
+					skos_file = None
+				else:
+					with open(SKOS_VOCAB, 'r') as skos_list:
+						skos_file = json.load(skos_list)
+				extractor = queries.retrieve_extractions(conf.base+name) if u.has_extractor(name, modify=True) else False
 				return render.review(graphdata=data, pageID=recordID, record_form=f,
 									graph=graphToRebuild, user=session['username'],
 									ids_dropdown=ids_dropdown,is_git_auth=is_git_auth,
-									invalid=True,project=conf.myProject,template=templateID)
+									invalid=True,project=conf.myProject,template=templateID,
+									skos_vocabs=skos_file,knowledge_extractor=extractor)
 			else:
 				recordData = web.input()
 				recordID = recordData.recordID
@@ -827,7 +842,7 @@ class Review(object):
 
 		# publish the record
 		elif actions.action.startswith('publish'):
-			if not f.validates():
+			if not f.validates() or not u.check_mandatory_fields(web.input()):
 				graphToRebuild = conf.base+name+'/'
 				recordID = name
 				data = queries.getData(graphToRebuild,templateID)

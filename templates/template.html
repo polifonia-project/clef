@@ -1,4 +1,4 @@
-$def with(f,user,res_type,res_name,is_git_auth, project, skos_vocabs)
+$def with(f,user,res_type,res_name,is_git_auth, project, skos_vocabs, templates)
 $var user = user
 $var is_git_auth = is_git_auth
 $var project = project
@@ -36,6 +36,7 @@ $var project = project
 										<option value="Multimedia">Multimedia (audio, image, video)</option>
 										<option value="Vocab">Vocabulary (SKOS)</option>
 										<option value='WebsitePreview'>Website Preview (iframe)</option>
+										<option value='Subtemplate'>Subtemplate</option>
 										</select>
 										<script type="text/javascript">
 											$$("#type__$id option[value$$=$field['type']]").attr("selected","selected");
@@ -214,11 +215,23 @@ $var project = project
 					<a class="link_btn" onclick="add_field('Vocab','$res_type', '$vocabs')" name="add_vocabulary">Add Vocabulary</a>
 					<a class="link_btn" onclick="add_field('WebsitePreview','$res_type')" name="add_preview">Add Website Preview</a>
 					<a class="link_btn" onclick="add_field('KnowledgeExtractor','$res_type')" name="add_extractor">Add Knowledge Extraction</a>
+					<a class="link_btn" onclick="add_field('Subtemplate','$res_type')" name="add_extractor">Add Subtemplate</a>
 					<script type="text/javascript">
 						var available_skos_vocabularies = '$vocabs';
 					</script>
 				</section>
 			</section>
+			$ id = templates.get_default_id()
+			<section class="row">
+				$:templates.render()
+			</section>
+			<script type="text/javascript">
+				$$('#$id').prepend($$('<optgroup label="-------------"></optgroup>'));
+				$$('#$id').prepend($$('<option value="CreateNewSubtemplate">Create a new subtemplate</option>'));
+				$$('#$id').prepend($$('<option value="None">Select from the list</option>'));
+				var importable_templates = $$('#$id').html();
+				$$('#$id').hide()
+			</script>
 			<section class="buttonsSection">
 				<button id="updateTemplate" name="action" value="updateTemplate-$res_name" class="btn btn-dark" type="submit">Save</button>
 				<button class="btn btn-dark delete_template" data-toggle="modal" data-target="#popup" name="action" value="deleteTemplate-$res_name" type="submit" title="delete">Delete <i class="far fa-trash-alt"></i></button>

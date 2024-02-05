@@ -1574,6 +1574,7 @@ function add_field(field, res_type, backend_file=null) {
       <option value='Vocab' "+is_selected('Vocab',field)+">Vocabulary (SKOS)</option>\
       <option value='WebsitePreview' "+is_selected('WebsitePreview',field)+">Website Preview (iframe)</option>\
       <option value='KnowledgeExtractor' "+is_selected('KnowledgeExtractor',field)+">Knowledge Extraction</option>\
+      <option value='Subtemplate' "+is_selected('Subtemplate',field)+">Subtemplate</option>\
     </select>\
   </section>";
 
@@ -1667,7 +1668,7 @@ function add_field(field, res_type, backend_file=null) {
   var field_browse = "<section class='row'>\
     <label class='col-md-11 col-sm-6' for='browse__"+temp_id+"'>use this value as a filter in <em>Explore</em> page</label>\
     <input type='checkbox' id='browse__"+temp_id+"' name='browse__"+temp_id+"'>\
-  </section>"
+  </section>";
   
   var field_extractor = "<section class='row'>\
     <label class='col-md-3'>KNOWLEDGE EXTRACTOR</label>\
@@ -1677,7 +1678,22 @@ function add_field(field, res_type, backend_file=null) {
   var field_mandatory = "<section class='row'>\
     <label class='col-md-11 col-sm-6' for='mandatory__"+temp_id+"'>make this value mandatory</label>\
     <input type='checkbox' id='mandatory__"+temp_id+"' name='mandatory__"+temp_id+"'>\
-  </section>"
+  </section>";
+
+  var field_subtemplate_name = "<section class='row'>\
+    <label class='col-md-3' for='subtemplate_name__"+temp_id+"'>TEMPLATE NAME</label>\
+    <input type='text' id='subtemplate_name__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_name__"+temp_id+"' disabled>\
+  </section>";
+
+  var field_subtemplate_class = "<section class='row'>\
+    <label class='col-md-3' for='subtemplate_class__"+temp_id+"'>OWL CLASS</label>\
+    <input type='text' id='subtemplate_class__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_class__"+temp_id+"' disabled>\
+  </section>";
+
+  var field_subtemplate_import = "<section class='row'>\
+    <label class='col-md-3'>IMPORT A TEMPLATE</label>\
+    <select class='col-md-8 ("+res_type+") custom-select' id='import_subtemplate__"+temp_id+"' name='import_subtemplate__"+temp_id+"' onchange='import_subtemplate(this)'>"+importable_templates+"</select>\
+  </section>";
 
   var open_addons = "<section id='addons__"+temp_id+"'>";
   var close_addons = "</section>";
@@ -1690,6 +1706,7 @@ function add_field(field, res_type, backend_file=null) {
   else if (field =='Vocab') { contents += field_available_vocabularies + accepted_values_vocabularies + field_placeholder + field_browse + field_mandatory; }
   else if (field =='Multimedia') { contents += field_multimedia + field_placeholder + field_mandatory; }
   else if (field =='WebsitePreview') { contents += field_placeholder + field_mandatory; }
+  else if (field =='Subtemplate') { contents = field_type + field_name + field_prepend + field_property + field_subtemplate_import + field_subtemplate_name + field_subtemplate_class + open_addons; }
   else if (field =='KnowledgeExtractor') {
     if ($("select option:selected[value='KnowledgeExtractor']").length > 0) {
       alert("Max. 1 Knowledge Extraction field allowed");
@@ -1708,6 +1725,31 @@ function add_field(field, res_type, backend_file=null) {
      $(this).parent().remove();
   });
 };
+
+function import_subtemplate(el) {
+  var requested_template = el.value;
+  var requested_name = el.options[el.selectedIndex].text;
+  var encoded_template = encodeURIComponent(requested_template.replace("resource_templates/", ""));
+  var url = window.location.href.split("/");
+  var url_tpl = url[url.length-1];
+  var url_request = '/'+url_tpl+'?template=' + encoded_template;
+  console.log(url_request)
+  $.ajax({
+    type: 'GET',
+    url: url_request,
+    success: function(result_json) {
+      var results = result_json.substring(1, result_json.length - 1).split(", ", 2);
+      var resource_class = results[0], resource_template = results[1];
+      var name_field = $(el).parent().next();
+      name_field.find('input').eq(0).val(requested_name);
+      name_field.next().find('input').eq(0).val(resource_class);
+    },
+    error: function(xhr, status, error) {
+      console.error("AJAX error:", error);
+    }
+  });
+}
+
 
 // if value == literal add disambiguate checkbox
 function add_disambiguate(temp_id, el) {

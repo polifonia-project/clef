@@ -228,7 +228,6 @@ class Template:
 		"""
 
 		# retrieve importable template
-		print(web.input())
 		if web.input() and "template" in web.input():
 			try:
 				requested_template = web.input().template.decode('utf-8').strip()
@@ -244,8 +243,7 @@ class Template:
 
 			return resource_class, template
 
-
-
+		# display template
 		is_git_auth = github_sync.is_git_auth()
 
 		with open(TEMPLATE_LIST,'r') as tpl_file:
@@ -284,6 +282,7 @@ class Template:
 		"""
 
 		data = web.input()
+		print(data)
 		if 'action' in data and 'updateTemplate' not in data.action and 'deleteTemplate' not in data.action:
 			create_record(data)
 		else:

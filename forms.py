@@ -30,7 +30,7 @@ def parse_config_variables(text:str, conf):
 		text = text.replace(k, v)
 	return text
 
-def get_form(json_form, from_dict=False):
+def get_form(json_form, from_dict=False, subtemplate=False):
 	""" read config in 'template-(.*).json' and return a webpy form """
 	import io
 	if from_dict == False:
@@ -94,7 +94,7 @@ def get_form(json_form, from_dict=False):
 				pre = prepend,
 				class_= classes,
 				value=default,
-				note = mandatory) , )
+				mandatory = mandatory) , )
 			else:
 				params = params + (form.Textbox(myid,
 				description = description,
@@ -103,7 +103,7 @@ def get_form(json_form, from_dict=False):
 				pre = prepend,
 				class_= classes,
 				value=default,
-				note = mandatory), )
+				mandatory = mandatory), )
 
 		# Multimedia Link
 		if field['type'] == 'Multimedia':
@@ -113,7 +113,7 @@ def get_form(json_form, from_dict=False):
 			pre = prepend,
 			class_= classes,
 			value=default,
-			note = mandatory) , )
+			mandatory = mandatory) , )
 			
 
 		# Text box
@@ -125,7 +125,7 @@ def get_form(json_form, from_dict=False):
 			pre = prepend,
 			class_= classes,
 			value=default,
-			note = mandatory), )
+			mandatory = mandatory), )
 
 		if field['type'] == 'Date':
 			if field['calendar'] == 'Month':
@@ -133,20 +133,23 @@ def get_form(json_form, from_dict=False):
 				description = description,
 				id=myid,
 				pre = prepend,
-				class_= classes), )
+				class_= classes,
+				mandatory=mandatory), )
 			elif field['calendar'] == 'Day':
 				params = params + (form.Date(myid,
 				description = description,
 				id=myid,
 				pre = prepend,
-				class_= classes), )
+				class_= classes,
+				mandatory=mandatory), )
 			elif field['calendar'] == 'Year':
 				params = params + (form.Textbox(myid,
 				description = description,
 				id=myid,
 				pre = prepend,
 				class_= classes,
-				value=default), )
+				value=default,
+				mandatory=mandatory), )
 
 		if field['type'] == 'Dropdown':
 			params = params + (form.Dropdown(myid,
@@ -155,7 +158,8 @@ def get_form(json_form, from_dict=False):
 			placeholder=placeholder,
 			id=myid,
 			pre = prepend,
-			class_= classes), )
+			class_= classes,
+			mandatory = mandatory), )
 
 		if field['type'] == 'Checkbox':
 			prepend_title = '<section class="checkbox_group_label label col-12">'+description+'</section>'
@@ -166,7 +170,8 @@ def get_form(json_form, from_dict=False):
 			id=myid,
 			pre = prepend_title+prepend,
 			class_= classes+' checkbox_group',
-			checked=False), )
+			checked=False,
+			mandatory = mandatory), )
 
 			for value in dropdown_values[1:]:
 				i += 1
@@ -176,10 +181,26 @@ def get_form(json_form, from_dict=False):
 				id=myid,
 				pre = '',
 				class_= classes+' checkbox_group following_checkbox',
-				checked=False), )
+				checked=False,
+				mandatory = mandatory), )
 
-	myform = form.Form(*params)
-	return myform
+		if field['type'] == 'Subtemplate':
+			resource_class = [t["type"] for t in tpl_list if t["template"] == field['import_subtemplate']][0]
+			params = params + (form.Textbox(myid,
+				description = description,
+				id=myid,
+				placeholder=placeholder,
+				pre = prepend,
+				class_= classes,
+				value=default,
+				mandatory = mandatory,
+				subtemplate = resource_class), ) + get_form(field['import_subtemplate'], subtemplate=True)
+
+	if subtemplate:
+		return params
+	else: 
+		myform = form.Form(*params)
+		return myform
 
 
 searchRecord = form.Form(

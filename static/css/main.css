@@ -1995,6 +1995,35 @@ button#showTemplates {
   margin-top: 0.7em;
 }
 
+/* subtemplates */
+.subform_section {
+  right:0px;
+  bottom:0px;
+  width: 40%;
+  top: 0;
+  z-index: 1022;
+  background-color: #F5F6FA;
+  position: fixed;
+  overflow-y: scroll;
+}
+
+.subform {
+  z-index: 1022;
+  display: block;
+  margin-top: 8em;
+  right: 0%;
+  position: relative;
+  top:0%;
+}
+
+.subform .row {
+  margin-right: 2em!important;
+}
+
+.subform_buttons {
+  margin-top: 3em !important;
+}
+
 /* extra */
 .fa-plus-circle, .fa-eye, .fa-trash{color: rgba(100,23,180,1); cursor: pointer;}
 .link_btn, .btn {white-space: nowrap;}

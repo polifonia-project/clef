@@ -3,6 +3,20 @@ $var user = user
 $var is_git_auth = is_git_auth
 $var project = project
 
+<!-- Subtemplate field -->
+$ id = templates.get_default_id()
+<section class="row">
+	$:templates.render()
+</section>
+<script type="text/javascript">
+	$$('#$id').prepend($$('<optgroup label="-------------"></optgroup>'));
+	$$('#$id').prepend($$('<option value="CreateNewSubtemplate">Create a new subtemplate</option>'));
+	$$('#$id').prepend($$('<option value="None">Select from the list</option>'));
+	var importable_templates = $$('#$id').html();
+	$$('#$id').attr("disabled", true);
+	$$('#$id').hide()
+</script>
+
 <header class="row">
 	<h3 class="col-md-12 col-sm-12">$res_name</h3>
 	<p class="col-md-12 col-sm-12" id='res_type$res_type' class='col-md-8'>
@@ -162,6 +176,26 @@ $var project = project
 												<label class='col-md-3'>PLACEHOLDER <br><span class="comment">an example value to be shown to the user (optional)</span></label>
 												<input type='text' id='placeholder__$id' class='col-md-8 align-self-start' name='placeholder__$id' value="${field['placeholder']}"/>
 											</section>
+										$elif field['type'] == 'Subtemplate':
+											<section class='row'>
+												<label class='col-md-3'>IMPORT A TEMPLATE</label>
+												<select class='col-md-8 custom-select' id='import_subtemplate__$id' name='import_subtemplate__$id' onchange='import_subtemplate(this)'>
+												</select>
+											</section>
+											<section class='row'>
+												<label class='col-md-3' for='subtemplate_name__"+temp_id+"'>TEMPLATE NAME</label>
+												<input type='text' id='subtemplate_name__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_name__"+temp_id+"' disabled>
+											</section>
+											
+											<section class='row'>
+												<label class='col-md-3' for='subtemplate_class__"+temp_id+"'>OWL CLASS</label>
+												<input type='text' id='subtemplate_class__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_class__"+temp_id+"' disabled>
+											</section>
+											<script type="text/javascript">
+												$$("#import_subtemplate__$id").append(importable_templates);
+												$$("#import_subtemplate__$id option[value$$='"+"$field['import_subtemplate']"+"']").attr("selected","selected");
+												import_subtemplate($$("#import_subtemplate__$id")[0]);
+											</script>
 										$else:
 											<!-- VALUES -->
 											<section class="row">
@@ -221,17 +255,6 @@ $var project = project
 					</script>
 				</section>
 			</section>
-			$ id = templates.get_default_id()
-			<section class="row">
-				$:templates.render()
-			</section>
-			<script type="text/javascript">
-				$$('#$id').prepend($$('<optgroup label="-------------"></optgroup>'));
-				$$('#$id').prepend($$('<option value="CreateNewSubtemplate">Create a new subtemplate</option>'));
-				$$('#$id').prepend($$('<option value="None">Select from the list</option>'));
-				var importable_templates = $$('#$id').html();
-				$$('#$id').hide()
-			</script>
 			<section class="buttonsSection">
 				<button id="updateTemplate" name="action" value="updateTemplate-$res_name" class="btn btn-dark" type="submit">Save</button>
 				<button class="btn btn-dark delete_template" data-toggle="modal" data-target="#popup" name="action" value="deleteTemplate-$res_name" type="submit" title="delete">Delete <i class="far fa-trash-alt"></i></button>

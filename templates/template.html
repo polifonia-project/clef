@@ -227,6 +227,12 @@ $ id = templates.get_default_id()
 											<label class="left col-md-11 col-sm-6" for="mandatory__$id">make this value mandatory</label>
 											<input $checked_mandatory type="checkbox" id="mandatory__$id" name="mandatory__$id">
 										</section>
+										<!-- hidden fields -->
+										<section class="row">
+											$ checked_hidden = "checked=checked" if 'hidden'in field and field["hidden"] == "True" else ""
+											<label class="left col-md-11 col-sm-6" for="hidden__$id">hide this field from the front-end view</label>
+											<input $checked_hidden type="checkbox" id="hidden__$id" name="hidden__$id">
+										</section>
 									</section>
 								$else:
 									<!-- KNOWLEDGE EXTRACTOR -->

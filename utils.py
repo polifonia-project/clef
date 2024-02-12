@@ -164,6 +164,7 @@ def fields_to_json(data, json_file, skos_file):
 		d["disambiguate"] = "True" if 'disambiguate' in d else "False"
 		d["browse"] = "True" if 'browse' in d else "False"
 		d["mandatory"] = "True" if 'mandatory' in d else "False" # add mandatory fields
+		d['hidden'] = "True" if 'hidden' in d else "False" # add hidden fields
 		# default if missing
 		if d["type"] == "None":
 			d["type"] = "Textbox" if "values" not in d else "Dropdown"
@@ -175,7 +176,7 @@ def fields_to_json(data, json_file, skos_file):
 				d["value"] = "gYearMonth"
 			else:
 				d["value"] = "gYear"
-		if d['type'] == "Vocab":
+		if d['type'] in ["Vocab", "Subtemplate"]:
 			d["value"] = "URI"
 		# multimedia
 		if d['type'] in ["Multimedia", "WebsitePreview"]:

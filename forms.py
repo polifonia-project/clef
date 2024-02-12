@@ -54,49 +54,72 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 	res_class = res_class[0] if len(res_class) > 0 else "none"
 
 	for field in fields:
-		# all
-		myid = field['id']
-		description = field['label'] if 'label' in field and len(field['label']) > 0 else 'input'
-		pre_a = '<span class="tip" data-toggle="tooltip" data-placement="bottom" title="'
-		pre_b = '"><i class="fas fa-info-circle"></i></span>'
-		prepend = pre_a+field['prepend']+pre_b if 'prepend' in field and len(field['prepend']) > 0 else ''
-		disabled = 'disabled' if 'disabled' in field and field['disabled'] == "True" else ''
-		classes = field['class'] if 'class' in field and len(field['class']) > 0 else ''
-		if 'vocab' in field:
-			for vocab in field['vocab']:
-				classes = classes + " " + vocab
-		classes = classes+' searchWikidata' if 'searchWikidata' in field and field['searchWikidata'] == 'True' else classes
-		classes = classes+' searchGeonames' if 'searchGeonames' in field and field['searchGeonames'] == 'True' else classes
-		classes = classes+' urlField' if 'url' in field and field['url'] == 'True' else classes
-		classes = classes+' disambiguate' if "disambiguate" in field and field["disambiguate"] == 'True' else classes
-		classes = classes+' multimediaField '+ field['multimedia'] if field['type'] == 'Multimedia' else classes
-		classes = classes+' vocabularyField' if field['type'] == 'Vocab' else classes
-		classes = classes+' oneVocableAccepted' if 'vocables' in field and field['vocables'] == 'oneVocable' else classes
-		classes = classes+' websitePreview' if field['type'] == 'WebsitePreview' else classes
-		classes = classes+' ('+res_class+') '+disabled
-		autocomplete = field['cache_autocomplete'] if 'cache_autocomplete' in field and len(field['cache_autocomplete']) > 0 else ''
-		mandatory = field['mandatory'] if 'mandatory' in field and field['mandatory'] == 'True' else 'False'
+		if 'hidden' in field and field['hidden'] == 'False': # do not include hidden fields
+			# all
+			myid = field['id']
+			description = field['label'] if 'label' in field and len(field['label']) > 0 else 'input'
+			pre_a = '<span class="tip" data-toggle="tooltip" data-placement="bottom" title="'
+			pre_b = '"><i class="fas fa-info-circle"></i></span>'
+			prepend = pre_a+field['prepend']+pre_b if 'prepend' in field and len(field['prepend']) > 0 else ''
+			disabled = 'disabled' if 'disabled' in field and field['disabled'] == "True" else ''
+			classes = field['class'] if 'class' in field and len(field['class']) > 0 else ''
+			if 'vocab' in field:
+				for vocab in field['vocab']:
+					classes = classes + " " + vocab
+			classes = classes+' searchWikidata' if 'searchWikidata' in field and field['searchWikidata'] == 'True' else classes
+			classes = classes+' searchGeonames' if 'searchGeonames' in field and field['searchGeonames'] == 'True' else classes
+			classes = classes+' urlField' if 'url' in field and field['url'] == 'True' else classes
+			classes = classes+' disambiguate' if "disambiguate" in field and field["disambiguate"] == 'True' else classes
+			classes = classes+' multimediaField '+ field['multimedia'] if field['type'] == 'Multimedia' else classes
+			classes = classes+' vocabularyField' if field['type'] == 'Vocab' else classes
+			classes = classes+' oneVocableAccepted' if 'vocables' in field and field['vocables'] == 'oneVocable' else classes
+			classes = classes+' websitePreview' if field['type'] == 'WebsitePreview' else classes
+			classes = classes+' ('+res_class+') '+disabled
+			autocomplete = field['cache_autocomplete'] if 'cache_autocomplete' in field and len(field['cache_autocomplete']) > 0 else ''
+			mandatory = field['mandatory'] if 'mandatory' in field and field['mandatory'] == 'True' else 'False'
 
-		# text box
-		placeholder = field['placeholder'] if 'placeholder' in field else None
-		default = field['defaultvalue'] if 'defaultvalue' in field else ''
-		# dropdown
-		dropdown_values = [(k,v) for k,v in field['values'].items()] if 'values' in field else None
+			# text box
+			placeholder = field['placeholder'] if 'placeholder' in field else None
+			default = field['defaultvalue'] if 'defaultvalue' in field else ''
+			# dropdown
+			dropdown_values = [(k,v) for k,v in field['values'].items()] if 'values' in field else None
 
-		# Text box
-		if field['type'] in ['Textbox','Vocab', 'WebsitePreview']:
-			if "disambiguate" in field and field["disambiguate"] == 'True':
-				vpass = form.regexp(r".{1,200}$", 'must be between 1 and 200 characters')
-				params = params + (form.Textbox(myid, vpass,
+			# Text box
+			if field['type'] in ['Textbox','Vocab', 'WebsitePreview']:
+				if "disambiguate" in field and field["disambiguate"] == 'True':
+					vpass = form.regexp(r".{1,200}$", 'must be between 1 and 200 characters')
+					params = params + (form.Textbox(myid, vpass,
+					description = description,
+					id=myid,
+					placeholder=placeholder,
+					pre = prepend,
+					class_= classes,
+					value=default,
+					mandatory = mandatory) , )
+				else:
+					params = params + (form.Textbox(myid,
+					description = description,
+					id=myid,
+					placeholder=placeholder,
+					pre = prepend,
+					class_= classes,
+					value=default,
+					mandatory = mandatory), )
+
+			# Multimedia Link
+			if field['type'] == 'Multimedia':
+				params = params + (form.Textbox(myid,
 				description = description,
 				id=myid,
-				placeholder=placeholder,
 				pre = prepend,
 				class_= classes,
 				value=default,
 				mandatory = mandatory) , )
-			else:
-				params = params + (form.Textbox(myid,
+				
+
+			# Text box
+			if field['type'] == 'Textarea':
+				params = params + (form.Textarea(myid,
 				description = description,
 				id=myid,
 				placeholder=placeholder,
@@ -105,96 +128,75 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 				value=default,
 				mandatory = mandatory), )
 
-		# Multimedia Link
-		if field['type'] == 'Multimedia':
-			params = params + (form.Textbox(myid,
-			description = description,
-			id=myid,
-			pre = prepend,
-			class_= classes,
-			value=default,
-			mandatory = mandatory) , )
-			
+			if field['type'] == 'Date':
+				if field['calendar'] == 'Month':
+					params = params + (Month(myid,
+					description = description,
+					id=myid,
+					pre = prepend,
+					class_= classes,
+					mandatory=mandatory), )
+				elif field['calendar'] == 'Day':
+					params = params + (form.Date(myid,
+					description = description,
+					id=myid,
+					pre = prepend,
+					class_= classes,
+					mandatory=mandatory), )
+				elif field['calendar'] == 'Year':
+					params = params + (form.Textbox(myid,
+					description = description,
+					id=myid,
+					pre = prepend,
+					class_= classes,
+					value=default,
+					mandatory=mandatory), )
 
-		# Text box
-		if field['type'] == 'Textarea':
-			params = params + (form.Textarea(myid,
-			description = description,
-			id=myid,
-			placeholder=placeholder,
-			pre = prepend,
-			class_= classes,
-			value=default,
-			mandatory = mandatory), )
-
-		if field['type'] == 'Date':
-			if field['calendar'] == 'Month':
-				params = params + (Month(myid,
+			if field['type'] == 'Dropdown':
+				params = params + (form.Dropdown(myid,
 				description = description,
+				args=dropdown_values,
+				placeholder=placeholder,
 				id=myid,
 				pre = prepend,
 				class_= classes,
-				mandatory=mandatory), )
-			elif field['calendar'] == 'Day':
-				params = params + (form.Date(myid,
-				description = description,
-				id=myid,
-				pre = prepend,
-				class_= classes,
-				mandatory=mandatory), )
-			elif field['calendar'] == 'Year':
-				params = params + (form.Textbox(myid,
-				description = description,
-				id=myid,
-				pre = prepend,
-				class_= classes,
-				value=default,
-				mandatory=mandatory), )
+				mandatory = mandatory), )
 
-		if field['type'] == 'Dropdown':
-			params = params + (form.Dropdown(myid,
-			description = description,
-			args=dropdown_values,
-			placeholder=placeholder,
-			id=myid,
-			pre = prepend,
-			class_= classes,
-			mandatory = mandatory), )
-
-		if field['type'] == 'Checkbox':
-			prepend_title = '<section class="checkbox_group_label label col-12">'+description+'</section>'
-			i = 0
-			params = params + (form.Checkbox(myid+'-'+str(i),
-			value=dropdown_values[0][0]+','+dropdown_values[0][1],
-			description = dropdown_values[0][1],
-			id=myid,
-			pre = prepend_title+prepend,
-			class_= classes+' checkbox_group',
-			checked=False,
-			mandatory = mandatory), )
-
-			for value in dropdown_values[1:]:
-				i += 1
+			if field['type'] == 'Checkbox':
+				prepend_title = '<section class="checkbox_group_label label col-12">'+description+'</section>'
+				i = 0
 				params = params + (form.Checkbox(myid+'-'+str(i),
-				value=value[0]+','+value[1],
-				description = value[1],
+				value=dropdown_values[0][0]+','+dropdown_values[0][1],
+				description = dropdown_values[0][1],
 				id=myid,
-				pre = '',
-				class_= classes+' checkbox_group following_checkbox',
+				pre = prepend_title+prepend,
+				class_= classes+' checkbox_group',
 				checked=False,
 				mandatory = mandatory), )
 
-		if field['type'] == 'Subtemplate':
-			resource_class = [t["type"] for t in tpl_list if t["template"] == field['import_subtemplate']][0]
-			params = params + (form.Textbox(myid,
-				description = description,
-				id=myid,
-				placeholder=placeholder,
-				pre = prepend,
-				class_= classes,
-				value=default,
-				mandatory = mandatory,
-				subtemplate = resource_class), ) + get_form(field['import_subtemplate'], subtemplate=True)
+				for value in dropdown_values[1:]:
+					i += 1
+					params = params + (form.Checkbox(myid+'-'+str(i),
+					value=value[0]+','+value[1],
+					description = value[1],
+					id=myid,
+					pre = '',
+					class_= classes+' checkbox_group following_checkbox',
+					checked=False,
+					mandatory = mandatory), )
+
+			# subtemplate
+			if field['type'] == 'Subtemplate':
+				resource_class = [t["type"] for t in tpl_list if t["template"] == field['import_subtemplate']][0]
+				params = params + (form.Textbox(myid,
+					description = description,
+					id=myid,
+					placeholder=placeholder,
+					pre = prepend,
+					class_= classes,
+					value=default,
+					mandatory = mandatory,
+					subtemplate = resource_class), ) + get_form(field['import_subtemplate'], subtemplate=True)
 
 	if subtemplate:
 		return params

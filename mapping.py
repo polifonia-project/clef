@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import os
 import datetime
+import time
 import json
 import urllib.parse
 import web
-from web import form
+from web import form, storify
 import rdflib
 from rdflib import URIRef , XSD, Namespace , Literal
 from rdflib.namespace import OWL, DC , DCTERMS, RDF , RDFS
@@ -60,14 +61,15 @@ def getRightURIbase(value):
 	return WD+value if value.startswith('Q') else GEO+value if value.isdecimal() else VIAF+value[4:] if value.startswith("viaf") else ''+value if value.startswith("http") else base+value
 
 
-def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=None,tpl_form=None):
+def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=None,tpl_form=None, subrecords_dict=None):
 	""" transform input data into RDF, upload data to the triplestore, dump data locally """
 
 	# MAPPING FORM / PROPERTIES
 	if tpl_form:
 		with open(tpl_form) as config_form:
 			fields = json.load(config_form)
-	else:
+	else: 
+		#should this be deleted? 
 		with open(conf.myform) as config_form:
 			fields = json.load(config_form)
 
@@ -109,7 +111,7 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 		wd.add(( URIRef(base+graph_name+'/'), RDFS.label, Literal("no title") ))
 
 	for field in fields:
-		if field['type'] != 'KnowledgeExtractor':
+		if field['type'] not in ['KnowledgeExtractor', 'Subtemplate']:
 			# URI, Textarea (only text at this stage), Literals
 			value = getValuesFromFields(field['id'], recordData, fields) \
 					if 'value' in field and field['value'] in ['URI','Place'] else getValuesFromFields(field['id'], recordData, field_type=field['type']) if 'value' in field and field['value'] == 'URL' else recordData[field['id']]
@@ -158,7 +160,7 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 					wd.add(( URIRef(base+graph_name), SCHEMA.keywords, URIRef(entityURI) ))
 					wd.add(( URIRef( entityURI ), RDFS.label, Literal(entity[1].lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
 		# KNOWLEDGE EXTRACTION: import graphs
-		else:
+		elif field['type']=="KnowledgeExtractor":
 			with open(knowledge_extraction) as extraction_file:
 				extraction = json.load(extraction_file)
 			imported_graphs = extraction[recordID] if recordID in extraction else []
@@ -176,7 +178,18 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 							wd_extraction.add(( URIRef(urllib.parse.unquote(recordData[label])), RDFS.label,  Literal(label.replace(start, ""))))
 					wd_extraction.serialize(destination='records/'+recordID+"-extraction-"+str(graph['internalID'])+'.ttl', format='ttl', encoding='utf-8')
 					server.update('load <file:///'+dir_path+'/records/'+recordID+"-extraction-"+str(graph['internalID'])+'.ttl> into graph <'+base+extraction_graph_name+'/>')
-					
+		# SUBTEMPLATE
+		elif field['type']=="Subtemplate":
+			subrecords = process_subrecords(recordData, field['id']) if not subrecords_dict else subrecords_dict
+			if field['id'] in subrecords:
+				for subrecord_idx, subrecord in subrecords[field['id']].items():
+					ID = str(int(time.time() * 1000))
+					subrecord['recordID'] = ID
+					label = find_label(field['import_subtemplate'], subrecord, field['label'])
+					inputToRDF(storify(subrecord),userID,stage,knowledge_extraction,tpl_form=field['import_subtemplate'],subrecords_dict=subrecord)
+					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+ID) ))
+					wd.add(( URIRef(base+ID), RDFS.label, Literal(label, datatype="http://www.w3.org/2001/XMLSchema#string")))
+
 
 	# get keywords (record modify)
 	if stage == 'modified' and any([k for k,v in recordData.items() if k.startswith('keywords')]):
@@ -195,3 +208,47 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 	server.update('load <file:///'+dir_path+'/records/'+recordID+'.ttl> into graph <'+base+graph_name+'/>')
 
 	return 'records/'+recordID+'.ttl'
+
+# convert the dict of inputs into a series of nested dictionaries to be parsed as single records
+def process_subrecords(data, id):
+	results = {}
+	created_subrecords = [key for key in data if key.startswith(id+"-")]
+	if created_subrecords != []:
+		for subrecord in created_subrecords:
+			add_results = {}
+			subrecord_split = subrecord.split('-')
+			prefix, num = subrecord_split[0], subrecord_split[-1]
+			subrecord_fields = data[subrecord].split(',')
+			inner_subrecords = [key for item in subrecord_fields for key in data.keys() if key.startswith(item + "-")]
+			for key in subrecord_fields:
+				if data[key] != "":
+					add_results[key.split('-')[0]] = data[key]
+				else:
+					inner_subrecords = [inner_subrecord for inner_subrecord in data.keys() if inner_subrecord.startswith(key + "-")]
+					for inner_subrecord in inner_subrecords:
+						if inner_subrecord.startswith(key + '-'):
+							inner_subrecord_split = inner_subrecord.split('-')
+							inner_prefix, inner_num = inner_subrecord_split[0], inner_subrecord_split[-1]
+							add_results[inner_prefix] = {
+								inner_num: process_subrecords(data, inner_subrecord)
+							}
+			if prefix in results:
+				results[prefix][num] = add_results
+			else:
+				results[prefix] = { num: add_results }
+	else:
+		for el in data[id].split(','):
+			results[el.split('-')[0]] = data[el]
+	return results
+
+def find_label(tpl, subrecord, alternative_label):
+	print(tpl)
+	# Retrieve the field associated with the Primary Key (i.e., the label) of the Record
+	with open(tpl) as tpl_file:
+		tpl_fields = json.load(tpl_file)
+	label_field_id = [field['id'] for field in tpl_fields if field['disambiguate'] == "True"][0]
+
+	# Add a mechanism to handle potential Templates without a Primary Key (e.g. the primary key has been set to "hidden")
+	label = subrecord[label_field_id] if label_field_id in subrecord else alternative_label+"-"+subrecord['recordID']
+	return label
+

@@ -346,7 +346,7 @@ $(document).ready(function() {
       $(this).parent().parent().hide();
     });
     var field_name = $(this).parent().prev().text();
-    $(this).parent().append("<i class='fas fa-plus-circle' onclick='create_subrecord(`" + subtemplate_class + "`,`"+field_name+"`)'></i>");
+    $(this).parent().append("<i class='fas fa-plus-circle' onclick='create_subrecord(`" + subtemplate_class + "`,`"+field_name+"`,this)'></i>");
   });
 
 });
@@ -1250,24 +1250,31 @@ function checkPriorRecords(elem) {
 };
 
 // create subrecords
-function create_subrecord(resource_class, field_name) {
+function create_subrecord(resource_class, field_name, el) {
   // handle multiple subform
+  //var subform_sections = check_subform_sections();
   if ($('.subform_section').length) {
     $('.subform_section').each(function () {
       var right_css = parseInt($(this).css('right'));
-      $(this).css('right', toString(right_css + 40) + "% !important");
-      console.log($(this))
+      $(this).css('right', (right_css + 30) + "%");
     });
+  } else {
+    $('body').after("<div class='modal-previewMM'></div>");
   }
+
+
   const subrecord_section = $("<section class='subform_section col-md-12 col-sm-4'></section>");
-  const subrecord_form = $("<section class='subform'></section>");
+  const subform_id = Date.now().toString();
+  const subrecord_form = $("<section class='subform' id='"+subform_id+"'></section>");
   subrecord_form.append($("<h2 class='articleTitle' style='font-size:3em'>"+field_name+"</h2>"));
+
   $("[class~='("+resource_class+")'][class~='original_subtemplate']").each(function() {
 
     // create a webform to define a new instance of the requested entity
     const clone_element = $(this).parent().parent().clone();
     clone_element.attr("style", "display: block");
     clone_element.find('input').removeClass('original_subtemplate');
+    console.log(clone_element.html())
 
     // associate proper input_ids to input fields belonging to the subrecord form
     var input_id = clone_element.find('input').attr('id');
@@ -1279,37 +1286,52 @@ function create_subrecord(resource_class, field_name) {
 
   // save or cancel subrecord
   const subrecord_buttons = $("<section class='row subform_buttons buttonsSection'></section>");
-  const save_subrecord = $("<input id='subrecord_save' class='btn btn-dark' style='margin-left:20px' value='Add''>");
-  const cancel_subrecord = $("<input id='subrecord_cancel' class='btn btn-dark' style='margin-left:20px' value='Cancel'>");
-  save_subrecord.bind('click', function(e) {
+  const save_subrecord_btn = $("<input id='subrecord_save' class='btn btn-dark' style='margin-left:20px' value='Add''>");
+  const cancel_subrecord_btn = $("<input id='subrecord_cancel' class='btn btn-dark' style='margin-left:20px' value='Cancel' onclick='cancel_subrecord(this)'>");
+  // SAVE
+  save_subrecord_btn.bind('click', function(e) {
     // generate a tag
     if (subrecord_form.find('.disambiguate').length) {
       var tag_label = subrecord_form.find('.disambiguate').val();
     } else {
-      var tag_label = field_name + "-" + ($('.tag.'+resource_class).length + 1).toString();
-    }
+      var tag_label = field_name + "-" + ($('.tag-subrecord.'+resource_class).length + 1).toString();
+    };
+    var subinputs = [];
     subrecord_form.find('input:not(.btn)').each(function() {
       $("#recordForm").append($(this));
       $(this).hide();
-    })
-    $("[subtemplate='"+resource_class+"']").after("<span class='tag "+resource_class+"'>" + tag_label + "</span>");
+      subinputs.push($(this).attr('id'));
+    });
+    var subrecord_index = $("[subtemplate='"+resource_class+"']").parent().parent().find('.tag-subrecord').length + 1;
+    var subrecord_id = $("[subtemplate='"+resource_class+"']").attr('id') + "-" + subrecord_index;
+    $(el).after("<br/><span class='tag-subrecord "+resource_class+"'>" + tag_label + "</span><i class='far fa-edit'></i><i class='far fa-trash-alt'></i>");
+    $('#recordForm').append("<input type='hidden' name='"+subrecord_id+"' id='"+subrecord_id+"' value='"+subinputs.toString()+"'></input>");
 
     // hide_subform
-    subrecord_section.remove();
-    $('.modal-previewMM').remove();
+    cancel_subrecord(this);
   });
-  cancel_subrecord.bind('click', function(e) {
-    subrecord_section.remove();
-    $('.modal-previewMM').remove();
-  });
-  subrecord_buttons.append(cancel_subrecord, save_subrecord);
+  
+  subrecord_buttons.append(cancel_subrecord_btn, save_subrecord_btn);
   subrecord_form.append(subrecord_buttons);
   
   subrecord_section.append(subrecord_form);
   $('.main_content').eq(0).prepend(subrecord_section);
-  $('body').after("<div class='modal-previewMM'></div>");
   
 }
+
+// CANCEL SUBRECORD
+function cancel_subrecord(subrecord_section) {
+  console.log(subrecord_section)
+  if ($('.subform_section').length > 1) {
+    $('.subform_section').each(function () {
+      var right_css = parseInt($(this).css('right'));
+      $(this).css('right', 'calc('+right_css+'px -  30%)');
+    });
+  } else {
+    $('.modal-previewMM').remove();
+  }
+  $(subrecord_section).closest('.subform_section').remove();
+};
 
 ////////////////////
 // PUBLISH RECORD //
@@ -1754,6 +1776,11 @@ function add_field(field, res_type, backend_file=null) {
     <input type='checkbox' id='mandatory__"+temp_id+"' name='mandatory__"+temp_id+"'>\
   </section>";
 
+  var field_hide = "<section class='row'>\
+    <label class='col-md-11 col-sm-6' for='hidden__"+temp_id+"'>hide this field from the front-end view</label>\
+    <input type='checkbox' id='hidden__"+temp_id+"' name='hidden__"+temp_id+"' onclick='hide_field(this)'>\
+  </section>";
+
   var field_subtemplate_name = "<section class='row'>\
     <label class='col-md-3' for='subtemplate_name__"+temp_id+"'>TEMPLATE NAME</label>\
     <input type='text' id='subtemplate_name__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_name__"+temp_id+"' disabled>\
@@ -1764,6 +1791,7 @@ function add_field(field, res_type, backend_file=null) {
     <input type='text' id='subtemplate_class__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_class__"+temp_id+"' disabled>\
   </section>";
 
+  // TODO: show imported template fields
   /* var field_subtemplate_fields = "<section class='row'>\
     <label class='col-md-3' for='subtemplate_fields__"+temp_id+"'>FIELDS</label>\
     <input type='text' id='subtemplate_class__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_class__"+temp_id+"' disabled>\
@@ -1775,6 +1803,20 @@ function add_field(field, res_type, backend_file=null) {
   </section>";
 
   // TODO: cardinality integration
+  /* var field_cardinality = "<section class='row'>\
+    <label class='col-md-3'>CARDINALITY <br><span class='comment'>the number of expected values</span></label>\
+    <section class='col-md-8'>\
+      <label for='oneValue__"+temp_id+"'>\
+        Single value\
+        <input type='radio' id='oneValue__"+temp_id+"' name='cardinality__"+temp_id+"' value='oneValue' checked>\
+      </label><br>\
+      <label for='multipleValues__"+temp_id+"'>\
+        Multiple values\
+        <input type='radio' id='multipleValues__"+temp_id+"' name='cardinality__"+temp_id+"' value='multipleValues'>\
+      </label><br>\
+    </section>\
+  </section>";
+ */
 
   var open_addons = "<section id='addons__"+temp_id+"'>";
   var close_addons = "</section>";
@@ -1787,7 +1829,7 @@ function add_field(field, res_type, backend_file=null) {
   else if (field =='Vocab') { contents += field_available_vocabularies + accepted_values_vocabularies + field_placeholder + field_browse + field_mandatory; }
   else if (field =='Multimedia') { contents += field_multimedia + field_placeholder + field_mandatory; }
   else if (field =='WebsitePreview') { contents += field_placeholder + field_mandatory; }
-  else if (field =='Subtemplate') { contents = field_type + field_name + field_prepend + field_property + field_subtemplate_import + field_subtemplate_name + field_subtemplate_class + open_addons; }
+  else if (field =='Subtemplate') { contents = field_type + field_name + field_prepend + field_property + field_subtemplate_import + field_subtemplate_name + field_subtemplate_class /* + field_cardinality */ + open_addons; }
   else if (field =='KnowledgeExtractor') {
     if ($("select option:selected[value='KnowledgeExtractor']").length > 0) {
       alert("Max. 1 Knowledge Extraction field allowed");
@@ -1796,7 +1838,7 @@ function add_field(field, res_type, backend_file=null) {
     contents = field_type + field_extractor + open_addons;
   }
   else {contents += field_values + field_browse; };
-  contents += close_addons + up_down;
+  contents += field_hide + close_addons + up_down;
   $(".sortable").append("<section class='block_field'>"+contents+"</section>");
   updateindex();
   moveUpAndDown() ;
@@ -1910,6 +1952,16 @@ function disable_other_cb(ckType) {
   $('#'+mandatory_checkbox_id).prop('checked', true); 
 };
 
+// make hidden fields recognisable
+function hide_field(el) { 
+  var checked = document.getElementById(el.id);
+  if (checked.checked == true) {
+    $("#"+el.id).closest('.block_field').css('opacity', 0.6);
+  } else {
+    $("#"+el.id).closest('.block_field').css('opacity', 1);
+  }
+}
+
 // when changing field type, change the form
 function change_fields(sel) {
   var new_field_type = sel.value;
@@ -1982,6 +2034,7 @@ function change_fields(sel) {
 
   block_field.replaceWith(new_field_block);
 };
+
 // add_SKOS_vocab: allow users to add a new SKOS vocabulabury with sparql endpoint
 
 function add_skos_vocab(element) {

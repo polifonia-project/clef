@@ -720,7 +720,7 @@ nav .wditem, nav .viafitem {
   margin-top: 0.2em !important;
 }
 
-.tag {
+.tag, .tag-subrecord {
   display: inline-block;
   cursor: pointer;
   color: black;
@@ -1999,16 +1999,16 @@ button#showTemplates {
 .subform_section {
   right:0px;
   bottom:0px;
-  width: 40%;
+  width: 30%;
   top: 0;
   z-index: 1022;
   background-color: #F5F6FA;
   position: fixed;
-  overflow-y: scroll;
+  overflow-y: auto;
+  border: 1px rgba(100,23,180,1) solid;
 }
 
 .subform {
-  z-index: 1022;
   display: block;
   margin-top: 8em;
   right: 0%;
@@ -2022,6 +2022,10 @@ button#showTemplates {
 
 .subform_buttons {
   margin-top: 3em !important;
+}
+
+.subform_buttons input {
+  width: 42%;
 }
 
 /* extra */

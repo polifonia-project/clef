@@ -98,6 +98,20 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 		if creatorIRI is not None and creatorLabel is not None:
 			wd.add(( URIRef(base+graph_name+'/'), PROV.wasAttributedTo, URIRef(creatorIRI) ))
 			wd.add(( URIRef(creatorIRI), RDFS.label , Literal(creatorLabel ) ))
+
+		# retrieve hidden triples (to be saved) and re-introduce them in the named graph
+		to_be_saved = queries.saveHiddenTriples(graphToClear, tpl_form)
+		if to_be_saved:
+			for binding in to_be_saved['results']['bindings']:
+				subject = URIRef(binding['subject']['value'])
+				for predicate, obj in binding.items():
+					if predicate != 'subject':
+						if obj['type'] == 'uri':
+							object_ = URIRef(obj['value'])
+						else:
+							object_ = Literal(obj['value'])
+						wd.add((subject, URIRef(predicate), object_))
+
 		queries.clearGraph(graphToClear)
 	wd.add(( URIRef(base+graph_name+'/'), PROV.generatedAtTime, Literal(datetime.datetime.now(),datatype=XSD.dateTime)  ))
 	wd.add(( URIRef(base+graph_name+'/'), URIRef('http://dbpedia.org/ontology/currentStatus'), Literal(stage, datatype="http://www.w3.org/2001/XMLSchema#string")  ))
@@ -110,6 +124,7 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 	if len(is_any_disambiguate) == 0:
 		wd.add(( URIRef(base+graph_name+'/'), RDFS.label, Literal("no title") ))
 
+	fields = [input_field for input_field in fields if input_field['hidden'] == 'False']
 	for field in fields:
 		if field['type'] not in ['KnowledgeExtractor', 'Subtemplate']:
 			# URI, Textarea (only text at this stage), Literals
@@ -212,31 +227,36 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 # convert the dict of inputs into a series of nested dictionaries to be parsed as single records
 def process_subrecords(data, id):
 	results = {}
-	created_subrecords = [key for key in data if key.startswith(id+"-")]
+	created_subrecords = [key for key in data if key.startswith(id+"__")]
 	if created_subrecords != []:
 		for subrecord in created_subrecords:
 			add_results = {}
-			subrecord_split = subrecord.split('-')
+			subrecord_split = subrecord.split('__')
 			prefix, num = subrecord_split[0], subrecord_split[-1]
 			subrecord_fields = data[subrecord].split(',')
-			inner_subrecords = [key for item in subrecord_fields for key in data.keys() if key.startswith(item + "-")]
+			inner_subrecords = [key for item in subrecord_fields for key in data.keys() if key.startswith(item + "__")]
 			for key in subrecord_fields:
 				if data[key] != "":
-					add_results[key.split('-')[0]] = data[key]
+					add_results[key.split('__')[0]] = data[key]
 				else:
-					inner_subrecords = [inner_subrecord for inner_subrecord in data.keys() if inner_subrecord.startswith(key + "-")]
-					for inner_subrecord in inner_subrecords:
-						if inner_subrecord.startswith(key + '-'):
-							inner_subrecord_split = inner_subrecord.split('-')
+					inner_subrecords = [inner_subrecord for inner_subrecord in data.keys() if inner_subrecord.startswith(key + "__")]
+					if inner_subrecords != []:
+						for inner_subrecord in inner_subrecords:
+							inner_subrecord_split = inner_subrecord.split('__')
 							inner_prefix, inner_num = inner_subrecord_split[0], inner_subrecord_split[-1]
 							add_results[inner_prefix] = {
 								inner_num: process_subrecords(data, inner_subrecord)
 							}
+					else:
+						imported_values = [import_key for import_key in data.keys() if import_key.startswith(key + "-")]
+						for imported_value in imported_values:
+							new_key = imported_value.split('__')[0] + "-" + imported_value.split('-')[-1]
+							add_results[new_key] = data[imported_value]
 			if prefix in results:
 				results[prefix][num] = add_results
 			else:
 				results[prefix] = { num: add_results }
-	else:
+	elif data[id] != "":
 		for el in data[id].split(','):
 			results[el.split('-')[0]] = data[el]
 	return results
@@ -251,4 +271,3 @@ def find_label(tpl, subrecord, alternative_label):
 	# Add a mechanism to handle potential Templates without a Primary Key (e.g. the primary key has been set to "hidden")
 	label = subrecord[label_field_id] if label_field_id in subrecord else alternative_label+"-"+subrecord['recordID']
 	return label
-

@@ -107,8 +107,16 @@ $(document).ready(function() {
   });  
 
 	// search WD, VIAF, my data, vocabs, years + add URLs 
-	$("input[type='text']").click(function () {
+  $(".main_content").on("click", "input[type='text']", function () { // make the onclick function valid for later generated inputs
 		searchID = $(this).attr('id');
+
+    const searchresult = $('#searchresult').detach();
+    if ($(this).closest('.subform_section').length) {
+      $(this).closest('.subform_section').prepend(searchresult);
+    } else if ($(this).closest('form').length) {
+      $(this).closest('form').parent().after(searchresult);
+    }
+
 
 		if ( $(this).hasClass('searchWikidata') ) {
 			searchWD(searchID);
@@ -447,14 +455,14 @@ function searchGeonames(searchterm) {
 	      format: "json",
 	    },
 	    function(data) {
-	    	  // autocomplete positioning
+	    	  // autocomplete positioning;
 	      	var position = $('#'+searchterm).position();
-	      	var leftpos = position.left+15;
+	      	var leftpos = $('.subform_section').length !== 0 ? position.left-35 : position.left+15;
 	      	var offset = $('#'+searchterm).offset();
     			var height = $('#'+searchterm).height();
-    			var width = $('#'+searchterm).width();
-    			var top = offset.top + height + "px";
-    			var right = offset.left + width + "px";
+          var top = $('.subform_section').length !== 0 ? offset.top - $('.subform_section').offset().top + height + "px" : offset.top + height + "px";
+          var max_width = $('.subform_section').length !== 0 ? '90%' : '600px';
+          console.log(max_width);
 
     			$('#searchresult').css( {
     			    'position': 'absolute',
@@ -463,7 +471,7 @@ function searchGeonames(searchterm) {
     			    'z-index':1000,
     			    'background-color': 'white',
     			    'border':'solid 1px grey',
-    			    'max-width':'600px',
+    			    'max-width':max_width,
     			    'border-radius': '4px'
     			});
     	    $("#searchresult").empty();
@@ -605,14 +613,14 @@ function searchWD(searchterm) {
         limit: 5,
 	    },
 	    function(data) {
-	    	  // autocomplete positioning
+	    	  // autocomplete positioning;
 	      	var position = $('#'+searchterm).position();
-	      	var leftpos = position.left+15;
+	      	var leftpos = $('.subform_section').length !== 0 ? position.left-35 : position.left+15;
 	      	var offset = $('#'+searchterm).offset();
     			var height = $('#'+searchterm).height();
-    			var width = $('#'+searchterm).width();
-    			var top = offset.top + height + "px";
-    			var right = offset.left + width + "px";
+          var top = $('.subform_section').length !== 0 ? offset.top - $('.subform_section').offset().top + height + "px" : offset.top + height + "px";
+          var max_width = $('.subform_section').length !== 0 ? '90%' : '600px';
+          console.log(max_width);
 
     			$('#searchresult').css( {
     			    'position': 'absolute',
@@ -621,7 +629,7 @@ function searchWD(searchterm) {
     			    'z-index':1000,
     			    'background-color': 'white',
     			    'border':'solid 1px grey',
-    			    'max-width':'600px',
+    			    'max-width':max_width,
     			    'border-radius': '4px'
     			});
     	    $("#searchresult").empty();
@@ -1046,26 +1054,25 @@ function searchVocab(searchterm) {
 
           $("#searchresult").show();
 
-          var position = $('#'+searchterm).position();
-          var leftpos = position.left+80;
-          var offset = $('#'+searchterm).offset();
-          var height = $('#'+searchterm).height();
-          var width = $('#'+searchterm).width();
-          var top = offset.top + height + "px";
-          var right = offset.left + width + "px";
+          // autocomplete positioning;
+	      	var position = $('#'+searchterm).position();
+	      	var leftpos = $('.subform_section').length !== 0 ? position.left-25 : position.left+80;
+	      	var offset = $('#'+searchterm).offset();
+    			var height = $('#'+searchterm).height();
+          var top = $('.subform_section').length !== 0 ? offset.top - $('.subform_section').offset().top + height + "px" : offset.top + height + "px";
+          var max_width = $('.subform_section').length !== 0 ? '90%' : '600px';
+          console.log(max_width);
 
-          $('#searchresult').css( {
-              'position': 'absolute',
-              'margin-left': leftpos+'px',
-              'top': top,
-              'z-index':1000,
-              'background-color': 'white',
-              'border':'solid 1px grey',
-              'max-width':'600px',
-              'border-radius': '4px',
-              'max-height': '300px',
-              'overflow-y': 'auto'
-          });
+    			$('#searchresult').css( {
+    			    'position': 'absolute',
+    			    'margin-left': leftpos+'px',
+    			    'top': top,
+    			    'z-index':1000,
+    			    'background-color': 'white',
+    			    'border':'solid 1px grey',
+    			    'max-width':max_width,
+    			    'border-radius': '4px'
+    			});
           $("#searchresult").empty();
           options.forEach(function(option) {
             // each option (i.e., retrieved term) has this structure: URI,LABEL,VOCABULARY
@@ -1249,10 +1256,8 @@ function checkPriorRecords(elem) {
   });
 };
 
-// create subrecords
-function create_subrecord(resource_class, field_name, el) {
-  // handle multiple subform
-  //var subform_sections = check_subform_sections();
+// set the webpage to display a new subform
+function replace_existing_subforms() {
   if ($('.subform_section').length) {
     $('.subform_section').each(function () {
       var right_css = parseInt($(this).css('right'));
@@ -1261,7 +1266,13 @@ function create_subrecord(resource_class, field_name, el) {
   } else {
     $('body').after("<div class='modal-previewMM'></div>");
   }
+}
 
+// create subrecords
+function create_subrecord(resource_class, field_name, el) {
+  // handle multiple subform
+  //var subform_sections = check_subform_sections();
+  replace_existing_subforms();
 
   const subrecord_section = $("<section class='subform_section col-md-12 col-sm-4'></section>");
   const subform_id = Date.now().toString();
@@ -1274,54 +1285,52 @@ function create_subrecord(resource_class, field_name, el) {
     const clone_element = $(this).parent().parent().clone();
     clone_element.attr("style", "display: block");
     clone_element.find('input').removeClass('original_subtemplate');
-    console.log(clone_element.html())
 
     // associate proper input_ids to input fields belonging to the subrecord form
     var input_id = clone_element.find('input').attr('id');
     var class_occurences = $("input[id*='"+input_id+"']").length;
-    clone_element.find('input').attr('id', input_id+"-"+class_occurences.toString())
-    clone_element.find('input').attr('name', input_id+"-"+class_occurences.toString())
+    clone_element.find('input').attr('id', input_id+"__"+class_occurences.toString())
+    clone_element.find('input').attr('name', input_id+"__"+class_occurences.toString())
     subrecord_form.append(clone_element);
   })
 
   // save or cancel subrecord
   const subrecord_buttons = $("<section class='row subform_buttons buttonsSection'></section>");
   const save_subrecord_btn = $("<input id='subrecord_save' class='btn btn-dark' style='margin-left:20px' value='Add''>");
-  const cancel_subrecord_btn = $("<input id='subrecord_cancel' class='btn btn-dark' style='margin-left:20px' value='Cancel' onclick='cancel_subrecord(this)'>");
+  const cancel_subrecord_btn = $("<input id='subrecord_cancel' class='btn btn-dark' style='margin-left:20px' value='Cancel'>");
+
   // SAVE
-  save_subrecord_btn.bind('click', function(e) {
+  save_subrecord_btn.on('click', function(e) {
     // generate a tag
-    if (subrecord_form.find('.disambiguate').length) {
-      var tag_label = subrecord_form.find('.disambiguate').val();
-    } else {
-      var tag_label = field_name + "-" + ($('.tag-subrecord.'+resource_class).length + 1).toString();
-    };
+    var tag_label = subrecord_form.find('.disambiguate').val() || (field_name + "-" + $(".tag-subrecord[class~='"+resource_class+"']").length + 1);
     var subinputs = [];
     subrecord_form.find('input:not(.btn)').each(function() {
       $("#recordForm").append($(this));
       $(this).hide();
-      subinputs.push($(this).attr('id'));
+      if ($(this).attr('id') !== undefined) {subinputs.push($(this).attr('id'))};
     });
     var subrecord_index = $("[subtemplate='"+resource_class+"']").parent().parent().find('.tag-subrecord').length + 1;
-    var subrecord_id = $("[subtemplate='"+resource_class+"']").attr('id') + "-" + subrecord_index;
-    $(el).after("<br/><span class='tag-subrecord "+resource_class+"'>" + tag_label + "</span><i class='far fa-edit'></i><i class='far fa-trash-alt'></i>");
+    var subrecord_id = $("[subtemplate='"+resource_class+"']").attr('id') + "__" + subrecord_index;
+    $(el).after("<br/><span id='"+subrecord_id+"-tag' class='tag-subrecord "+resource_class+"'>" + tag_label + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+subrecord_id+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+subrecord_id+"\", keep=false)'></i>");
     $('#recordForm').append("<input type='hidden' name='"+subrecord_id+"' id='"+subrecord_id+"' value='"+subinputs.toString()+"'></input>");
 
+    // hide_subform
+    cancel_subrecord(this);
+  });
+  // CANCEL
+  cancel_subrecord_btn.on('click', function(e) {
     // hide_subform
     cancel_subrecord(this);
   });
   
   subrecord_buttons.append(cancel_subrecord_btn, save_subrecord_btn);
   subrecord_form.append(subrecord_buttons);
-  
   subrecord_section.append(subrecord_form);
-  $('.main_content').eq(0).prepend(subrecord_section);
-  
+  $('.main_content').eq(0).prepend(subrecord_section); 
 }
 
-// CANCEL SUBRECORD
+// CANCEL SUBRECORD (before adding it to #recordForm)
 function cancel_subrecord(subrecord_section) {
-  console.log(subrecord_section)
   if ($('.subform_section').length > 1) {
     $('.subform_section').each(function () {
       var right_css = parseInt($(this).css('right'));
@@ -1330,8 +1339,62 @@ function cancel_subrecord(subrecord_section) {
   } else {
     $('.modal-previewMM').remove();
   }
+  $('main form').append($('#searchresult'));
   $(subrecord_section).closest('.subform_section').remove();
 };
+
+// DELETE or MODIFY SUBRECORD (after it has been added to #recordForm)
+function modify_subrecord(sub_id, keep) {
+  var original_subtemplate_id = sub_id.split("__")[0];
+  var original_subtemplate_class = $('#'+original_subtemplate_id).attr('subtemplate');
+  console.log(original_subtemplate_class, sub_id)
+
+  if (!keep) {
+    // remove all inputs
+    var inner_inputs = $('#'+sub_id).val().split(",");
+    delete_inner_subrecord(inner_inputs); // collect nested inputs and remove them
+    $('#'+sub_id+'-tag').next('i').remove();
+    $('#'+sub_id+'-tag').next('i').remove();
+    $('#'+sub_id+'-tag').remove();
+    $('#'+sub_id).remove();
+  }
+  else {
+    // recollect the first level nested inputs to be displayed
+    var inner_inputs = $('#'+sub_id).val().split(",");
+
+    // recreate subrecord_section
+    var field_name = $('#'+sub_id+'-tag').parent().prev().text();
+    var el = $('#'+sub_id+'-tag').prev('.fa-plus-circle');
+    create_subrecord(original_subtemplate_class, field_name, el);
+
+    for (let i=0; i<inner_inputs.length; i++) {
+      var input = $('#'+inner_inputs[i]);
+      var shortened_id = inner_inputs[i].split("__").slice(0, -1).join("__");
+      var new_input = $('.subform_section [id*="'+shortened_id+'__"]');
+      if (input.val() !== "") {
+        new_input.replaceWith(input.show());
+        // FINISH HERE:
+        /* still need to add a system to recreate inner-subrecords and all those fields associated with a tag (e.g. Entity) */
+      }
+    }
+  }
+}
+
+function delete_inner_subrecord(inner_inputs) {
+  for (let i = 0; i < inner_inputs.length; i++) {
+    if ($("#"+inner_inputs[i]).attr('subtemplate')) {
+      console.log(inner_inputs[i])
+      var recursion_inputs = $("[id*="+inner_inputs[i]+"__]");
+      console.log(recursion_inputs)
+      if (recursion_inputs.length) {
+        for (let y = 0; y < recursion_inputs.length; y++) {
+          delete_inner_subrecord($(recursion_inputs[y]).val().split(","));
+        }
+      }
+    }
+    $("[id*="+inner_inputs[i]+"]").remove();
+  }
+}
 
 ////////////////////
 // PUBLISH RECORD //

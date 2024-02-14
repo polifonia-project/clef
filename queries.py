@@ -352,3 +352,31 @@ def retrieve_extractions(res_uri):
 		next_id = max(ke_dict[res_uri.split("/")[-1]], key=lambda x: int(x["internalID"]))
 		res_dict['next_id'] = int(next_id['internalID']) + 1
 	return res_dict
+
+def saveHiddenTriples(graph, tpl):
+	with open(tpl) as template:
+		fields = json.load(template)
+
+	results = []
+	hidden_fields = [field for field in fields if field['hidden'] == 'True']
+	patterns = [ 'OPTIONAL {?subject <'+hidden_field['property']+'> ?'+hidden_field['id']+'.}. '  if hidden_field['value'] in ['Literal','Date','gYearMonth','gYear','URL'] else 'OPTIONAL {?subject <'+hidden_field['property']+'> ?'+hidden_field['id']+'. ?'+hidden_field['id']+' rdfs:label ?'+hidden_field['id']+'_label .} .' for hidden_field in hidden_fields if 'value' in hidden_field and hidden_field['hidden'] == 'True']
+	if patterns != []:
+		patterns_string = ''.join(patterns)
+		queryNGraph = '''
+			PREFIX base: <'''+conf.base+'''>
+			PREFIX schema: <https://schema.org/>
+			SELECT DISTINCT *
+			WHERE {
+					GRAPH <'''+graph+'''>
+					{
+						'''+patterns_string+'''
+					}
+			}
+			'''
+		print(queryNGraph)
+		sparql = SPARQLWrapper(conf.myEndpoint)
+		sparql.setQuery(queryNGraph)
+		sparql.setReturnFormat(JSON)
+		results = sparql.query().convert()
+		print(results)
+	return results

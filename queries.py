@@ -359,7 +359,7 @@ def saveHiddenTriples(graph, tpl):
 
 	results = []
 	hidden_fields = [field for field in fields if field['hidden'] == 'True']
-	patterns = [ 'OPTIONAL {?subject <'+hidden_field['property']+'> ?'+hidden_field['id']+'.}. '  if hidden_field['value'] in ['Literal','Date','gYearMonth','gYear','URL'] else 'OPTIONAL {?subject <'+hidden_field['property']+'> ?'+hidden_field['id']+'. ?'+hidden_field['id']+' rdfs:label ?'+hidden_field['id']+'_label .} .' for hidden_field in hidden_fields if 'value' in hidden_field and hidden_field['hidden'] == 'True']
+	patterns = [ 'OPTIONAL {?subject <'+hidden_field['property']+'> ?'+hidden_field['id']+'. ?subject ?'+hidden_field['id']+'_property ?'+hidden_field['id']+'}. '  if hidden_field['value'] in ['Literal','Date','gYearMonth','gYear','URL'] else 'OPTIONAL {?subject <'+hidden_field['property']+'> ?'+hidden_field['id']+'. ?'+hidden_field['id']+' rdfs:label ?'+hidden_field['id']+'_label . ?subject ?'+hidden_field['id']+'_property ?'+hidden_field['id']+'}.' for hidden_field in hidden_fields if 'value' in hidden_field and hidden_field['hidden'] == 'True']
 	if patterns != []:
 		patterns_string = ''.join(patterns)
 		queryNGraph = '''

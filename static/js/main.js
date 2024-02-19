@@ -48,6 +48,27 @@ $(document).ready(function() {
     };
   });
 
+  // check templates' constraints
+  $("#updateTemplate").on('click', function(e) {
+    e.preventDefault();
+
+    // make sure the primary key is mandatory 
+    var primary_key = $('.disambiguate[checked="checked"');
+    primary_key.parent().parent().find('input[id*="mandatory"]').attr("checked", "checked");
+
+    // prevent mandatory fields to be hidden 
+    var mandatory_fields = $('input[type="checkbox"][id*="mandatory"][checked="checked"]');
+    mandatory_fields.each(function() {
+      var hidden_field_checkbox = $(this).parent().parent().find('input[type="checkbox"][id*="hidden"]');
+      if (hidden_field_checkbox.attr('checked') == 'checked') {
+        Swal.fire({ title:"Hidden fields cannot be mandatory"});
+        return false;
+      }; 
+    });
+    Swal.fire({ title: 'Saved!'});
+    setTimeout(function() { document.getElementById('templateForm').submit();}, 500);
+  });
+
   // disable forms
   $(".disabled").attr("disabled","disabled");
 
@@ -354,7 +375,7 @@ $(document).ready(function() {
       $(this).parent().parent().hide();
     });
     var field_name = $(this).parent().prev().text();
-    $(this).parent().append("<i class='fas fa-plus-circle' onclick='create_subrecord(`" + subtemplate_class + "`,`"+field_name+"`,this)'></i>");
+    $(this).after("<i class='fas fa-plus-circle' onclick='create_subrecord(`" + subtemplate_class + "`,`"+field_name+"`,$(this))'></i>");
   });
 
 });
@@ -1302,6 +1323,7 @@ function create_subrecord(resource_class, field_name, el) {
   // SAVE
   save_subrecord_btn.on('click', function(e) {
     // generate a tag
+    console.log("RQWEQ")
     var tag_label = subrecord_form.find('.disambiguate').val() || (field_name + "-" + $(".tag-subrecord[class~='"+resource_class+"']").length + 1);
     var subinputs = [];
     subrecord_form.find('input:not(.btn)').each(function() {
@@ -1311,7 +1333,8 @@ function create_subrecord(resource_class, field_name, el) {
     });
     var subrecord_index = $("[subtemplate='"+resource_class+"']").parent().parent().find('.tag-subrecord').length + 1;
     var subrecord_id = $("[subtemplate='"+resource_class+"']").attr('id') + "__" + subrecord_index;
-    $(el).after("<br/><span id='"+subrecord_id+"-tag' class='tag-subrecord "+resource_class+"'>" + tag_label + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+subrecord_id+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+subrecord_id+"\", keep=false)'></i>");
+    console.log(el);
+    el.after("<br/><span id='"+subrecord_id+"-tag' class='tag-subrecord "+resource_class+"'>" + tag_label + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+subrecord_id+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+subrecord_id+"\", keep=false)'></i>");
     $('#recordForm').append("<input type='hidden' name='"+subrecord_id+"' id='"+subrecord_id+"' value='"+subinputs.toString()+"'></input>");
 
     // hide_subform
@@ -1353,10 +1376,6 @@ function modify_subrecord(sub_id, keep) {
     // remove all inputs
     var inner_inputs = $('#'+sub_id).val().split(",");
     delete_inner_subrecord(inner_inputs); // collect nested inputs and remove them
-    $('#'+sub_id+'-tag').next('i').remove();
-    $('#'+sub_id+'-tag').next('i').remove();
-    $('#'+sub_id+'-tag').remove();
-    $('#'+sub_id).remove();
   }
   else {
     // recollect the first level nested inputs to be displayed
@@ -1364,20 +1383,53 @@ function modify_subrecord(sub_id, keep) {
 
     // recreate subrecord_section
     var field_name = $('#'+sub_id+'-tag').parent().prev().text();
-    var el = $('#'+sub_id+'-tag').prev('.fa-plus-circle');
+    var el = $('#'+sub_id+'-tag').prevAll('.fa-plus-circle').first();
+    console.log(el);
     create_subrecord(original_subtemplate_class, field_name, el);
 
     for (let i=0; i<inner_inputs.length; i++) {
+      console.log(inner_inputs[i])
       var input = $('#'+inner_inputs[i]);
       var shortened_id = inner_inputs[i].split("__").slice(0, -1).join("__");
       var new_input = $('.subform_section [id*="'+shortened_id+'__"]');
-      if (input.val() !== "") {
-        new_input.replaceWith(input.show());
-        // FINISH HERE:
-        /* still need to add a system to recreate inner-subrecords and all those fields associated with a tag (e.g. Entity) */
+      new_input.replaceWith(input.show());
+      if ($('input[type="hidden"][name*="'+inner_inputs[i]+'-"]').length) {
+        var imported_values = $('input[type="hidden"][name*="'+inner_inputs[i]+'-"]');
+        imported_values.each(function() {
+          var id = $(this).attr('name').split("-")[0];
+          var values = $(this).attr('value').split(",");
+          var value_code = values[0];
+          var value_string = decodeURIComponent(values[1]);
+          var tag = "<span class='tag "+value_code+"' data-input='"+id+"' data-id='"+value_code+"'>"+value_string+"</span>";
+          var hidden_input = $(this).detach();
+          input.after(tag, hidden_input);
+        })
+      } else if ($('input[id*="'+inner_inputs[i]+'__"]')) {
+        var inner_subrecords = $('input[id*="'+inner_inputs[i]+'__"]');
+        inner_subrecords.each(function() {
+          var inner_subrecord_fields = $(this).val().split(',');
+          var primary_key = "";
+          for (let i=0; i<inner_subrecord_fields.length; i++){
+            if ($('#'+inner_subrecord_fields[i]).hasClass('disambiguate')) {
+              primary_key = $('#'+inner_subrecord_fields[i]).val();
+            }
+          }
+          if (primary_key === "") {
+            var inner_field_name = $('#'+inner_inputs[i]).prev('span').attr('data-original-title') 
+            var num = $(this).attr('id').split('__')[-1];
+            var primary_key = inner_field_name+ "-" + num;
+          } 
+          var resource_class = $('#'+inner_inputs[i]).attr('subtemplate');
+          var tag = "<span id='"+$(this).attr('id')+"-tag' class='tag-subrecord "+resource_class+"'>" + primary_key + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+$(this).attr('id')+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+$(this).attr('id')+"\", keep=false)'></i>"
+          $('#'+inner_inputs[i]).after(tag);
+        })
       }
     }
   }
+  $('#'+sub_id+'-tag').next('i').remove();
+  $('#'+sub_id+'-tag').next('i').remove();
+  $('#'+sub_id+'-tag').remove();
+  $('#'+sub_id).remove();
 }
 
 function delete_inner_subrecord(inner_inputs) {

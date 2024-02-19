@@ -104,14 +104,17 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 		if to_be_saved:
 			for binding in to_be_saved['results']['bindings']:
 				subject = URIRef(binding['subject']['value'])
-				for predicate, obj in binding.items():
-					if predicate != 'subject':
-						if obj['type'] == 'uri':
-							object_ = URIRef(obj['value'])
-						else:
-							object_ = Literal(obj['value'])
-						wd.add((subject, URIRef(predicate), object_))
-
+				for predicate_obj, inner_dict in binding.items():
+					if predicate_obj.endswith('_property'):
+						predicate = URIRef(inner_dict['value'])
+						obj_value = binding[predicate_obj.replace("_property", "")]['value']
+						obj_type = binding[predicate_obj.replace("_property", "")]['type']
+						obj = URIRef(obj_value) if obj_type == "uri" else Literal(obj_value, datatype="http://www.w3.org/2001/XMLSchema#string")
+						label = binding[predicate_obj.replace("_property", "") + "_label"]['value'] if predicate_obj.replace("_property", "") + "_label" in binding else None
+						wd.add((subject, URIRef(predicate), obj))
+						print(subject, predicate, obj, label)
+						if label:
+							wd.add((obj, RDFS.label, Literal(label, datatype="http://www.w3.org/2001/XMLSchema#string")))
 		queries.clearGraph(graphToClear)
 	wd.add(( URIRef(base+graph_name+'/'), PROV.generatedAtTime, Literal(datetime.datetime.now(),datatype=XSD.dateTime)  ))
 	wd.add(( URIRef(base+graph_name+'/'), URIRef('http://dbpedia.org/ontology/currentStatus'), Literal(stage, datatype="http://www.w3.org/2001/XMLSchema#string")  ))
@@ -196,6 +199,7 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 		# SUBTEMPLATE
 		elif field['type']=="Subtemplate":
 			subrecords = process_subrecords(recordData, field['id']) if not subrecords_dict else subrecords_dict
+			print("SUBRECORDS!!!!!!!!!!!!!!!\n", subrecords)
 			if field['id'] in subrecords:
 				for subrecord_idx, subrecord in subrecords[field['id']].items():
 					ID = str(int(time.time() * 1000))
@@ -244,9 +248,12 @@ def process_subrecords(data, id):
 						for inner_subrecord in inner_subrecords:
 							inner_subrecord_split = inner_subrecord.split('__')
 							inner_prefix, inner_num = inner_subrecord_split[0], inner_subrecord_split[-1]
-							add_results[inner_prefix] = {
-								inner_num: process_subrecords(data, inner_subrecord)
-							}
+							if inner_prefix in add_results:
+								add_results[inner_prefix][inner_num] = process_subrecords(data, inner_subrecord)
+							else: 
+								add_results[inner_prefix] = {
+									inner_num: process_subrecords(data, inner_subrecord)
+								}
 					else:
 						imported_values = [import_key for import_key in data.keys() if import_key.startswith(key + "-")]
 						for imported_value in imported_values:
@@ -258,7 +265,7 @@ def process_subrecords(data, id):
 				results[prefix] = { num: add_results }
 	elif data[id] != "":
 		for el in data[id].split(','):
-			results[el.split('-')[0]] = data[el]
+			results[el.split('__')[0]] = data[el]
 	return results
 
 def find_label(tpl, subrecord, alternative_label):

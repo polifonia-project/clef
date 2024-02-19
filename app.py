@@ -994,7 +994,7 @@ class View(object):
 				title = "No title"
 			properties = {field["label"]:[field["property"], field["type"]] for field in fields if 'property' in field}
 			data_labels = { field['label']:v for k,v in data.items() \
-							for field in fields if k == field['id']}
+							for field in fields if k == field['id'] and field['hidden'] == 'False' }
 		except Exception as e:
 			pass
 

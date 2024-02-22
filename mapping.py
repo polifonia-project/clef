@@ -58,7 +58,7 @@ def getValuesFromFields(fieldPrefix, recordData, fields=None, field_type=None):
 
 
 def getRightURIbase(value):
-	return WD+value if value.startswith('Q') else GEO+value if value.isdecimal() else VIAF+value[4:] if value.startswith("viaf") else ''+value if value.startswith("http") else base+value
+	return WD+value if value.startswith('Q') else GEO+value if value.isdecimal() else VIAF+value[4:] if value.startswith("viaf") else ''+value if value.startswith("http") else base+value.lstrip().rstrip()
 
 
 def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=None,tpl_form=None, subrecords_dict=None):
@@ -115,6 +115,7 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 						print(subject, predicate, obj, label)
 						if label:
 							wd.add((obj, RDFS.label, Literal(label, datatype="http://www.w3.org/2001/XMLSchema#string")))
+
 		queries.clearGraph(graphToClear)
 	wd.add(( URIRef(base+graph_name+'/'), PROV.generatedAtTime, Literal(datetime.datetime.now(),datatype=XSD.dateTime)  ))
 	wd.add(( URIRef(base+graph_name+'/'), URIRef('http://dbpedia.org/ontology/currentStatus'), Literal(stage, datatype="http://www.w3.org/2001/XMLSchema#string")  ))
@@ -198,11 +199,25 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 					server.update('load <file:///'+dir_path+'/records/'+recordID+"-extraction-"+str(graph['internalID'])+'.ttl> into graph <'+base+extraction_graph_name+'/>')
 		# SUBTEMPLATE
 		elif field['type']=="Subtemplate":
+			# check potential duplications:
+			#doubled_values = check_double_subrecords(recordData) if not doubled_values else doubled_values
+
+			# handle imported entities from catalogue (not newly created ones)
+			imported_entities = [field_id for field_id in recordData if field_id.startswith(field['id']+"-") and "," in recordData[field_id]]
+			for imported_entity in imported_entities:
+				imported_entity_id, imported_entity_label = recordData[imported_entity].split(',')
+				imported_entity_label = urllib.parse.unquote(imported_entity_label)
+				entityURI = getRightURIbase(imported_entity_id) 
+				print(entityURI)
+				wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(entityURI) ))
+				wd.add(( URIRef( entityURI ), RDFS.label, Literal(imported_entity_label.lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
 			subrecords = process_subrecords(recordData, field['id']) if not subrecords_dict else subrecords_dict
-			print("SUBRECORDS!!!!!!!!!!!!!!!\n", subrecords)
+			print("#### surbrecords:", subrecords)
 			if field['id'] in subrecords:
 				for subrecord_idx, subrecord in subrecords[field['id']].items():
-					ID = str(int(time.time() * 1000))
+					ct = datetime.datetime.now()
+					ts = ct.timestamp()
+					ID = str(ts).replace('.', '-')
 					subrecord['recordID'] = ID
 					label = find_label(field['import_subtemplate'], subrecord, field['label'])
 					inputToRDF(storify(subrecord),userID,stage,knowledge_extraction,tpl_form=field['import_subtemplate'],subrecords_dict=subrecord)
@@ -228,45 +243,63 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 
 	return 'records/'+recordID+'.ttl'
 
+def check_double_subrecords(data):
+	results_dict = {
+		'targets': {},
+		'pointers' : {},
+	}
+	for key, value in data.items():
+		if value.startswith("target-"):
+			split_key = key.split("__")
+			new_key = split_key[0] + "__" + split_key[-1]
+			split_value = value.replace("target-", "").split("__")
+			new_value = split_value[0] + "__" + split_value[-1]
+			results_dict['targets'][new_value] = new_key
+			results_dict['pointers'][new_key] = new_value
+	return results_dict
+
+
+
+
 # convert the dict of inputs into a series of nested dictionaries to be parsed as single records
-def process_subrecords(data, id):
-	results = {}
-	created_subrecords = [key for key in data if key.startswith(id+"__")]
-	if created_subrecords != []:
-		for subrecord in created_subrecords:
-			add_results = {}
-			subrecord_split = subrecord.split('__')
-			prefix, num = subrecord_split[0], subrecord_split[-1]
-			subrecord_fields = data[subrecord].split(',')
-			inner_subrecords = [key for item in subrecord_fields for key in data.keys() if key.startswith(item + "__")]
-			for key in subrecord_fields:
-				if data[key] != "":
-					add_results[key.split('__')[0]] = data[key]
-				else:
-					inner_subrecords = [inner_subrecord for inner_subrecord in data.keys() if inner_subrecord.startswith(key + "__")]
-					if inner_subrecords != []:
-						for inner_subrecord in inner_subrecords:
-							inner_subrecord_split = inner_subrecord.split('__')
-							inner_prefix, inner_num = inner_subrecord_split[0], inner_subrecord_split[-1]
-							if inner_prefix in add_results:
-								add_results[inner_prefix][inner_num] = process_subrecords(data, inner_subrecord)
-							else: 
-								add_results[inner_prefix] = {
-									inner_num: process_subrecords(data, inner_subrecord)
-								}
-					else:
-						imported_values = [import_key for import_key in data.keys() if import_key.startswith(key + "-")]
-						for imported_value in imported_values:
-							new_key = imported_value.split('__')[0] + "-" + imported_value.split('-')[-1]
-							add_results[new_key] = data[imported_value]
-			if prefix in results:
-				results[prefix][num] = add_results
-			else:
-				results[prefix] = { num: add_results }
-	elif data[id] != "":
-		for el in data[id].split(','):
-			results[el.split('__')[0]] = data[el]
-	return results
+def process_subrecords(data, id, created_subrecords=None):
+    results = {}
+    subrecords = [key for key in data if key.startswith(id+"__") and not data[key].startswith("target-")] if created_subrecords == None else created_subrecords
+
+    for subrecord in subrecords:
+        subrecord_split = subrecord.split('__')
+        prefix, num = subrecord_split[0], subrecord_split[-1]
+        if prefix not in results:
+            results[prefix] = { num: {} }  
+        else:
+            results[prefix][num] = {}
+        add_results = {}
+        subrecord_fields = data[subrecord].split(',')
+        for key in subrecord_fields:
+            if data[key].startswith("target-"):
+                add_results[key.replace("target-", "").split('__')[0]] = {key.split('__')[-1] : process_subrecords(data, data[key].replace("target-", "")) }
+            elif data[key] != "":
+                add_results[key.split('__')[0]] = data[key]
+            else:
+                multiple_values_fields = [import_key for import_key in data.keys() if import_key.startswith(key + "-")]
+                for imported_value in multiple_values_fields:
+                    new_key = imported_value.split('__')[0] + "-" + imported_value.split('-')[-1]
+                    add_results[new_key] = data[imported_value]
+                inner_subrecords = [item for item in data.keys() if item.startswith(key + "__") and not data[item].startswith("target-") ]
+                if inner_subrecords:
+                    add_results[key.split('__')[0]] = process_subrecords(data, key, inner_subrecords)[key.split('__')[0]]
+                
+            results[prefix][num] = add_results
+
+    if not subrecords and data[id] != "":
+        for el in data[id].split(','):
+            imported_resources = [field_id for field_id in data if field_id.startswith(el+"-")]
+            for imported_res in imported_resources:
+                results[imported_res.split('__')[0]+"-"+imported_res.split("-")[-1]] = data[imported_res]
+            results[el.split('__')[0]] = data[el]
+
+    return results
+
 
 def find_label(tpl, subrecord, alternative_label):
 	print(tpl)

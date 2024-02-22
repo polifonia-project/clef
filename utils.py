@@ -294,10 +294,11 @@ def updateTemplateList(res_name=None,res_type=None,remove=False):
 
 		for i in range(len(data)):
 			if data[i]['short_name'] == res_name:
-				#del data[i]
-				#break
-				data[i]["status"] = "deleted"
-
+				to_be_deleted = data[i]['template']
+				if os.path.exists(to_be_deleted):
+					os.remove(to_be_deleted)
+				del data[i]
+				break
 		with open(TEMPLATE_LIST,'w') as tpl_file:
 			json.dump(data, tpl_file)
 

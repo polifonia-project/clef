@@ -249,6 +249,7 @@ class Template:
 		with open(TEMPLATE_LIST,'r') as tpl_file:
 			tpl_list = json.load(tpl_file)
 
+		print(res_name)
 		res_type = [i['type'] for i in tpl_list if i["short_name"] == res_name][0]
 		res_full_name = [i['name'] for i in tpl_list if i["short_name"] == res_name][0]
 
@@ -513,6 +514,7 @@ class Index:
 		# create a new template
 		elif actions.action.startswith('createTemplate'):
 			print('create template')
+			print(actions)
 			is_git_auth = github_sync.is_git_auth()
 			res_type = actions.class_uri.strip() if "class_uri" in actions else conf.main_entity
 			res_name = actions.class_name.replace(' ','_').lower() if "class_name" in actions else "not provided"
@@ -524,9 +526,9 @@ class Index:
 			types = [t['type'] for t in templates]
 			now_time = str(time.time()).replace('.','-')
 			# check for duplicates
-			res_n = actions.class_name if (res_type not in types and res_name not in names) else actions.class_name+'_'+now_time
+			res_n, adress = (actions.class_name, res_name) if (res_type not in types and res_name not in names) else (actions.class_name+'_'+now_time, res_name+'_'+now_time)
 			u.updateTemplateList(res_n,res_type)
-			raise web.seeother(prefixLocal+'template-'+res_name)
+			raise web.seeother(prefixLocal+'template-'+adress)
 
 		# login or create a new record
 		else:
@@ -827,7 +829,7 @@ class Review(object):
 
 		# save the new record for future publication
 		if actions.action.startswith('save'):
-			if not f.validates() or not u.check_mandatory_fields(web.input()):
+			if not f.validates():
 				graphToRebuild = conf.base+name+'/'
 				recordID = name
 				data = queries.getData(graphToRebuild,templateID)
@@ -866,7 +868,7 @@ class Review(object):
 
 		# publish the record
 		elif actions.action.startswith('publish'):
-			if not f.validates() or not u.check_mandatory_fields(web.input()):
+			if not f.validates():
 				graphToRebuild = conf.base+name+'/'
 				recordID = name
 				data = queries.getData(graphToRebuild,templateID)

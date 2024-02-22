@@ -138,7 +138,6 @@ $(document).ready(function() {
       $(this).closest('form').parent().after(searchresult);
     }
 
-
 		if ( $(this).hasClass('searchWikidata') ) {
 			searchWD(searchID);
 		};
@@ -173,6 +172,10 @@ $(document).ready(function() {
 
     if ( $(this).hasClass('websitePreview')) {
       addURL(searchID, iframe=true);
+    }
+
+    if ( $(this).attr('subtemplate') != undefined) {
+      searchCatalogueByClass(searchID);
     }
 	});
 
@@ -585,6 +588,112 @@ function searchGeonames(searchterm) {
   	    	//colorForm();
 	    };
 	});
+};
+
+// a function to look for catalogue's records belonging to a desired class 
+function searchCatalogueByClass(searchterm) {
+  var resource_class = $('#'+searchterm).attr('subtemplate');
+  var yet_to_save_keys = [];
+  var yet_to_save_resources = [];
+  $('.disambiguate[class*="' + resource_class + '"]').each(function() {
+    yet_to_save_keys.push($(this).val());
+    var key_id = $(this).attr('id');
+    var subrecord = $('input[type="hidden"][value*="'+key_id+'"]');
+    yet_to_save_resources.push(subrecord.attr('id'));
+  });
+  
+
+  $('#'+searchterm).keyup(function(e) {
+    var useful_yet_to_save_keys = yet_to_save_keys.filter(function(value) {
+      return value.toLowerCase().includes($('#'+searchterm).val().toLowerCase()) && value.trim() !== '';
+    });
+
+    // autocomplete positioning;
+    var position = $('#'+searchterm).position();
+    var leftpos = $('.subform_section').length !== 0 ? position.left-35 : position.left+15;
+    var offset = $('#'+searchterm).offset();
+    var height = $('#'+searchterm).height();
+    var top = $('.subform_section').length !== 0 ? offset.top - $('.subform_section').offset().top + height + "px" : offset.top + height + "px";
+    var max_width = $('.subform_section').length !== 0 ? '90%' : '600px';
+    $('#searchresult').css( {
+        'position': 'absolute',
+        'margin-left': leftpos+'px',
+        'top': top,
+        'z-index':1000,
+        'background-color': 'white',
+        'border':'solid 1px grey',
+        'max-width':max_width,
+        'border-radius': '4px'
+    });
+	  $("#searchresult").show();
+
+    // prepare the query
+	  var query_term = $('#'+searchterm).val();
+    var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o where { ?o bds:search '"+query_term+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o ; a <"+resource_class+"> .}"
+    var encoded = encodeURIComponent(query);
+
+    // send the query request
+    $.ajax({
+      type: 'GET',
+      url: myPublicEndpoint + '?query=' + encoded, 
+      headers: { Accept: 'application/sparql-results+json' },
+      success: function (returnedJson) {
+        $("#searchresult").empty();
+        var url = myPublicEndpoint + '?query=' + encoded
+        // show results
+        if (!returnedJson.results.bindings.length) {
+          $("#searchresult").append("<div class='wditem noresults'>No results in catalogue</div>");
+          // remove messages after 3 seconds
+          setTimeout(function(){ if ($('.noresults').length > 0) { $('.noresults').remove(); } }, 3000);
+        } else {
+          for (let i = 0; i < returnedJson.results.bindings.length; i++) {
+            var myUrl = returnedJson.results.bindings[i].s.value;
+            var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1);
+            $("#searchresult").append("<div class='wditem fromCatalogue'><a class='blue orangeText' target='_blank' href='view-" + resID + "'><i class='fas fa-external-link-alt'></i></a> <a class='blue orangeText' data-id='" + myUrl + "'>" + returnedJson.results.bindings[i].o.value + "</a></div>");
+          }
+        }
+
+        // add tag if the user chooses an item from the catalogue
+        $('a[data-id^="' + base + '"]').each(function () {
+          $(this).bind('click', function (e) {
+            e.preventDefault();
+            var oldID = this.getAttribute('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
+            var oldLabel = $(this).text();
+            $('#' + searchterm).next('i').after("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(oldLabel) + "\"/>");
+            $("#searchresult").hide();
+            $('#' + searchterm).val('');
+          });
+
+        });;
+
+        // once external resources have been added, include newly created resources (yet to be saved)
+        for (let j = 0; j < useful_yet_to_save_keys.length; j++) {
+          var resource_id = yet_to_save_resources[j];
+          var resource_name = useful_yet_to_save_keys[j];
+          $('#searchresult').append("<div class='wditem'><a class='blue orangeText' target='"+resource_id+"'>"+resource_name+"</a></div>")
+        }
+
+        // add tag if the user chooses an item from yet to save resources
+        $('a[target]').each(function () {
+          $(this).bind('click', function (e) {
+            e.preventDefault();
+            console.log(this)
+            var target = $(this).attr('target');
+            var label = $(this).text();
+            var id_root = target.replace(/\d+$/, '');
+            var subrecord_idx = $('[id^="'+id_root+'"]').length + 1;
+            $('#' + searchterm).next('i').after("<span class='tag-subrecord "+resource_class+"' id='"+target+"-tag'>" + label + "</span><i class='far fa-edit' onclick='modify_subrecord("+target+", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord("+target+", keep=false)'></i><input type='hidden' class='hiddenInput' id='"+id_root+subrecord_idx+"' name='"+id_root+subrecord_idx+"' value='target-"+target+"'>");
+            $("#searchresult").hide();
+            $('#' + searchterm).val('');
+          });
+
+        });
+      },
+      error: function (error) {
+        reject(error);
+      }
+    });
+  })
 };
 
 // a function to look through the catalogue while querying Wikidata and VIAF
@@ -1317,28 +1426,29 @@ function create_subrecord(resource_class, field_name, el) {
 
   // save or cancel subrecord
   const subrecord_buttons = $("<section class='row subform_buttons buttonsSection'></section>");
-  const save_subrecord_btn = $("<input id='subrecord_save' class='btn btn-dark' style='margin-left:20px' value='Add''>");
+  const save_subrecord_btn = $("<input id='subrecord_save' class='btn btn-dark' style='margin-left:20px' value='Add'>");
   const cancel_subrecord_btn = $("<input id='subrecord_cancel' class='btn btn-dark' style='margin-left:20px' value='Cancel'>");
 
   // SAVE
   save_subrecord_btn.on('click', function(e) {
     // generate a tag
-    console.log("RQWEQ")
-    var tag_label = subrecord_form.find('.disambiguate').val() || (field_name + "-" + $(".tag-subrecord[class~='"+resource_class+"']").length + 1);
-    var subinputs = [];
-    subrecord_form.find('input:not(.btn)').each(function() {
-      $("#recordForm").append($(this));
-      $(this).hide();
-      if ($(this).attr('id') !== undefined) {subinputs.push($(this).attr('id'))};
-    });
-    var subrecord_index = $("[subtemplate='"+resource_class+"']").parent().parent().find('.tag-subrecord').length + 1;
-    var subrecord_id = $("[subtemplate='"+resource_class+"']").attr('id') + "__" + subrecord_index;
-    console.log(el);
-    el.after("<br/><span id='"+subrecord_id+"-tag' class='tag-subrecord "+resource_class+"'>" + tag_label + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+subrecord_id+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+subrecord_id+"\", keep=false)'></i>");
-    $('#recordForm').append("<input type='hidden' name='"+subrecord_id+"' id='"+subrecord_id+"' value='"+subinputs.toString()+"'></input>");
+    var is_valid = check_mandatory_fields(this);
+    if (is_valid) {
+      var tag_label = subrecord_form.find('.disambiguate').val() || (field_name + "-" + $(".tag-subrecord[class~='"+resource_class+"']").length + 1);
+      var subinputs = [];
+      subrecord_form.find('input:not(.btn)').each(function() {
+        $("#recordForm").append($(this));
+        $(this).hide();
+        if ($(this).attr('id') !== undefined) {subinputs.push($(this).attr('id'))};
+      });
+      var subrecord_index = $("[subtemplate='"+resource_class+"']").parent().parent().find('.tag-subrecord').length + 1;
+      var subrecord_id = $("[subtemplate='"+resource_class+"']").attr('id') + "__" + subrecord_index;
+      el.after("<br/><span id='"+subrecord_id+"-tag' class='tag-subrecord "+resource_class+"'>" + tag_label + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+subrecord_id+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+subrecord_id+"\", keep=false)'></i>");
+      $('#recordForm').append("<input type='hidden' name='"+subrecord_id+"' id='"+subrecord_id+"' value='"+subinputs.toString()+"'></input>");
 
-    // hide_subform
-    cancel_subrecord(this);
+      // hide_subform
+      cancel_subrecord(this);
+    }
   });
   // CANCEL
   cancel_subrecord_btn.on('click', function(e) {
@@ -2557,15 +2667,17 @@ function next_extractor(element, id, type) {
 
 
 // TODO: bring it to the right position within this file
-function check_mandatory_fields(){
+function check_mandatory_fields(subrecord_btn=false){
   var is_valid = true;
-
-  $('[mandatory="True"]:not(.original_subtemplate)').each(function() {
+  
+  if (subrecord_btn) { var fields = $(subrecord_btn).parent().parent().find('[mandatory="True"]'); } else { var fields = $('[mandatory="True"]:not(.original_subtemplate)'); }
+  fields.each(function() {
     if ($(this).val() === '' && !$('[data-input="'+$(this).attr('id')+'"]').length) {
       console.log($(this));
       /* in principle, the header could be changed through the back-end application. 
       However, this would cause the loss of all inserted values. */
-      $('header').find('h3').eq(0).text("The form is not valid, please check mandatory fields")
+      if (subrecord_btn) { alert("Check Mandatory Fields!")}
+      else { $('header').find('h3').eq(0).text("The form is not valid, please check mandatory fields") }
       window.scrollTo(0, 0);
       is_valid = false;
     }

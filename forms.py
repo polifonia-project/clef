@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import web , datetime , os, time, re, cgi , json
+import web , datetime , os, time, re, cgi , json, html
 from web import form
 import conf
 
@@ -60,7 +60,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 			description = field['label'] if 'label' in field and len(field['label']) > 0 else 'input'
 			pre_a = '<span class="tip" data-toggle="tooltip" data-placement="bottom" title="'
 			pre_b = '"><i class="fas fa-info-circle"></i></span>'
-			prepend = pre_a+field['prepend']+pre_b if 'prepend' in field and len(field['prepend']) > 0 else ''
+			prepend = pre_a+html.escape(field['prepend'])+pre_b if 'prepend' in field and len(field['prepend']) > 0 else ''
 			disabled = 'disabled' if 'disabled' in field and field['disabled'] == "True" else ''
 			classes = field['class'] if 'class' in field and len(field['class']) > 0 else ''
 			if 'vocab' in field:
@@ -87,7 +87,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 			# Text box
 			if field['type'] in ['Textbox','Vocab', 'WebsitePreview']:
 				if "disambiguate" in field and field["disambiguate"] == 'True':
-					vpass = form.regexp(r".{1,200}$", 'must be between 1 and 200 characters')
+					vpass = form.regexp(r".{0,200}$", 'must be between 1 and 200 characters') # TODO: check the regex (either set it to {0, 200} or remove it in case of Subtemplates' primary keys)
 					params = params + (form.Textbox(myid, vpass,
 					description = description,
 					id=myid,

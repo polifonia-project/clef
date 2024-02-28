@@ -662,6 +662,12 @@ function searchCatalogueByClass(searchterm) {
             $('#' + searchterm).next('i').after("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(oldLabel) + "\"/>");
             $("#searchresult").hide();
             $('#' + searchterm).val('');
+            if ($('[name="'+searchterm+'-subrecords"]').length) {
+              $('[name="'+searchterm+'-subrecords"]').val($('[name="'+searchterm+'-subrecords"]').val() + "," + oldID);
+            } else {
+              const new_sub = $("<input type='hidden' name='"+searchterm+"-subrecords' value='"+oldID+"'>")
+              $('#recordForm').append(new_sub)
+            }
           });
 
         });;
@@ -685,6 +691,12 @@ function searchCatalogueByClass(searchterm) {
             $('#' + searchterm).next('i').after("<span class='tag-subrecord "+resource_class+"' id='"+target+"-tag'>" + label + "</span><i class='far fa-edit' onclick='modify_subrecord("+target+", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord("+target+", keep=false)'></i><input type='hidden' class='hiddenInput' id='"+id_root+subrecord_idx+"' name='"+id_root+subrecord_idx+"' value='target-"+target+"'>");
             $("#searchresult").hide();
             $('#' + searchterm).val('');
+            if ($('[name="'+searchterm+'-subrecords"]').length) {
+              $('[name="'+searchterm+'-subrecords"]').val($('[name="'+searchterm+'-subrecords"]').val()+","+id_root+subrecord_idx);
+            } else {
+              const new_sub = $("<input type='hidden' name='"+searchterm+"-subrecords' value='"+id_root+subrecord_idx+"'>")
+              $('#recordForm').append(new_sub)
+            }
           });
 
         });
@@ -1439,12 +1451,24 @@ function create_subrecord(resource_class, field_name, el) {
       subrecord_form.find('input:not(.btn)').each(function() {
         $("#recordForm").append($(this));
         $(this).hide();
-        if ($(this).attr('id') !== undefined) {subinputs.push($(this).attr('id'))};
+        if ($(this).attr('id') !== undefined && !$(this).val().startsWith("target-") ) {subinputs.push($(this).attr('id'))};
       });
       var subrecord_index = $("[subtemplate='"+resource_class+"']").parent().parent().find('.tag-subrecord').length + 1;
-      var subrecord_id = $("[subtemplate='"+resource_class+"']").attr('id') + "__" + subrecord_index;
+      var subrecord_base = $("[subtemplate='"+resource_class+"']").attr('id')
+      var subrecord_id = subrecord_base + "__" + subrecord_index;
       el.after("<br/><span id='"+subrecord_id+"-tag' class='tag-subrecord "+resource_class+"'>" + tag_label + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+subrecord_id+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+subrecord_id+"\", keep=false)'></i>");
       $('#recordForm').append("<input type='hidden' name='"+subrecord_id+"' id='"+subrecord_id+"' value='"+subinputs.toString()+"'></input>");
+
+      var $subrecords = $('[name="'+subrecord_base+'-subrecords"]');
+      if ($subrecords.length) {
+          var to_add_value = $subrecords.val();
+          if (!$subrecords.val().split(',').includes(to_add_value)) {
+              $subrecords.val(to_add_value + "," + subrecord_id);
+          }
+      } else {
+          const new_sub = $("<input type='hidden' name='"+$("[subtemplate='"+resource_class+"']").attr('id')+"-subrecords' value='"+subrecord_id+"'>");
+          $('#recordForm').append(new_sub);
+      }
 
       // hide_subform
       cancel_subrecord(this);
@@ -1498,42 +1522,64 @@ function modify_subrecord(sub_id, keep) {
     create_subrecord(original_subtemplate_class, field_name, el);
 
     for (let i=0; i<inner_inputs.length; i++) {
-      console.log(inner_inputs[i])
       var input = $('#'+inner_inputs[i]);
       var shortened_id = inner_inputs[i].split("__").slice(0, -1).join("__");
       var new_input = $('.subform_section [id*="'+shortened_id+'__"]');
       new_input.replaceWith(input.show());
-      if ($('input[type="hidden"][name*="'+inner_inputs[i]+'-"]').length) {
-        var imported_values = $('input[type="hidden"][name*="'+inner_inputs[i]+'-"]');
-        imported_values.each(function() {
-          var id = $(this).attr('name').split("-")[0];
-          var values = $(this).attr('value').split(",");
-          var value_code = values[0];
-          var value_string = decodeURIComponent(values[1]);
-          var tag = "<span class='tag "+value_code+"' data-input='"+id+"' data-id='"+value_code+"'>"+value_string+"</span>";
-          var hidden_input = $(this).detach();
-          input.after(tag, hidden_input);
-        })
-      } else if ($('input[id*="'+inner_inputs[i]+'__"]')) {
-        var inner_subrecords = $('input[id*="'+inner_inputs[i]+'__"]');
-        inner_subrecords.each(function() {
-          var inner_subrecord_fields = $(this).val().split(',');
-          var primary_key = "";
-          for (let i=0; i<inner_subrecord_fields.length; i++){
-            if ($('#'+inner_subrecord_fields[i]).hasClass('disambiguate')) {
-              primary_key = $('#'+inner_subrecord_fields[i]).val();
+      if ($('input[name*="'+inner_inputs[i]+'-subrecords"]').length) {
+        console.log(inner_inputs[i])
+        var inner_subrecords = $('input[name*="'+inner_inputs[i]+'-subrecords"]').val().split(",");
+        console.log(inner_subrecords);
+        for (let j=0;j<inner_subrecords.length;j++) {
+          if (inner_subrecords[j].includes("-")) {
+            console.log(inner_subrecords[j]);
+            var id = inner_subrecords[j].split("-")[0];
+            console.log($('[name="'+inner_inputs[i]+"-"+inner_subrecords[j]+'"]'))
+            var values = $('[name="'+inner_inputs[i]+"-"+inner_subrecords[j]+'"]').attr('value').split(",");
+            var value_code = values[0];
+            var value_string = decodeURIComponent(values[1]);
+            var tag = "<span class='tag "+value_code+"' data-input='"+id+"' data-id='"+value_code+"'>"+value_string+"</span>";
+            var hidden_input = $('[name="'+inner_subrecords[j]+'"').detach();
+            input.after(tag, hidden_input);
+          } else if ($('[name="'+inner_subrecords[j]+'"]').val().startsWith("target-")) {
+            console.log(inner_subrecords[j]);
+            var target_id = $('input[name="'+inner_subrecords[j]+'"]').val().split("target-")[1];
+            var inner_subrecord_fields = $('input[name="'+target_id+'"]').val().split(',');
+            var primary_key = "";
+            for (let y=0; y<inner_subrecord_fields.length; y++){
+              if ($('#'+inner_subrecord_fields[y]).hasClass('disambiguate')) {
+                primary_key = $('#'+inner_subrecord_fields[iy]).val();
+              }
             }
+            if (primary_key === "") {
+              var inner_field_name = $('#'+inner_inputs[i]).prev('span').attr('data-original-title');
+              var num = $(this).attr('id').split('__')[-1];
+              var primary_key = inner_field_name+ "-" + num;
+            }
+            var resource_class = $('#'+inner_inputs[i]).attr('subtemplate');
+            var tag = "<span id='"+$(this).attr('id')+"-tag' class='tag-subrecord "+resource_class+"'>" + primary_key + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+$(this).attr('id')+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+$(this).attr('id')+"\", keep=false)'></i>"
+            $('#'+inner_inputs[i]).after(tag);
+          } else {
+            console.log(inner_subrecords[j]);
+            var inner_subrecord_fields = $('[name="'+inner_subrecords[j]+'"]').val().split(',');
+            var primary_key = "";
+            for (let y=0; y<inner_subrecord_fields.length; y++){
+              if ($('#'+inner_subrecord_fields[y]).hasClass('disambiguate')) {
+                primary_key = $('#'+inner_subrecord_fields[y]).val();
+              }
+            }
+            if (primary_key === "") {
+              var inner_field_name = $('#'+inner_inputs[i]).prev('span').attr('data-original-title');
+              var num = $(this).attr('id').split('__')[-1];
+              var primary_key = inner_field_name+ "-" + num;
+            }
+            var resource_class = $('#'+inner_inputs[i]).attr('subtemplate');
+            var tag = "<span id='"+$(this).attr('id')+"-tag' class='tag-subrecord "+resource_class+"'>" + primary_key + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+$(this).attr('id')+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+$(this).attr('id')+"\", keep=false)'></i>"
+            console.log(inner_inputs[i]);
+            $('#'+inner_inputs[i]).after(tag);
           }
-          if (primary_key === "") {
-            var inner_field_name = $('#'+inner_inputs[i]).prev('span').attr('data-original-title') 
-            var num = $(this).attr('id').split('__')[-1];
-            var primary_key = inner_field_name+ "-" + num;
-          } 
-          var resource_class = $('#'+inner_inputs[i]).attr('subtemplate');
-          var tag = "<span id='"+$(this).attr('id')+"-tag' class='tag-subrecord "+resource_class+"'>" + primary_key + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+$(this).attr('id')+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+$(this).attr('id')+"\", keep=false)'></i>"
-          $('#'+inner_inputs[i]).after(tag);
-        })
-      }
+        }
+      }  
     }
   }
   $('#'+sub_id+'-tag').next('i').remove();

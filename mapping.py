@@ -81,6 +81,7 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 	# CREATE/MODIFY A NAMED GRAPH for each new record
 
 	recordID = recordData.recordID
+	print(recordID)
 	graph_name = recordID
 	wd = rdflib.Graph(identifier=URIRef(base+graph_name+'/'))
 
@@ -199,31 +200,42 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 					server.update('load <file:///'+dir_path+'/records/'+recordID+"-extraction-"+str(graph['internalID'])+'.ttl> into graph <'+base+extraction_graph_name+'/>')
 		# SUBTEMPLATE
 		elif field['type']=="Subtemplate":
-			# check potential duplications:
-			#doubled_values = check_double_subrecords(recordData) if not doubled_values else doubled_values
+			print(field['id'], recordData[field['id']], type(recordData[field['id']]))
+			if type(recordData[field['id']]) != type([]):
+				new_subrecords, imported_subrecords, duplicate_subrecords = check_subrecords(recordData, field['id']) if field['id']+"-subrecords" in recordData else ([],[],[])
 
-			# handle imported entities from catalogue (not newly created ones)
-			imported_entities = [field_id for field_id in recordData if field_id.startswith(field['id']+"-") and "," in recordData[field_id]]
-			for imported_entity in imported_entities:
-				imported_entity_id, imported_entity_label = recordData[imported_entity].split(',')
-				imported_entity_label = urllib.parse.unquote(imported_entity_label)
-				entityURI = getRightURIbase(imported_entity_id) 
-				print(entityURI)
-				wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(entityURI) ))
-				wd.add(( URIRef( entityURI ), RDFS.label, Literal(imported_entity_label.lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
-			subrecords = process_subrecords(recordData, field['id']) if not subrecords_dict else subrecords_dict
-			print("#### surbrecords:", subrecords)
-			if field['id'] in subrecords:
-				for subrecord_idx, subrecord in subrecords[field['id']].items():
+				# newly created subrecords
+				for new_entity in new_subrecords:
 					ct = datetime.datetime.now()
 					ts = ct.timestamp()
 					ID = str(ts).replace('.', '-')
-					subrecord['recordID'] = ID
-					label = find_label(field['import_subtemplate'], subrecord, field['label'])
-					inputToRDF(storify(subrecord),userID,stage,knowledge_extraction,tpl_form=field['import_subtemplate'],subrecords_dict=subrecord)
+					label_id = find_label(field['import_subtemplate'])
+					retrieved_label = [recordData[label] for label in recordData[new_entity].split(",") if label.startswith(label_id+"__")][0] if label_id else recordData[new_entity]+"-"+ID 
+					process_new_subrecord(recordData, new_entity, userID, stage, knowledge_extraction, field['import_subtemplate'], ID)
+					recordData[new_entity] = ID+","+retrieved_label
 					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+ID) ))
-					wd.add(( URIRef(base+ID), RDFS.label, Literal(label, datatype="http://www.w3.org/2001/XMLSchema#string")))
+					wd.add(( URIRef(base+ID), RDFS.label, Literal(retrieved_label, datatype="http://www.w3.org/2001/XMLSchema#string")))
+				
+				# imported subrecords
+				for imported_entity in imported_subrecords:
+					imported_entity_id, imported_entity_label = recordData[imported_entity].split(',')
+					imported_entity_label = urllib.parse.unquote(imported_entity_label)
+					entityURI = getRightURIbase(imported_entity_id) 
+					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(entityURI) ))
+					wd.add(( URIRef( entityURI ), RDFS.label, Literal(imported_entity_label.lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
 
+				# duplicate subrecords
+				for duplicate_entity in duplicate_subrecords:
+					duplicate_entity_id, duplicate_entity_label = process_duplicate_subrecord(recordData, duplicate_entity, userID, stage, knowledge_extraction, field['import_subtemplate'], return_entity=True)
+					entityURI = getRightURIbase(duplicate_entity_id) 
+					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(entityURI) ))
+					wd.add(( URIRef( entityURI ), RDFS.label, Literal(duplicate_entity_label.lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
+
+			else:
+				for entity in recordData[field['id']]:
+					entity_URI, entity_label = entity.split(",",1)
+					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+entity_URI) ))
+					wd.add(( URIRef(base+entity_URI), RDFS.label, Literal(entity_label, datatype="http://www.w3.org/2001/XMLSchema#string")))
 
 	# get keywords (record modify)
 	if stage == 'modified' and any([k for k,v in recordData.items() if k.startswith('keywords')]):
@@ -243,71 +255,90 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 
 	return 'records/'+recordID+'.ttl'
 
-def check_double_subrecords(data):
-	results_dict = {
-		'targets': {},
-		'pointers' : {},
-	}
-	for key, value in data.items():
-		if value.startswith("target-"):
-			split_key = key.split("__")
-			new_key = split_key[0] + "__" + split_key[-1]
-			split_value = value.replace("target-", "").split("__")
-			new_value = split_value[0] + "__" + split_value[-1]
-			results_dict['targets'][new_value] = new_key
-			results_dict['pointers'][new_key] = new_value
-	return results_dict
+def check_subrecords(data, identifier):
+	subrecords = data[identifier+"-subrecords"].split(",")
+	new_subrecords, imported_subrecords, double_subrecords = [], [], []
+	for subrecord in subrecords:
+		if subrecord.startswith(identifier+"__"):
+			new_subrecords.append(subrecord)
+		elif subrecord.startswith(identifier+"-") and "target-" not in data[subrecord]:
+			imported_subrecords.append(subrecord)
+		else:
+			double_subrecords.append(subrecord)
+	return new_subrecords, imported_subrecords, double_subrecords
+	
+def process_new_subrecord(data, subrecord_id, userID, stage, knowledge_extraction, sub_tpl, ID):
+	subrecord_fields = data[subrecord_id].split(",")
+	new_record_data = {}
+	with open(sub_tpl) as fields:
+		subtemplate = json.load(fields)
+	for subrecord_field in subrecord_fields:
+		# check inner subrecords
+		if subrecord_field+"-subrecords" in data:
+			new_record_data[subrecord_field.split("__")[0]] = [[]]
+			inner_subtemplate = [key['import_subtemplate'] for key in subtemplate if key['id'] == subrecord_field.split("__")[0]][0]
+			for inner_subrecord in data[subrecord_field + "-subrecords"].split(","):
+				if "-" in inner_subrecord:
+					inner_subrecord = subrecord_field + "-" + inner_subrecord
+					data = process_imported_subrecord(data, inner_subrecord)
+				elif "target-" in data[inner_subrecord]:
+					data = process_duplicate_subrecord(data, inner_subrecord, userID, stage, knowledge_extraction, sub_tpl)
+				else:
+					ct = datetime.datetime.now()
+					ts = ct.timestamp()
+					new_ID = str(ts).replace('.', '-')
+					data = process_new_subrecord(data, inner_subrecord, userID, stage, knowledge_extraction, inner_subtemplate, new_ID)
+				new_record_data[subrecord_field.split("__")[0]][0].append(data[inner_subrecord])
+		# check single value fields (e.g. Date/Literal)
+		elif data[subrecord_field] != "":
+			key = subrecord_field.split("__")[0]
+			new_record_data[key] = data[subrecord_field]
+		# check multiple values fields (e.g. Entities, SKOS Vocabs)
+		else:
+			multiple_values = [key for key in data if key.startswith(subrecord_field+"-")]
+			if multiple_values != []:
+				for value in multiple_values:
+					new_key = value.split("__")[0] + "-" + value.split("-")[-1]
+					new_record_data[new_key] = data[value]
+			else:
+				new_record_data[subrecord_field.split("__")[0]] = ""
+	new_record_data['recordID'] = ID
+	label = new_record_data[find_label(sub_tpl)]
+	store_data = storify(new_record_data)
+	inputToRDF(store_data,userID,stage,knowledge_extraction,tpl_form=sub_tpl)
+	result = ID+","+label
+	data[subrecord_id] = result.strip()
+	return data
 
+def process_imported_subrecord(data, subrecord_id):
+	ID, label = data[subrecord_id].split(",",1)
+	label = urllib.parse.unquote(label)
+	result = ID+","+label
+	data[subrecord_id] = result.strip()
+	return data
 
+def process_duplicate_subrecord(data, subrecord_id, userID, stage, knowledge_extraction, sub_tpl, return_entity=False):
+	inner_key = data[subrecord_id].replace("target-","")
+	if "," not in data[inner_key]:
+		ct = datetime.datetime.now()
+		ts = ct.timestamp()
+		new_ID = str(ts).replace('.', '-')
+		data = process_new_subrecord(data, inner_key, userID, stage, knowledge_extraction, sub_tpl, new_ID)
+	ID, label = data[inner_key].split(",",1)
+	label = urllib.parse.unquote(label)
+	if return_entity:
+		return ID, label
+	else:
+		result = ID+","+label
+		data[subrecord_id] = result.strip()
+		return data
 
-
-# convert the dict of inputs into a series of nested dictionaries to be parsed as single records
-def process_subrecords(data, id, created_subrecords=None):
-    results = {}
-    subrecords = [key for key in data if key.startswith(id+"__") and not data[key].startswith("target-")] if created_subrecords == None else created_subrecords
-
-    for subrecord in subrecords:
-        subrecord_split = subrecord.split('__')
-        prefix, num = subrecord_split[0], subrecord_split[-1]
-        if prefix not in results:
-            results[prefix] = { num: {} }  
-        else:
-            results[prefix][num] = {}
-        add_results = {}
-        subrecord_fields = data[subrecord].split(',')
-        for key in subrecord_fields:
-            if data[key].startswith("target-"):
-                add_results[key.replace("target-", "").split('__')[0]] = {key.split('__')[-1] : process_subrecords(data, data[key].replace("target-", "")) }
-            elif data[key] != "":
-                add_results[key.split('__')[0]] = data[key]
-            else:
-                multiple_values_fields = [import_key for import_key in data.keys() if import_key.startswith(key + "-")]
-                for imported_value in multiple_values_fields:
-                    new_key = imported_value.split('__')[0] + "-" + imported_value.split('-')[-1]
-                    add_results[new_key] = data[imported_value]
-                inner_subrecords = [item for item in data.keys() if item.startswith(key + "__") and not data[item].startswith("target-") ]
-                if inner_subrecords:
-                    add_results[key.split('__')[0]] = process_subrecords(data, key, inner_subrecords)[key.split('__')[0]]
-                
-            results[prefix][num] = add_results
-
-    if not subrecords and data[id] != "":
-        for el in data[id].split(','):
-            imported_resources = [field_id for field_id in data if field_id.startswith(el+"-")]
-            for imported_res in imported_resources:
-                results[imported_res.split('__')[0]+"-"+imported_res.split("-")[-1]] = data[imported_res]
-            results[el.split('__')[0]] = data[el]
-
-    return results
-
-
-def find_label(tpl, subrecord, alternative_label):
-	print(tpl)
+def find_label(tpl):
 	# Retrieve the field associated with the Primary Key (i.e., the label) of the Record
 	with open(tpl) as tpl_file:
 		tpl_fields = json.load(tpl_file)
-	label_field_id = [field['id'] for field in tpl_fields if field['disambiguate'] == "True"][0]
-
+	fields_id = [field['id'] for field in tpl_fields if field['disambiguate'] == "True"]
+	label_field_id = fields_id[0] if fields_id != [] else False
+	
 	# Add a mechanism to handle potential Templates without a Primary Key (e.g. the primary key has been set to "hidden")
-	label = subrecord[label_field_id] if label_field_id in subrecord else alternative_label+"-"+subrecord['recordID']
-	return label
+	return label_field_id

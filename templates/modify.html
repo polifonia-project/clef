@@ -84,7 +84,7 @@ $var project = project
 													var list_vocabs = '$list_vocabs'.split("//")
 													var skos_vocabs_json = JSON.parse(skos_to_string)
 												</script>
-											<!-- text box with URI,label -->
+											<!-- text box with URI,label; includes subrecords -->
 											$if len(graphdata[id]) > 0 and "multimedia" not in input.attrs["class"] and "websitePreview" not in input.attrs["class"]:
 												$for k_v in graphdata[id]:
 														<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>

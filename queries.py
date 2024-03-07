@@ -222,6 +222,7 @@ def getData(graph,res_template):
 					OPTIONAL {?subject schema:keywords ?keywords . ?keywords rdfs:label ?keywords_label . } }
 		}
 		'''
+	
 	sparql = SPARQLWrapper(conf.myEndpoint)
 	sparql.setQuery(queryNGraph)
 	sparql.setReturnFormat(JSON)

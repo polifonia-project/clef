@@ -81,7 +81,6 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 	# CREATE/MODIFY A NAMED GRAPH for each new record
 
 	recordID = recordData.recordID
-	print(recordID)
 	graph_name = recordID
 	wd = rdflib.Graph(identifier=URIRef(base+graph_name+'/'))
 
@@ -100,7 +99,7 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 			wd.add(( URIRef(base+graph_name+'/'), PROV.wasAttributedTo, URIRef(creatorIRI) ))
 			wd.add(( URIRef(creatorIRI), RDFS.label , Literal(creatorLabel ) ))
 
-		# retrieve hidden triples (to be saved) and re-introduce them in the named graph
+		# retrieve hidden triples (to be saved) and re-introduce them in the modified named graph
 		to_be_saved = queries.saveHiddenTriples(graphToClear, tpl_form)
 		if to_be_saved:
 			for binding in to_be_saved['results']['bindings']:
@@ -218,7 +217,7 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 				
 				# imported subrecords
 				for imported_entity in imported_subrecords:
-					imported_entity_id, imported_entity_label = recordData[imported_entity].split(',')
+					imported_entity_id, imported_entity_label = recordData[field['id']+"-"+imported_entity].split(',')
 					imported_entity_label = urllib.parse.unquote(imported_entity_label)
 					entityURI = getRightURIbase(imported_entity_id) 
 					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(entityURI) ))
@@ -261,7 +260,7 @@ def check_subrecords(data, identifier):
 	for subrecord in subrecords:
 		if subrecord.startswith(identifier+"__"):
 			new_subrecords.append(subrecord)
-		elif subrecord.startswith(identifier+"-") and "target-" not in data[subrecord]:
+		elif "-" in subrecord and "target-" not in data[identifier+"-"+subrecord]:
 			imported_subrecords.append(subrecord)
 		else:
 			double_subrecords.append(subrecord)
@@ -305,7 +304,8 @@ def process_new_subrecord(data, subrecord_id, userID, stage, knowledge_extractio
 	new_record_data['recordID'] = ID
 	label = new_record_data[find_label(sub_tpl)]
 	store_data = storify(new_record_data)
-	inputToRDF(store_data,userID,stage,knowledge_extraction,tpl_form=sub_tpl)
+	grapht_to_clear = None if stage == 'not modified' else base+ID+"/"
+	inputToRDF(store_data,userID,stage,knowledge_extraction,graphToClear=grapht_to_clear,tpl_form=sub_tpl)
 	result = ID+","+label
 	data[subrecord_id] = result.strip()
 	return data
@@ -340,5 +340,5 @@ def find_label(tpl):
 	fields_id = [field['id'] for field in tpl_fields if field['disambiguate'] == "True"]
 	label_field_id = fields_id[0] if fields_id != [] else False
 	
-	# Add a mechanism to handle potential Templates without a Primary Key (e.g. the primary key has been set to "hidden")
+	# TODO: add a mechanism to handle potential Templates without a Primary Key in case it's needed
 	return label_field_id

@@ -994,6 +994,14 @@ class View(object):
 					and k == field['id'])][0]
 			except Exception as e:
 				title = "No title"
+
+			try:
+				subtemplates = [data[k][0] for k,v in data.items() \
+					for field in fields if (field['type'] == "Subtemplate" \
+					and k == field['id'])]
+			except Exception as e:
+				subtemplates = None
+			print(subtemplates)
 			properties = {field["label"]:[field["property"], field["type"]] for field in fields if 'property' in field}
 			data_labels = { field['label']:v for k,v in data.items() \
 							for field in fields if k == field['id'] and field['hidden'] == 'False' }

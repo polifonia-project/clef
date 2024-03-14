@@ -205,7 +205,9 @@ $ id = templates.get_default_id()
 														</label><br>
 												</section>
 											</section>
+											$ cardinality = field['cardinality'] + "__" + id if 'cardinality' in field else "oneValue__" + id
 											<script type="text/javascript">
+												$$("#$cardinality").attr('checked', 'checked')
 												$$("#import_subtemplate__$id").append(importable_templates);
 												$$("#import_subtemplate__$id option[value$$='"+"$field['import_subtemplate']"+"']").attr("selected","selected");
 												import_subtemplate($$("#import_subtemplate__$id")[0]);

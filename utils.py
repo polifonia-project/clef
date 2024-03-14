@@ -202,8 +202,11 @@ def fields_to_json(data, json_file, skos_file):
 			d['vocab'+vocab_data[1][idx]] = d['vocab'][idx] 
 		d["disabled"] = "False"
 		d["class"]= "col-md-11 yearField" if d["type"] == "Date" and d["calendar"] == "Year" else "col-md-11"
-		d["class"]= d["class"] + " oneVocable" if "oneVocable" in d else d["class"]
 		d["cache_autocomplete"] ="off"
+		# view classes: mark elements in the final Record visualization
+		d["view_class"] = ''
+		d["view_class"] += " oneValue" if "cardinality" in d and d["cardinality"] == "oneValue" else ""
+		d["view_class"] += " subtemplateField" if d["type"] == "Subtemplate" else ""
 
 		
 	# add a default disambiguate if none is selected

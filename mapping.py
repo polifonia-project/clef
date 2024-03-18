@@ -209,7 +209,8 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 						subrecord_id = subrecord
 						subrecord_template = field['import_subtemplate']
 						label_id = find_label(subrecord_template)
-						retrieved_label = [recordData[label] for label in recordData[subrecord].split(",") if label == label_id+"__"+subrecord][0] if label_id else field['label']+"-"+subrecord
+						label_value = [recordData[label] for label in recordData[subrecord].split(",") if label == label_id+"__"+subrecord or (label == label_id and recordData[label] != '')]
+						retrieved_label = label_value[0] if len(label_value) > 0 else field['label']+"-"+subrecord
 						process_new_subrecord(recordData,userID,stage,knowledge_extraction,subrecord_template,subrecord)
 					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+subrecord_id) ))
 					wd.add(( URIRef(base+subrecord_id), RDFS.label, Literal(retrieved_label, datatype="http://www.w3.org/2001/XMLSchema#string")))

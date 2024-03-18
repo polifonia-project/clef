@@ -1996,6 +1996,10 @@ button#showTemplates {
 }
 
 /* subtemplates */
+.check_subtemplate {
+  margin-left: 1em;
+}
+
 .subform_section {
   right:0px;
   bottom:0px;

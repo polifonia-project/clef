@@ -384,13 +384,15 @@ $(document).ready(function() {
       $(this).prev().hide();
       $(this).attr('type', 'hidden');
       var sub_tpl_id = $(this).attr('id');
+      var now = new Date().valueOf();
+      var sub_form_id = (now / 1000).toString().replace('.', '-');
       var form_id = $('.corners form').attr('id');
       var subfields_str_id = '';
       subtemplate_fields.each(function() {
         subfields_str_id += $(this).attr('id') + ",";
       });
-      var hidden_subrecord_link = $('<input type="hidden" name="'+sub_tpl_id+'-subrecords" value="'+sub_tpl_id+'__1"/>');
-      var hidden_subrecord_fields = $('<input type="hidden" name="'+sub_tpl_id+'__1" value="'+subfields_str_id.slice(0,-1)+'"/>');
+      var hidden_subrecord_link = $('<input type="hidden" name="'+sub_tpl_id+'-subrecords" value="'+sub_form_id+'"/>');
+      var hidden_subrecord_fields = $('<input type="hidden" name="'+sub_form_id+'" value="'+subfields_str_id.slice(0,-1)+'"/>');
       $('#'+form_id).append(hidden_subrecord_link,hidden_subrecord_fields);
 
       // check if a subrecord is already associated with this 'subtemplate' field and fill its fields
@@ -405,7 +407,7 @@ $(document).ready(function() {
           url:request_url,
           dataType:"html",
           success:function(data) {
-            var input_fields = $('[name="'+sub_tpl_id+'__1"]').val().split(",");
+            var input_fields = $('[name="'+sub_form_id+'"]').val().split(",");
             for (let i=0; i < input_fields.length; i++) {
               var input_replace = $(data).find('#'+input_fields[i]).parent().parent();
               $('#'+input_fields[i]).parent().parent().replaceWith(input_replace);
@@ -488,18 +490,19 @@ function add_subtemplate(el) {
               var cls = $(this).attr('class');
               var new_cls = cls.replace("col-md-5", "col-md-12")
               $(this).attr('class', new_cls);
+              $(this).find('.wikiEntity').append(wd_img);
+              $(this).find('.geoEntity').append(geo_img);
+              $(this).find('.viafEntity').append(viaf_img);
             })
             calledValue.append($('<div class="hidden-subrecord"></div>').append(calledRecordData));
           } else {
-            console.log(calledValue.parent());
-            console.log(calledRecordData)
+            calledRecordData.find('.wikiEntity').append(wd_img);
+            calledRecordData.find('.geoEntity').append(geo_img);
+            calledRecordData.find('.viafEntity').append(viaf_img);
             calledValue.parent().after(calledRecordData)
           }
 
-
-          calledValue.find('.wikiEntity').append(wd_img);
-          calledValue.find('.geoEntity').append(geo_img);
-          calledValue.find('.viafEntity').append(viaf_img);
+          
 
           var new_values = calledValue.find('.subtemplateField');
           new_values.each(function() {
@@ -1544,14 +1547,16 @@ function replace_existing_subforms() {
 }
 
 // create subrecords
-function create_subrecord(resource_class, field_name, el) {
+function create_subrecord(resource_class, field_name, el, subform_id=null ) {
+  if (!subform_id) {
+    var now = new Date().valueOf();
+    subform_id = (now / 1000).toString().replace('.', '-');
+  }
   var form_id = $('.corners').eq(0).find('form').eq(0).attr('id');
   replace_existing_subforms();
 
   // prepare the new subrecord form
   const subrecord_section = $("<section class='subform_section col-md-12 col-sm-4'></section>");
-  var now = new Date().valueOf()
-  const subform_id = (now / 1000).toString().replace('.', '-');
   const subrecord_form = $("<section class='subform' id='"+subform_id+"-form' target='"+subform_id+"'></section>");
   subrecord_form.append($("<h2 class='articleTitle' style='font-size:3em'>"+field_name+"</h2>"));
 
@@ -1563,8 +1568,59 @@ function create_subrecord(resource_class, field_name, el) {
     clone_element.find('input').removeClass('original_subtemplate');
     // associate proper identifiers to input fields belonging to the subrecord form
     var input_id = clone_element.find('input').attr('id');
-    clone_element.find('input').attr('id', input_id+"__"+subform_id.toString())
-    clone_element.find('input').attr('name', input_id+"__"+subform_id.toString())
+    clone_element.find('input').attr('id', input_id+"__"+subform_id.toString());
+    clone_element.find('input').attr('name', input_id+"__"+subform_id.toString());
+
+    // retrieve previously provided values (modify subrecords):
+    // a) single value 
+    if ($('#'+form_id+' #'+input_id+"__"+subform_id).length >0) {
+      to_modify = $('#'+form_id+' #'+input_id+'__'+subform_id);
+      clone_element.find('input').val(to_modify.val());
+    } 
+    // b) multiple values: imported values and subrecords
+    let clone_element_values = [];
+    if ($('#'+form_id+' [name*="'+input_id+'__'+subform_id+'-"]').length >0) {
+      var imported_values = $('#'+form_id+' [name*="'+input_id+'__'+subform_id+'-"]');
+      imported_values.each(function(){
+        if ($(this).attr('name').endsWith('-subrecords')) {
+          // retrieve subrecords
+          var subrecords = $(this).val().split(',');
+          var subtemplate_field_id = $(this).attr('name').replace('-subrecords', '');
+          console.log($('#'+subtemplate_field_id).attr('class'))
+          var subrecord_cls = $('#'+subtemplate_field_id).attr('subtemplate')
+          for (let i=0; i<subrecords.length;i++){
+            var code = subrecords[i];
+            if (subrecords[i].includes(";")) {
+              code = subrecords[i].split(";")[0];
+              var label = subrecords[i].split(";")[1];
+            } else {
+              var subrecord_fields = $('#'+subrecords[i]).val().split(",");
+              var label = "";
+              for (let j=0; j<subrecord_fields.length;j++){
+                console.log(subrecord_fields[j])
+                if ($("#"+subrecord_fields[j].split("__")[0]).hasClass('disambiguate')) {
+                  label = $("#"+subrecord_fields[j]).val();
+                }
+              } 
+            }
+            var subrecord_value_span = $("<span class='tag-subrecord "+subrecord_cls+"' id='"+code+"-tag'>"+label+"</span>")
+            var modify_button = $('<i class="far fa-edit" onclick="modify_subrecord(`'+code+'`, keep=true)"></i>')
+            var delete_button = $('<i class="far fa-trash-alt" onclick="modify_subrecord(`'+code+'`, keep=false)"></i>')
+            clone_element_values.push(subrecord_value_span, modify_button, delete_button);
+          }
+        } else {
+          // imported multiple values
+          var value = $(this).val();
+          var code = value.split(",")[0];
+          var label = decodeURIComponent(value.split(",")[1]);
+          var imported_value_span = $("<span class='tag "+code+"' data-input='"+input_id+'__'+subform_id+"' data-id='"+code+"'>"+label+"</span>");
+          clone_element_values.push(imported_value_span);
+          clone_element_values.push($(this));
+          $(this).remove();
+        }
+      })
+    }
+    clone_element.find('.input_or_select').eq(0).append(clone_element_values);
     subrecord_form.append(clone_element);
   })
 
@@ -1638,7 +1694,9 @@ function cancel_subrecord(subrecord_section) {
 
 // DELETE or MODIFY SUBRECORD (after it has been added to #recordForm)
 function modify_subrecord(sub_id, keep) {
-  var original_subtemplate_id = sub_id.split("__")[0];
+  console.log(sub_id);
+  console.log( $('[name*="-subrecords"][value*="'+sub_id+'"'))
+  var original_subtemplate_id = $('[name*="-subrecords"][value*="'+sub_id+'"').attr('name').replace("-subrecords", "");
   var original_subtemplate_class = $('#'+original_subtemplate_id).attr('subtemplate');
   console.log(original_subtemplate_class, sub_id)
 
@@ -1654,69 +1712,8 @@ function modify_subrecord(sub_id, keep) {
     // recreate subrecord_section
     var field_name = $('#'+sub_id+'-tag').parent().prev().text();
     var el = $('#'+sub_id+'-tag').prevAll('.fa-plus-circle').first();
-    console.log(el);
-    create_subrecord(original_subtemplate_class, field_name, el);
-
-    for (let i=0; i<inner_inputs.length; i++) {
-      var input = $('#'+inner_inputs[i]);
-      var shortened_id = inner_inputs[i].split("__").slice(0, -1).join("__");
-      var new_input = $('.subform_section [id*="'+shortened_id+'__"]');
-      new_input.replaceWith(input.show());
-      if ($('input[name*="'+inner_inputs[i]+'-subrecords"]').length) {
-        console.log(inner_inputs[i])
-        var inner_subrecords = $('input[name*="'+inner_inputs[i]+'-subrecords"]').val().split(",");
-        console.log(inner_subrecords);
-        for (let j=0;j<inner_subrecords.length;j++) {
-          if (inner_subrecords[j].includes("-")) {
-            console.log(inner_subrecords[j]);
-            var id = inner_subrecords[j].split("-")[0];
-            console.log($('[name="'+inner_inputs[i]+"-"+inner_subrecords[j]+'"]'))
-            var values = $('[name="'+inner_inputs[i]+"-"+inner_subrecords[j]+'"]').attr('value').split(",");
-            var value_code = values[0];
-            var value_string = decodeURIComponent(values[1]);
-            var tag = "<span class='tag "+value_code+"' data-input='"+id+"' data-id='"+value_code+"'>"+value_string+"</span>";
-            var hidden_input = $('[name="'+inner_subrecords[j]+'"').detach();
-            input.after(tag, hidden_input);
-          } else if ($('[name="'+inner_subrecords[j]+'"]').val().startsWith("target-")) {
-            console.log(inner_subrecords[j]);
-            var target_id = $('input[name="'+inner_subrecords[j]+'"]').val().split("target-")[1];
-            var inner_subrecord_fields = $('input[name="'+target_id+'"]').val().split(',');
-            var primary_key = "";
-            for (let y=0; y<inner_subrecord_fields.length; y++){
-              if ($('#'+inner_subrecord_fields[y]).hasClass('disambiguate')) {
-                primary_key = $('#'+inner_subrecord_fields[iy]).val();
-              }
-            }
-            if (primary_key === "") {
-              var inner_field_name = $('#'+inner_inputs[i]).prev('span').attr('data-original-title');
-              var num = $(this).attr('id').split('__')[-1];
-              var primary_key = inner_field_name+ "-" + num;
-            }
-            var resource_class = $('#'+inner_inputs[i]).attr('subtemplate');
-            var tag = "<span id='"+$(this).attr('id')+"-tag' class='tag-subrecord "+resource_class+"'>" + primary_key + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+$(this).attr('id')+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+$(this).attr('id')+"\", keep=false)'></i>"
-            $('#'+inner_inputs[i]).after(tag);
-          } else {
-            console.log(inner_subrecords[j]);
-            var inner_subrecord_fields = $('[name="'+inner_subrecords[j]+'"]').val().split(',');
-            var primary_key = "";
-            for (let y=0; y<inner_subrecord_fields.length; y++){
-              if ($('#'+inner_subrecord_fields[y]).hasClass('disambiguate')) {
-                primary_key = $('#'+inner_subrecord_fields[y]).val();
-              }
-            }
-            if (primary_key === "") {
-              var inner_field_name = $('#'+inner_inputs[i]).prev('span').attr('data-original-title');
-              var num = $(this).attr('id').split('__')[-1];
-              var primary_key = inner_field_name+ "-" + num;
-            }
-            var resource_class = $('#'+inner_inputs[i]).attr('subtemplate');
-            var tag = "<span id='"+$(this).attr('id')+"-tag' class='tag-subrecord "+resource_class+"'>" + primary_key + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+$(this).attr('id')+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+$(this).attr('id')+"\", keep=false)'></i>"
-            console.log(inner_inputs[i]);
-            $('#'+inner_inputs[i]).after(tag);
-          }
-        }
-      }  
-    }
+    console.log(el)
+    create_subrecord(original_subtemplate_class,field_name,el,subform_id=sub_id);
   }
   $('#'+sub_id+'-tag').next('i').remove();
   $('#'+sub_id+'-tag').next('i').remove();
@@ -2188,12 +2185,12 @@ function add_field(field, res_type, backend_file=null) {
     <input type='checkbox' id='hidden__"+temp_id+"' name='hidden__"+temp_id+"' onclick='hide_field(this)'>\
   </section>";
 
-  var field_subtemplate_name = "<section class='row'>\
+  var field_subtemplate_name = "<section class='row' style='display:none'>\
     <label class='col-md-3' for='subtemplate_name__"+temp_id+"'>TEMPLATE NAME</label>\
     <input type='text' id='subtemplate_name__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_name__"+temp_id+"' disabled>\
   </section>";
 
-  var field_subtemplate_class = "<section class='row'>\
+  var field_subtemplate_class = "<section class='row' style='display:none'>\
     <label class='col-md-3' for='subtemplate_class__"+temp_id+"'>OWL CLASS</label>\
     <input type='text' id='subtemplate_class__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_class__"+temp_id+"' disabled>\
   </section>";
@@ -2209,13 +2206,11 @@ function add_field(field, res_type, backend_file=null) {
     <select class='col-md-8 ("+res_type+") custom-select' id='import_subtemplate__"+temp_id+"' name='import_subtemplate__"+temp_id+"' onchange='import_subtemplate(this)'>"+importable_templates+"</select>\
   </section>";
 
-  var field_check_subtemplate = "<section class='row'>\
+  var field_check_subtemplate = "<section class='row' style='display:none'>\
     <label class='col-md-3'>CHECK SUBTEMPLATE</label>\
-    <button class='("+res_type+") btn btn-dark' value='edit-' onclick='edit_subtemplate(this)'>Edit subtemplate</button>\
+    <input type='button' class='("+res_type+") btn btn-dark check_subtemplate' value='Edit subtemplate' onclick='edit_subtemplate(this)'></input>\
   </section>"
 
-
-  // TODO: cardinality integration
   var field_cardinality = "<section class='row'>\
     <label class='col-md-3'>CARDINALITY <br><span class='comment'>the number of expected values</span></label>\
     <section class='col-md-8'>\
@@ -2267,6 +2262,9 @@ function import_subtemplate(el) {
   var requested_name = el.options[el.selectedIndex].text;
   var name_field = $(el).parent().next().find('input').eq(0);
   var class_field = $(el).parent().next().next().find('input').eq(0);
+  var edit_field = $(el).parent().next().next().next();
+  $(name_field).parent().show();
+  $(class_field).parent().show();
   // make fields not modifiable unless creating a new subtemplate
   name_field.attr("disabled", true); 
   class_field.attr("disabled", true);
@@ -2297,30 +2295,28 @@ function import_subtemplate(el) {
     class_field.attr("disabled", false); 
     name_field.focus(); // autofocus the name input field
     name_field.val(""); class_field.val(""); // make the fields empty
-
+    edit_field.show();
   }
   
 }
 
 function edit_subtemplate(el) {
-  el.preventDefault();
-  var val = $(el).val();
-  var cls = $('el').parent().prev().find('input').val();
-  var label = $('el').parent().prev().prev().find('input').val();
-  if (cls==='' || label==='') {
-    alert("Please, insert specify a label and a class");
+  var class_field = $(el).parent().prev().find('input').val();
+  var name_field = $(el).parent().prev().prev().find('input').val();
+  if (class_field==='' || name_field==='') {
+    alert("Please, specify a label and a class");
   } else {
-    var modified_cls = "";
-    var url = "/" + modified_cls;
+    var modified_cls = name_field.toLowerCase().replaceAll(" ", "_");
+    var url = "/template-" + modified_cls;
+    console.log(url);
     $.ajax({
-      type:'GET',
-      url:url,
-      dataType:"html",
-      success:function(data) {
-        // TODO: code needed for new subtemplate creation
-        alert(nice)
+      type: 'POST',
+      url: '/welcome-1?action=createTemplate&class_uri='+encodeURIComponent(class_field)+'&class_name='+encodeURIComponent(name_field),
+      success: function(data) {
+        console.log("ok")
       }
     })
+    window.open(url, "_blank");
   }
 }
 

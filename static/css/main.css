@@ -1999,6 +1999,10 @@ button#showTemplates {
 }
 
 /* subtemplates */
+.check_subtemplate {
+  margin-left: 1em;
+}
+
 .subform_section {
   right:0px;
   bottom:0px;
@@ -2025,6 +2029,7 @@ button#showTemplates {
 
 .subform_buttons {
   margin-top: 3em !important;
+  margin-bottom: 1.5em !important;
 }
 
 .subform_buttons input {
@@ -2039,8 +2044,6 @@ input[subtemplate]+.fa-plus-circle {
   color: rgba(100,23,180,1); cursor: pointer;
 }
 
-<<<<<<< Updated upstream
-=======
 /* Subrecords visualisation */
 
 .subtemplateValue {
@@ -2171,7 +2174,6 @@ input[subtemplate]+.fa-plus-circle {
 }
 
 
->>>>>>> Stashed changes
 /* extra */
 .fa-globe, .fa-plus-circle, .fa-eye, .fa-trash{color: rgba(100,23,180,1); cursor: pointer;}
 .link_btn, .btn {white-space: nowrap;}

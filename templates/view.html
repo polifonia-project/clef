@@ -12,6 +12,7 @@ $var project = project
 			</h2>
 			$for field,value in graphdata.items():
 				$ width_class = "col-md-12" if properties[field][1]=="WebsitePreview" else "col-md-5 col-sm-12" if (value and len(value[0]) <= 100) else 'col-md-12'
+				$ width_class += properties[field][2]
 				<section class="info-item $width_class">
 						$if isinstance(value[0],str):
 							<h4 class="articleSubtitle">$field </h4>

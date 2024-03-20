@@ -65,6 +65,8 @@ $(document).ready(function() {
         return false;
       }; 
     });
+
+    // save the template in case everything is ok
     Swal.fire({ title: 'Saved!'});
     setTimeout(function() { document.getElementById('templateForm').submit();}, 500);
   });
@@ -131,10 +133,7 @@ $(document).ready(function() {
   $(".main_content").on("click", "input[type='text']", function () { // make the onclick function valid for later generated inputs
 		searchID = $(this).attr('id');
 
-<<<<<<< Updated upstream
-=======
     // make the searchresult element available within subforms 
->>>>>>> Stashed changes
     const searchresult = $('#searchresult').detach();
     if ($(this).closest('.subform_section').length) {
       $(this).closest('.subform_section').prepend(searchresult);
@@ -373,22 +372,79 @@ $(document).ready(function() {
   // detect URLs in inputs - popup send to wayback machine
   detectInputWebPage("detect_web_page");
 
-  // organize subtemplates
+  // display 'Subtemplate' fields
   $("[subtemplate]").each(function() {
     var subtemplate_class = $(this).attr("subtemplate");
     var subtemplate_fields = $("[class~='("+subtemplate_class+")']");
-    subtemplate_fields.each(function() {
-      $(this).addClass('original_subtemplate');
-      $(this).parent().parent().hide();
-    });
-    var field_name = $(this).parent().prev().text();
-    $(this).after("<i class='fas fa-plus-circle' onclick='create_subrecord(`" + subtemplate_class + "`,`"+field_name+"`,$(this))'></i>");
+
+    if ($(this).hasClass("oneValue")) {
+      // merged subtemplates: hide the 'subtemplate' field then link it to its sub-fields via an hidden input field
+      console.log(this)
+      $(this).parent().prev().hide();
+      $(this).prev().hide();
+      $(this).attr('type', 'hidden');
+      var sub_tpl_id = $(this).attr('id');
+      var now = new Date().valueOf();
+      var sub_form_id = (now / 1000).toString().replace('.', '-');
+      var form_id = $('.corners form').attr('id');
+      var subfields_str_id = '';
+      subtemplate_fields.each(function() {
+        subfields_str_id += $(this).attr('id') + ",";
+      });
+      var hidden_subrecord_link = $('<input type="hidden" name="'+sub_tpl_id+'-subrecords" value="'+sub_form_id+'"/>');
+      var hidden_subrecord_fields = $('<input type="hidden" name="'+sub_form_id+'" value="'+subfields_str_id.slice(0,-1)+'"/>');
+      $('#'+form_id).append(hidden_subrecord_link,hidden_subrecord_fields);
+
+      // check if a subrecord is already associated with this 'subtemplate' field and fill its fields
+      if($(this).next('span').length) {
+        $(this).next().hide();
+        var target_record = $(this).next().attr('id');
+        var current_url = window.location.href.split("/");
+        var current_action = current_url[current_url.length-1].split("-")[0]; // modify or review
+        var request_url = '/'+current_action+"-"+target_record
+        $.ajax({
+          type:'GET',
+          url:request_url,
+          dataType:"html",
+          success:function(data) {
+            var input_fields = $('[name="'+sub_form_id+'"]').val().split(",");
+            for (let i=0; i < input_fields.length; i++) {
+              var input_replace = $(data).find('#'+input_fields[i]).parent().parent();
+              $('#'+input_fields[i]).parent().parent().replaceWith(input_replace);
+            }   
+          }
+        });
+      }
+    }
+    else {
+      // multiple subtemplates 
+
+      // get the class of the subtemplate and hide it, then clone each field before creating a subrecord
+      subtemplate_fields.each(function() {
+        $(this).addClass('original_subtemplate');
+        $(this).parent().parent().hide();
+      });
+      var field_name = $(this).parent().prev().text();
+      $(this).after("<i class='fas fa-plus-circle' onclick='create_subrecord(`" + subtemplate_class + "`,`"+field_name+"`,$(this))'></i>");
+      
+      // create hidden fields to store subrecords information when loading a previously created Record
+      if ($('.corners form').attr('id') === "modifyForm") {
+        var subtemplate_field_id = $(this).attr('id');
+        var subrecords = "";
+        $('[data-input="'+subtemplate_field_id+'"').each(function() {
+          subrecords+=$(this).attr('id')+";"+$(this).text()+",";
+        })
+        $('#modifyForm').append('<input type="hidden" name="'+subtemplate_field_id+'-subrecords" id="'+subtemplate_field_id+'-subrecords" value="'+subrecords.slice(0,-1)+'">');
+      
+      }
+    }
+  });
+  
+  // organize subrecords visualization
+  $('.subtemplateField').each(function() {
+      add_subtemplate($(this));
   });
 
-<<<<<<< Updated upstream
-});
-
-=======
   // language tags handling
   $('[lang]').each(function() {
     const section = $(this).parent().prev();;
@@ -611,7 +667,6 @@ function add_subtemplate(el) {
   }); 
 }
 
->>>>>>> Stashed changes
 //////////////
 // BACKEND //
 //////////////
@@ -821,7 +876,11 @@ function searchGeonames(searchterm) {
 
 // a function to look for catalogue's records belonging to a desired class 
 function searchCatalogueByClass(searchterm) {
+  // get the required class
   var resource_class = $('#'+searchterm).attr('subtemplate');
+
+  // get an array of subrecords created within the same webpage and not saved yet:
+  // they must belong to the same required class
   var yet_to_save_keys = [];
   var yet_to_save_resources = [];
   $('.disambiguate[class*="' + resource_class + '"]').each(function() {
@@ -831,7 +890,7 @@ function searchCatalogueByClass(searchterm) {
     yet_to_save_resources.push(subrecord.attr('id'));
   });
   
-
+  // on key up look for suggestions based on the new input string
   $('#'+searchterm).keyup(function(e) {
     var useful_yet_to_save_keys = yet_to_save_keys.filter(function(value) {
       return value.toLowerCase().includes($('#'+searchterm).val().toLowerCase()) && value.trim() !== '';
@@ -861,7 +920,7 @@ function searchCatalogueByClass(searchterm) {
     var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o where { ?o bds:search '"+query_term+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o ; a <"+resource_class+"> .}"
     var encoded = encodeURIComponent(query);
 
-    // send the query request
+    // send the query request to the catalogue
     $.ajax({
       type: 'GET',
       url: myPublicEndpoint + '?query=' + encoded, 
@@ -876,6 +935,7 @@ function searchCatalogueByClass(searchterm) {
           setTimeout(function(){ if ($('.noresults').length > 0) { $('.noresults').remove(); } }, 3000);
         } else {
           for (let i = 0; i < returnedJson.results.bindings.length; i++) {
+            // get the URL and the label for each retrieved element 
             var myUrl = returnedJson.results.bindings[i].s.value;
             var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1);
             $("#searchresult").append("<div class='wditem fromCatalogue'><a class='blue orangeText' target='_blank' href='view-" + resID + "'><i class='fas fa-external-link-alt'></i></a> <a class='blue orangeText' data-id='" + myUrl + "'>" + returnedJson.results.bindings[i].o.value + "</a></div>");
@@ -888,13 +948,13 @@ function searchCatalogueByClass(searchterm) {
             e.preventDefault();
             var oldID = this.getAttribute('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
             var oldLabel = $(this).text();
-            $('#' + searchterm).next('i').after("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(oldLabel) + "\"/>");
+            $('#' + searchterm).next('i').after("<span class='tag "+oldID+"' data-input='"+searchterm+"' data-id='"+oldID+"'>"+oldLabel+"</span>");
             $("#searchresult").hide();
             $('#' + searchterm).val('');
             if ($('[name="'+searchterm+'-subrecords"]').length) {
-              $('[name="'+searchterm+'-subrecords"]').val($('[name="'+searchterm+'-subrecords"]').val() + "," + oldID);
+              $('[name="'+searchterm+'-subrecords"]').val($('[name="'+searchterm+'-subrecords"]').val()+","+oldID+";"+oldLabel);
             } else {
-              const new_sub = $("<input type='hidden' name='"+searchterm+"-subrecords' value='"+oldID+"'>")
+              const new_sub = $("<input type='hidden' name='"+searchterm+"-subrecords' value='"+oldID+";"+oldLabel+"'>")
               $('#recordForm').append(new_sub)
             }
           });
@@ -912,18 +972,15 @@ function searchCatalogueByClass(searchterm) {
         $('a[target]').each(function () {
           $(this).bind('click', function (e) {
             e.preventDefault();
-            console.log(this)
             var target = $(this).attr('target');
             var label = $(this).text();
-            var id_root = target.replace(/\d+$/, '');
-            var subrecord_idx = $('[id^="'+id_root+'"]').length + 1;
-            $('#' + searchterm).next('i').after("<span class='tag-subrecord "+resource_class+"' id='"+target+"-tag'>" + label + "</span><i class='far fa-edit' onclick='modify_subrecord("+target+", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord("+target+", keep=false)'></i><input type='hidden' class='hiddenInput' id='"+id_root+subrecord_idx+"' name='"+id_root+subrecord_idx+"' value='target-"+target+"'>");
+            $('#' + searchterm).next('i').after("<span class='tag-subrecord "+resource_class+"' id='"+target+"-tag'>" + label + "</span><i class='far fa-edit' onclick='modify_subrecord("+target+", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord("+target+", keep=false)'></i>");
             $("#searchresult").hide();
             $('#' + searchterm).val('');
             if ($('[name="'+searchterm+'-subrecords"]').length) {
-              $('[name="'+searchterm+'-subrecords"]').val($('[name="'+searchterm+'-subrecords"]').val()+","+id_root+subrecord_idx);
+              $('[name="'+searchterm+'-subrecords"]').val($('[name="'+searchterm+'-subrecords"]').val()+","+target+";"+label);
             } else {
-              const new_sub = $("<input type='hidden' name='"+searchterm+"-subrecords' value='"+id_root+subrecord_idx+"'>")
+              const new_sub = $("<input type='hidden' name='"+searchterm+"-subrecords' value='"+target+";"+label+"'>")
               $('#recordForm').append(new_sub)
             }
           });
@@ -1640,37 +1697,89 @@ function replace_existing_subforms() {
 }
 
 // create subrecords
-function create_subrecord(resource_class, field_name, el) {
-  // handle multiple subform
-  //var subform_sections = check_subform_sections();
+function create_subrecord(resource_class, field_name, el, subform_id=null ) {
+  if (!subform_id) {
+    var now = new Date().valueOf();
+    subform_id = (now / 1000).toString().replace('.', '-');
+  }
+  var form_id = $('.corners').eq(0).find('form').eq(0).attr('id');
   replace_existing_subforms();
 
+  // prepare the new subrecord form
   const subrecord_section = $("<section class='subform_section col-md-12 col-sm-4'></section>");
-  const subform_id = Date.now().toString();
-  const subrecord_form = $("<section class='subform' id='"+subform_id+"'></section>");
+  const subrecord_form = $("<section class='subform' id='"+subform_id+"-form' target='"+subform_id+"'></section>");
   subrecord_form.append($("<h2 class='articleTitle' style='font-size:3em'>"+field_name+"</h2>"));
 
+  // create a clone for each input belonging to the requested (sub-)template
   $("[class~='("+resource_class+")'][class~='original_subtemplate']").each(function() {
-
     // create a webform to define a new instance of the requested entity
     const clone_element = $(this).parent().parent().clone();
     clone_element.attr("style", "display: block");
     clone_element.find('input').removeClass('original_subtemplate');
-
-    // associate proper input_ids to input fields belonging to the subrecord form
+    // associate proper identifiers to input fields belonging to the subrecord form
     var input_id = clone_element.find('input').attr('id');
-    var class_occurences = $("input[id*='"+input_id+"']").length;
-    clone_element.find('input').attr('id', input_id+"__"+class_occurences.toString())
-    clone_element.find('input').attr('name', input_id+"__"+class_occurences.toString())
+    clone_element.find('input').attr('id', input_id+"__"+subform_id.toString());
+    clone_element.find('input').attr('name', input_id+"__"+subform_id.toString());
+
+    // retrieve previously provided values (modify subrecords):
+    // a) single value 
+    if ($('#'+form_id+' #'+input_id+"__"+subform_id).length >0) {
+      to_modify = $('#'+form_id+' #'+input_id+'__'+subform_id);
+      clone_element.find('input').val(to_modify.val());
+    } 
+    // b) multiple values: imported values and subrecords
+    let clone_element_values = [];
+    if ($('#'+form_id+' [name*="'+input_id+'__'+subform_id+'-"]').length >0) {
+      var imported_values = $('#'+form_id+' [name*="'+input_id+'__'+subform_id+'-"]');
+      imported_values.each(function(){
+        if ($(this).attr('name').endsWith('-subrecords')) {
+          // retrieve subrecords
+          var subrecords = $(this).val().split(',');
+          var subtemplate_field_id = $(this).attr('name').replace('-subrecords', '');
+          console.log($('#'+subtemplate_field_id).attr('class'))
+          var subrecord_cls = $('#'+subtemplate_field_id).attr('subtemplate')
+          for (let i=0; i<subrecords.length;i++){
+            var code = subrecords[i];
+            if (subrecords[i].includes(";")) {
+              code = subrecords[i].split(";")[0];
+              var label = subrecords[i].split(";")[1];
+            } else {
+              var subrecord_fields = $('#'+subrecords[i]).val().split(",");
+              var label = "";
+              for (let j=0; j<subrecord_fields.length;j++){
+                console.log(subrecord_fields[j])
+                if ($("#"+subrecord_fields[j].split("__")[0]).hasClass('disambiguate')) {
+                  label = $("#"+subrecord_fields[j]).val();
+                }
+              } 
+            }
+            var subrecord_value_span = $("<span class='tag-subrecord "+subrecord_cls+"' id='"+code+"-tag'>"+label+"</span>")
+            var modify_button = $('<i class="far fa-edit" onclick="modify_subrecord(`'+code+'`, keep=true)"></i>')
+            var delete_button = $('<i class="far fa-trash-alt" onclick="modify_subrecord(`'+code+'`, keep=false)"></i>')
+            clone_element_values.push(subrecord_value_span, modify_button, delete_button);
+          }
+        } else {
+          // imported multiple values
+          var value = $(this).val();
+          var code = value.split(",")[0];
+          var label = decodeURIComponent(value.split(",")[1]);
+          var imported_value_span = $("<span class='tag "+code+"' data-input='"+input_id+'__'+subform_id+"' data-id='"+code+"'>"+label+"</span>");
+          clone_element_values.push(imported_value_span);
+          clone_element_values.push($(this));
+          $(this).remove();
+        }
+      })
+    }
+    clone_element.find('.input_or_select').eq(0).append(clone_element_values);
     subrecord_form.append(clone_element);
   })
 
-  // save or cancel subrecord
+  // save or cancel subrecord (buttons)
   const subrecord_buttons = $("<section class='row subform_buttons buttonsSection'></section>");
   const save_subrecord_btn = $("<input id='subrecord_save' class='btn btn-dark' style='margin-left:20px' value='Add'>");
   const cancel_subrecord_btn = $("<input id='subrecord_cancel' class='btn btn-dark' style='margin-left:20px' value='Cancel'>");
 
-  // SAVE
+  // SAVE SUBRECORD
   save_subrecord_btn.on('click', function(e) {
     // generate a tag
     var is_valid = check_mandatory_fields(this);
@@ -1678,32 +1787,36 @@ function create_subrecord(resource_class, field_name, el) {
       var tag_label = subrecord_form.find('.disambiguate').val() || (field_name + "-" + $(".tag-subrecord[class~='"+resource_class+"']").length + 1);
       var subinputs = [];
       subrecord_form.find('input:not(.btn)').each(function() {
-        $("#recordForm").append($(this));
+        console.log(form_id);
+        $('#'+form_id).append($(this));
         $(this).hide();
         if ($(this).attr('id') !== undefined && !$(this).val().startsWith("target-") ) {subinputs.push($(this).attr('id'))};
       });
-      var subrecord_index = $("[subtemplate='"+resource_class+"']").parent().parent().find('.tag-subrecord').length + 1;
-      var subrecord_base = $("[subtemplate='"+resource_class+"']").attr('id')
-      var subrecord_id = subrecord_base + "__" + subrecord_index;
-      el.after("<br/><span id='"+subrecord_id+"-tag' class='tag-subrecord "+resource_class+"'>" + tag_label + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+subrecord_id+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+subrecord_id+"\", keep=false)'></i>");
-      $('#recordForm').append("<input type='hidden' name='"+subrecord_id+"' id='"+subrecord_id+"' value='"+subinputs.toString()+"'></input>");
 
+      var subrecord_id = $(this).parent().parent().attr('target'); // the timestamp assigned to the main section
+      var subrecord_base = $("[subtemplate='"+resource_class+"']").attr('id'); // the 'id' of the 'subtemplate' field
+      el.after("<br/><span id='"+subrecord_id+"-tag' class='tag-subrecord "+resource_class+"'>" + tag_label + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+subrecord_id+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+subrecord_id+"\", keep=false)'></i>");
+      $('#'+form_id).append("<input type='hidden' name='"+subrecord_id+"' id='"+subrecord_id+"' value='"+subinputs.toString()+"'></input>");
+
+      // for each subtemplate field, create an hidden input value including a list of related subrecords
+      // this is needed to streamline the creation of records (back-end application)
       var $subrecords = $('[name="'+subrecord_base+'-subrecords"]');
       if ($subrecords.length) {
           var to_add_value = $subrecords.val();
-          if (!$subrecords.val().split(',').includes(to_add_value)) {
+          if (!$subrecords.val().split(',').includes(subrecord_id)) {
               $subrecords.val(to_add_value + "," + subrecord_id);
           }
       } else {
           const new_sub = $("<input type='hidden' name='"+$("[subtemplate='"+resource_class+"']").attr('id')+"-subrecords' value='"+subrecord_id+"'>");
-          $('#recordForm').append(new_sub);
+          $('#'+form_id).append(new_sub);
       }
 
       // hide_subform
       cancel_subrecord(this);
     }
   });
-  // CANCEL
+  
+  // CANCEL SUBRECORD
   cancel_subrecord_btn.on('click', function(e) {
     // hide_subform
     cancel_subrecord(this);
@@ -1731,7 +1844,9 @@ function cancel_subrecord(subrecord_section) {
 
 // DELETE or MODIFY SUBRECORD (after it has been added to #recordForm)
 function modify_subrecord(sub_id, keep) {
-  var original_subtemplate_id = sub_id.split("__")[0];
+  console.log(sub_id);
+  console.log( $('[name*="-subrecords"][value*="'+sub_id+'"'))
+  var original_subtemplate_id = $('[name*="-subrecords"][value*="'+sub_id+'"').attr('name').replace("-subrecords", "");
   var original_subtemplate_class = $('#'+original_subtemplate_id).attr('subtemplate');
   console.log(original_subtemplate_class, sub_id)
 
@@ -1747,69 +1862,8 @@ function modify_subrecord(sub_id, keep) {
     // recreate subrecord_section
     var field_name = $('#'+sub_id+'-tag').parent().prev().text();
     var el = $('#'+sub_id+'-tag').prevAll('.fa-plus-circle').first();
-    console.log(el);
-    create_subrecord(original_subtemplate_class, field_name, el);
-
-    for (let i=0; i<inner_inputs.length; i++) {
-      var input = $('#'+inner_inputs[i]);
-      var shortened_id = inner_inputs[i].split("__").slice(0, -1).join("__");
-      var new_input = $('.subform_section [id*="'+shortened_id+'__"]');
-      new_input.replaceWith(input.show());
-      if ($('input[name*="'+inner_inputs[i]+'-subrecords"]').length) {
-        console.log(inner_inputs[i])
-        var inner_subrecords = $('input[name*="'+inner_inputs[i]+'-subrecords"]').val().split(",");
-        console.log(inner_subrecords);
-        for (let j=0;j<inner_subrecords.length;j++) {
-          if (inner_subrecords[j].includes("-")) {
-            console.log(inner_subrecords[j]);
-            var id = inner_subrecords[j].split("-")[0];
-            console.log($('[name="'+inner_inputs[i]+"-"+inner_subrecords[j]+'"]'))
-            var values = $('[name="'+inner_inputs[i]+"-"+inner_subrecords[j]+'"]').attr('value').split(",");
-            var value_code = values[0];
-            var value_string = decodeURIComponent(values[1]);
-            var tag = "<span class='tag "+value_code+"' data-input='"+id+"' data-id='"+value_code+"'>"+value_string+"</span>";
-            var hidden_input = $('[name="'+inner_subrecords[j]+'"').detach();
-            input.after(tag, hidden_input);
-          } else if ($('[name="'+inner_subrecords[j]+'"]').val().startsWith("target-")) {
-            console.log(inner_subrecords[j]);
-            var target_id = $('input[name="'+inner_subrecords[j]+'"]').val().split("target-")[1];
-            var inner_subrecord_fields = $('input[name="'+target_id+'"]').val().split(',');
-            var primary_key = "";
-            for (let y=0; y<inner_subrecord_fields.length; y++){
-              if ($('#'+inner_subrecord_fields[y]).hasClass('disambiguate')) {
-                primary_key = $('#'+inner_subrecord_fields[iy]).val();
-              }
-            }
-            if (primary_key === "") {
-              var inner_field_name = $('#'+inner_inputs[i]).prev('span').attr('data-original-title');
-              var num = $(this).attr('id').split('__')[-1];
-              var primary_key = inner_field_name+ "-" + num;
-            }
-            var resource_class = $('#'+inner_inputs[i]).attr('subtemplate');
-            var tag = "<span id='"+$(this).attr('id')+"-tag' class='tag-subrecord "+resource_class+"'>" + primary_key + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+$(this).attr('id')+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+$(this).attr('id')+"\", keep=false)'></i>"
-            $('#'+inner_inputs[i]).after(tag);
-          } else {
-            console.log(inner_subrecords[j]);
-            var inner_subrecord_fields = $('[name="'+inner_subrecords[j]+'"]').val().split(',');
-            var primary_key = "";
-            for (let y=0; y<inner_subrecord_fields.length; y++){
-              if ($('#'+inner_subrecord_fields[y]).hasClass('disambiguate')) {
-                primary_key = $('#'+inner_subrecord_fields[y]).val();
-              }
-            }
-            if (primary_key === "") {
-              var inner_field_name = $('#'+inner_inputs[i]).prev('span').attr('data-original-title');
-              var num = $(this).attr('id').split('__')[-1];
-              var primary_key = inner_field_name+ "-" + num;
-            }
-            var resource_class = $('#'+inner_inputs[i]).attr('subtemplate');
-            var tag = "<span id='"+$(this).attr('id')+"-tag' class='tag-subrecord "+resource_class+"'>" + primary_key + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+$(this).attr('id')+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+$(this).attr('id')+"\", keep=false)'></i>"
-            console.log(inner_inputs[i]);
-            $('#'+inner_inputs[i]).after(tag);
-          }
-        }
-      }  
-    }
+    console.log(el)
+    create_subrecord(original_subtemplate_class,field_name,el,subform_id=sub_id);
   }
   $('#'+sub_id+'-tag').next('i').remove();
   $('#'+sub_id+'-tag').next('i').remove();
@@ -2281,12 +2335,12 @@ function add_field(field, res_type, backend_file=null) {
     <input type='checkbox' id='hidden__"+temp_id+"' name='hidden__"+temp_id+"' onclick='hide_field(this)'>\
   </section>";
 
-  var field_subtemplate_name = "<section class='row'>\
+  var field_subtemplate_name = "<section class='row' style='display:none'>\
     <label class='col-md-3' for='subtemplate_name__"+temp_id+"'>TEMPLATE NAME</label>\
     <input type='text' id='subtemplate_name__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_name__"+temp_id+"' disabled>\
   </section>";
 
-  var field_subtemplate_class = "<section class='row'>\
+  var field_subtemplate_class = "<section class='row' style='display:none'>\
     <label class='col-md-3' for='subtemplate_class__"+temp_id+"'>OWL CLASS</label>\
     <input type='text' id='subtemplate_class__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_class__"+temp_id+"' disabled>\
   </section>";
@@ -2302,34 +2356,37 @@ function add_field(field, res_type, backend_file=null) {
     <select class='col-md-8 ("+res_type+") custom-select' id='import_subtemplate__"+temp_id+"' name='import_subtemplate__"+temp_id+"' onchange='import_subtemplate(this)'>"+importable_templates+"</select>\
   </section>";
 
-  // TODO: cardinality integration
-  /* var field_cardinality = "<section class='row'>\
+  var field_check_subtemplate = "<section class='row' style='display:none'>\
+    <label class='col-md-3'>CHECK SUBTEMPLATE</label>\
+    <input type='button' class='("+res_type+") btn btn-dark check_subtemplate' value='Edit subtemplate' onclick='edit_subtemplate(this)'></input>\
+  </section>"
+
+  var field_cardinality = "<section class='row'>\
     <label class='col-md-3'>CARDINALITY <br><span class='comment'>the number of expected values</span></label>\
     <section class='col-md-8'>\
       <label for='oneValue__"+temp_id+"'>\
-        Single value\
+        Merge templates\
         <input type='radio' id='oneValue__"+temp_id+"' name='cardinality__"+temp_id+"' value='oneValue' checked>\
       </label><br>\
       <label for='multipleValues__"+temp_id+"'>\
-        Multiple values\
+        Combine templates\
         <input type='radio' id='multipleValues__"+temp_id+"' name='cardinality__"+temp_id+"' value='multipleValues'>\
       </label><br>\
     </section>\
   </section>";
- */
 
   var open_addons = "<section id='addons__"+temp_id+"'>";
   var close_addons = "</section>";
   var up_down = '<a href="#" class="up"><i class="fas fa-arrow-up"></i></a> <a href="#" class="down"><i class="fas fa-arrow-down"></i></a><a href="#" class="trash"><i class="far fa-trash-alt"></i></a>';
 
   contents += field_type + field_name + field_prepend + field_property + open_addons;
-  if (field =='Textbox') { contents += field_value + field_placeholder + field_mandatory; }
-  else if (field =='Textarea') { contents += field_placeholder + field_mandatory; }
-  else if (field =='Date') { contents += field_calendar + field_browse + field_mandatory; }
-  else if (field =='Vocab') { contents += field_available_vocabularies + accepted_values_vocabularies + field_placeholder + field_browse + field_mandatory; }
-  else if (field =='Multimedia') { contents += field_multimedia + field_placeholder + field_mandatory; }
-  else if (field =='WebsitePreview') { contents += field_placeholder + field_mandatory; }
-  else if (field =='Subtemplate') { contents = field_type + field_name + field_prepend + field_property + field_subtemplate_import + field_subtemplate_name + field_subtemplate_class /* + field_cardinality */ + open_addons; }
+  if (field =='Textbox') { contents += field_value + field_placeholder + field_mandatory + field_hide; }
+  else if (field =='Textarea') { contents += field_placeholder + field_mandatory + field_hide; }
+  else if (field =='Date') { contents += field_calendar + field_mandatory + field_hide + field_browse ; }
+  else if (field =='Vocab') { contents += field_available_vocabularies + accepted_values_vocabularies + field_placeholder + field_mandatory + field_hide + field_browse ; }
+  else if (field =='Multimedia') { contents += field_multimedia + field_placeholder + field_mandatory + field_hide; }
+  else if (field =='WebsitePreview') { contents += field_placeholder + field_mandatory + field_hide; }
+  else if (field =='Subtemplate') { contents = field_type + field_name + field_prepend + field_property + field_subtemplate_import + field_subtemplate_name + field_subtemplate_class + field_check_subtemplate + field_cardinality + field_mandatory + field_hide + field_browse + open_addons; }
   else if (field =='KnowledgeExtractor') {
     if ($("select option:selected[value='KnowledgeExtractor']").length > 0) {
       alert("Max. 1 Knowledge Extraction field allowed");
@@ -2337,8 +2394,8 @@ function add_field(field, res_type, backend_file=null) {
     }
     contents = field_type + field_extractor + open_addons;
   }
-  else {contents += field_values + field_browse; };
-  contents += field_hide + close_addons + up_down;
+  else {contents += field_values + field_mandatory + field_hide + field_browse; };
+  contents += close_addons + up_down;
   $(".sortable").append("<section class='block_field'>"+contents+"</section>");
   updateindex();
   moveUpAndDown() ;
@@ -2355,6 +2412,9 @@ function import_subtemplate(el) {
   var requested_name = el.options[el.selectedIndex].text;
   var name_field = $(el).parent().next().find('input').eq(0);
   var class_field = $(el).parent().next().next().find('input').eq(0);
+  var edit_field = $(el).parent().next().next().next();
+  $(name_field).parent().show();
+  $(class_field).parent().show();
   // make fields not modifiable unless creating a new subtemplate
   name_field.attr("disabled", true); 
   class_field.attr("disabled", true);
@@ -2385,11 +2445,30 @@ function import_subtemplate(el) {
     class_field.attr("disabled", false); 
     name_field.focus(); // autofocus the name input field
     name_field.val(""); class_field.val(""); // make the fields empty
-
+    edit_field.show();
   }
   
 }
 
+function edit_subtemplate(el) {
+  var class_field = $(el).parent().prev().find('input').val();
+  var name_field = $(el).parent().prev().prev().find('input').val();
+  if (class_field==='' || name_field==='') {
+    alert("Please, specify a label and a class");
+  } else {
+    var modified_cls = name_field.toLowerCase().replaceAll(" ", "_");
+    var url = "/template-" + modified_cls;
+    console.log(url);
+    $.ajax({
+      type: 'POST',
+      url: '/welcome-1?action=createTemplate&class_uri='+encodeURIComponent(class_field)+'&class_name='+encodeURIComponent(name_field),
+      success: function(data) {
+        console.log("ok")
+      }
+    })
+    window.open(url, "_blank");
+  }
+}
 
 // if value == literal add disambiguate checkbox
 function add_disambiguate(temp_id, el) {

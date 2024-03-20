@@ -206,8 +206,11 @@ def getData(graph,res_template):
 		fields = json.load(config_form)
 
 	res_class = getClass(graph[:-1])
-	# Added new types of values: URL, Date, gYearMonth
-	patterns = [ 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'.}. '  if field['value'] in ['Literal','Date','gYearMonth','gYear','URL'] else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. ?'+field['id']+' rdfs:label ?'+field['id']+'_label .} .' for field in fields if 'value' in field]
+	patterns = [ 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'.} ' if field['value'] in ['Literal','URL']
+			else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. FILTER (datatype(?'+field['id']+') = xsd:'+field['value'][0].lower() + field['value'][1:]+') } ' if field['value'] in ['Date', 'gYear', 'gYearMonth']
+			else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. ?'+field['id']+' rdfs:label ?'+field['id']+'_label .} .' 
+			for field in fields ]
+
 	patterns_string = ''.join(patterns)
 
 	queryNGraph = '''
@@ -222,6 +225,7 @@ def getData(graph,res_template):
 					OPTIONAL {?subject schema:keywords ?keywords . ?keywords rdfs:label ?keywords_label . } }
 		}
 		'''
+	print(queryNGraph)
 	sparql = SPARQLWrapper(conf.myEndpoint)
 	sparql.setQuery(queryNGraph)
 	sparql.setReturnFormat(JSON)
@@ -235,6 +239,7 @@ def getData(graph,res_template):
 		return False
 
 	data = defaultdict(list)
+	print("#DATA:\n", results)
 	for result in results["results"]["bindings"]:
 		result.pop('subject',None)
 		result.pop('graph_title',None)

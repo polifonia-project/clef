@@ -75,6 +75,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 			classes = classes+' oneVocableAccepted' if 'vocables' in field and field['vocables'] == 'oneVocable' else classes
 			classes = classes+' websitePreview' if field['type'] == 'WebsitePreview' else classes
 			classes = classes+' ('+res_class+') '+disabled
+			classes = classes+ ' ' + field['cardinality'] if 'cardinality' in field else classes
 			autocomplete = field['cache_autocomplete'] if 'cache_autocomplete' in field and len(field['cache_autocomplete']) > 0 else ''
 			mandatory = field['mandatory'] if 'mandatory' in field and field['mandatory'] == 'True' else 'False'
 
@@ -199,7 +200,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					checked=False,
 					mandatory = mandatory), )
 
-			# subtemplate
+			# Subtemplate
 			if field['type'] == 'Subtemplate':
 				resource_class = [t["type"] for t in tpl_list if t["template"] == field['import_subtemplate']][0]
 				params = params + (form.Textbox(myid,

@@ -514,7 +514,6 @@ class Index:
 		# create a new template
 		elif actions.action.startswith('createTemplate'):
 			print('create template')
-			print(actions)
 			is_git_auth = github_sync.is_git_auth()
 			res_type = actions.class_uri.strip() if "class_uri" in actions else conf.main_entity
 			res_name = actions.class_name.replace(' ','_').lower() if "class_name" in actions else "not provided"
@@ -994,7 +993,7 @@ class View(object):
 					and k == field['id'])][0]
 			except Exception as e:
 				title = "No title"
-			properties = {field["label"]:[field["property"], field["type"]] for field in fields if 'property' in field}
+			properties = {field["label"]:[field["property"], field["type"], field["view_class"]] for field in fields if 'property' in field}
 			data_labels = { field['label']:v for k,v in data.items() \
 							for field in fields if k == field['id'] and field['hidden'] == 'False' }
 		except Exception as e:

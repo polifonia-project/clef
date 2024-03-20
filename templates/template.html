@@ -192,10 +192,26 @@ $ id = templates.get_default_id()
 												<label class='col-md-3' for='subtemplate_class__"+temp_id+"'>OWL CLASS</label>
 												<input type='text' id='subtemplate_class__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_class__"+temp_id+"' disabled>
 											</section>
+											<section class='row'>
+												<label class='col-md-3'>CARDINALITY <br><span class='comment'>the number of expected values</span></label>
+												<section class='col-md-8'>
+													<label for='oneValue__$id'>
+														Merge templates
+														<input type='radio' id='oneValue__$id' name='cardinality__$id' value='oneValue'>
+														</label><br>
+													<label for='multipleValues__$id'>
+														Combine templates
+														<input type='radio' id='multipleValues__$id' name='cardinality__$id' value='multipleValues'>
+														</label><br>
+												</section>
+											</section>
+											$ cardinality = field['cardinality'] + "__" + id if 'cardinality' in field else "oneValue__" + id
 											<script type="text/javascript">
+												$$("#$cardinality").attr('checked', 'checked')
 												$$("#import_subtemplate__$id").append(importable_templates);
 												$$("#import_subtemplate__$id option[value$$='"+"$field['import_subtemplate']"+"']").attr("selected","selected");
 												import_subtemplate($$("#import_subtemplate__$id")[0]);
+
 											</script>
 										$else:
 											<!-- VALUES -->

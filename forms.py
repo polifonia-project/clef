@@ -85,17 +85,18 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 			dropdown_values = [(k,v) for k,v in field['values'].items()] if 'values' in field else None
 
 			# Text box
-			if field['type'] in ['Textbox','Vocab', 'WebsitePreview']:
+			if field['type'] == 'Textbox' and field['value'] == 'Literal':
 				if "disambiguate" in field and field["disambiguate"] == 'True':
-					vpass = form.regexp(r".{0,200}$", 'must be between 1 and 200 characters') # TODO: check the regex (either set it to {0, 200} or remove it in case of Subtemplates' primary keys)
-					params = params + (form.Textbox(myid, vpass,
+					#vpass = form.regexp(r".{0,200}$", 'must be between 1 and 200 characters') # TODO: check the regex (either set it to {0, 200} or remove it in case of Subtemplates' primary keys)
+					params = params + (form.Textbox(myid, #vpass,
 					description = description,
 					id=myid,
 					placeholder=placeholder,
 					pre = prepend,
 					class_= classes,
 					value=default,
-					mandatory = mandatory) , )
+					mandatory = mandatory,
+					lang=conf.mainLang) , )
 				else:
 					params = params + (form.Textbox(myid,
 					description = description,
@@ -104,8 +105,20 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					pre = prepend,
 					class_= classes,
 					value=default,
-					mandatory = mandatory), )
+					mandatory = mandatory,
+					lang=conf.mainLang), )
 
+			# Entities, SKOS thesauri, links
+			if field['type'] in ['Vocab', 'WebsitePreview'] or (field['type'] == 'Textbox' and field['value'] in ['URL', 'URI']):
+				params = params + (form.Textbox(myid,
+					description = description,
+					id=myid,
+					placeholder=placeholder,
+					pre = prepend,
+					class_= classes,
+					value=default,
+					mandatory = mandatory), )
+				
 			# Multimedia Link
 			if field['type'] == 'Multimedia':
 				params = params + (form.Textbox(myid,
@@ -126,7 +139,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 				pre = prepend,
 				class_= classes,
 				value=default,
-				mandatory = mandatory), )
+				mandatory = mandatory,
+				lang=conf.mainLang), )
 
 			if field['type'] == 'Date':
 				if field['calendar'] == 'Month':

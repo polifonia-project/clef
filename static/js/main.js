@@ -112,7 +112,7 @@ $(document).ready(function() {
       } 
     });
 
-    const div = $("<div id='" + id + "__vocabsLink' style='margin-bottom: 10px; margin-top: -5px'>");
+    const div = $("<div id='" + id + "__vocabsLink' class='suggested-vocabs-div'>");
     if ($(this).prev().length > 0) {
       div.insertBefore($(this).prev());
     } else {
@@ -131,6 +131,10 @@ $(document).ready(function() {
   $(".main_content").on("click", "input[type='text']", function () { // make the onclick function valid for later generated inputs
 		searchID = $(this).attr('id');
 
+<<<<<<< Updated upstream
+=======
+    // make the searchresult element available within subforms 
+>>>>>>> Stashed changes
     const searchresult = $('#searchresult').detach();
     if ($(this).closest('.subform_section').length) {
       $(this).closest('.subform_section').prepend(searchresult);
@@ -381,8 +385,233 @@ $(document).ready(function() {
     $(this).after("<i class='fas fa-plus-circle' onclick='create_subrecord(`" + subtemplate_class + "`,`"+field_name+"`,$(this))'></i>");
   });
 
+<<<<<<< Updated upstream
 });
 
+=======
+  // language tags handling
+  $('[lang]').each(function() {
+    const section = $(this).parent().prev();;
+    var id = $(this).attr('id');
+    var new_id = id+"_"+$(this).attr('lang');
+    $('#'+id).attr('name',new_id);
+    $('#'+id).attr('id',new_id);
+    var lang = $(this).attr('lang').toUpperCase();
+    const languages_list = $('<div id="languages-'+id+'"><i class="fas fa-globe" aria-hidden="true" onclick="language_form(this)"></i></div>');
+    const main_lang = $('<a class="lang-item selected-lang" title="text language: '+lang+'" onclick="show_lang(\''+new_id+'\')">'+lang+'</a>');
+    main_lang.on('click', function(e) {
+      e.preventDefault();
+    })
+    languages_list.append(main_lang);
+    section.append(languages_list)
+  })
+});
+
+/////////////////////////
+// MULTIPLE LANGUAGES ///
+/////////////////////////
+function language_form(el) {
+  if ($('#lang-form').length > 0) {
+    $('#lang-form').remove()
+  } else {
+    var height = $(el).offset().top + 30 + "px";
+    var left = $(el).offset().left - 15 +"px";
+    var current_lang = $(el).parent().find('.selected-lang').text().toLowerCase();
+    var input = $(el).parent().parent().next().find('textarea, input').filter(':visible');
+    var field_id = input.attr('id');
+    const lang_form = $('<section id="lang-form" data-input="'+field_id+'"></section>');
+    const change_language = $('<section class="form_row"><label>Change current language:</label><input type="textbox" class="custom-select" onclick="activate_filter(this)"></input><div class="language-options" onclick="change_current_language(this)"></div></section>');
+    const add_language = $('<section class="form_row"><label>Add another language:</label><input type="textbox" class="custom-select" placeholder="Select a new language" onclick="activate_filter(this)"><div class="language-options" onclick="add_new_language(this)"></input></div></section>')
+    const remove_lang = $('<section class="form_row"><label>Remove current language: </label> <i class="far fa-trash-alt" onclick="remove_current_language(this)"></i></section>');
+    $.ajax({
+      type: 'GET',
+      url: "https://raw.githubusercontent.com/mattcg/language-subtag-registry/master/data/json/registry.json",
+      dataType: 'json',
+      success: function(data) {
+        let languageObjects = [];
+        // Loop through the array of objects
+        for (let obj of data) {
+            // Check if the object has "type": "language"
+            if (obj.Type === "language" && !("Deprecated" in obj)) {
+              var lang = obj.Description[0];
+              var tag = obj.Subtag;
+              if (tag === current_lang) {
+                change_language.find('div').prepend('<a class="selected-lang" lang="'+lang+'" href="#'+tag+'">'+lang+' ('+tag+')</a>');
+                change_language.find('input').attr('placeholder',lang+' ('+tag+')');
+              }
+              var optionSelect = $("<a href='#"+tag+"' lang='"+lang+"'>"+lang+" ("+tag+")</a>");
+              change_language.find('div').append(optionSelect.clone());
+              add_language.find('div').append(optionSelect.clone());
+            } 
+        }
+        change_language.find('div').hide();
+        add_language.find('div').hide();
+        lang_form.append(change_language, add_language, remove_lang);
+        lang_form.css({'top':height, 'left':left});
+        $('main').append(lang_form);
+      },
+      error: function(data) {
+        console.log("Resource not available");
+      }
+    })
+  }
+}
+
+function activate_filter(el){
+  if ($(el).next('div').attr('style') == 'display: none;') {
+    $(el).next('div').show();
+    $(el).keyup(function(){
+      let input_val = $(el).val();
+      $(el).next('div').find('a:not([lang*="' + input_val + '"])').hide();
+      $(el).next('div').find('a[lang*="' + input_val + '"]').show();
+    })
+  } else {
+    $(el).next('div').hide();
+  }
+
+}
+
+function add_new_language(el) {
+  var new_lang = $(el).val();
+  if (new_lang !== 'None') {
+    var last_lang_id = $(el).parent().parent().parent().attr('data-input');
+    const new_lang_input = $('#'+last_lang_id).clone();
+    var new_lang_input_id = last_lang_id.split('_')[0] + "_" + new_lang;
+    $('#languages-'+last_lang_id.split('_')[0]).find('.selected-lang').removeClass('selected-lang');
+    $('#languages-'+last_lang_id.split('_')[0]).append("<a class='lang-item selected-lang' title='text language: "+new_lang.toUpperCase()+"' onclick='show_lang(\""+new_lang_input_id+"\")'>"+new_lang.toUpperCase()+"</a>");
+    new_lang_input.attr('id', new_lang_input_id);
+    new_lang_input.attr('name', new_lang_input_id);
+    new_lang_input.attr('lang', new_lang);
+    new_lang_input.val('');
+    $('[id^="'+last_lang_id.split('_')[0]+'"]').hide(); 
+    $('#'+last_lang_id).after(new_lang_input);
+    $(el).parent().parent().parent().remove();
+  }
+}
+
+function change_current_language(el) {
+  var new_lang = $(el).val();
+  var id = $(el).parent().parent().parent().attr('data-input');
+  var current_lang = $('#languages-'+id.split('_')[0]).find('.selected-lang').eq(0);
+  console.log(current_lang.text().toLowerCase())
+  var current_lang_field_id =  id.split('_')[0] +"_"+current_lang.text().toLowerCase();
+  if (current_lang.text().toLowerCase() !== new_lang) {
+    var new_id = id.split('_')[0] + '_'  + new_lang;
+    var title = 'text language: '+new_lang.toUpperCase();
+    current_lang.attr('title',title);
+    current_lang.attr('onclick','show_lang("'+new_id+'")');
+    current_lang.text(new_lang.toUpperCase());
+    $('#'+current_lang_field_id).attr('name',new_id);
+    $('#'+current_lang_field_id).attr('id',new_id);
+    $('#'+new_id).attr('lang',new_lang);
+    $(el).parent().parent().parent().remove();
+  }
+}
+
+function remove_current_language(el) {
+  var current_field = $(el).parent().parent().attr('data-input');
+  let field_base = current_field.split('_')[0];
+  var current_lang_tag = $('#languages-'+field_base).find('.selected-lang');
+  if (current_lang_tag.next('a').length > 0) {
+    current_lang_tag.next('a').addClass('selected-lang');
+    var next_lang = current_lang_tag.next('a').text().toLowerCase();
+    current_lang_tag.remove();
+    $('#'+current_field).remove();
+    console.log('#'+field_base+'_'+next_lang)
+    $('#'+field_base+'_'+next_lang).show();
+  } else if (current_lang_tag.prev('a').length > 0) {
+    current_lang_tag.prev('a').addClass('selected-lang');
+    var prev_lang = current_lang_tag.prev('a').text().toLowerCase();
+    current_lang_tag.remove();
+    $('#'+current_field).remove();
+    $('#'+field_base+'_'+prev_lang).show();
+  } else {
+    alert('Not allowed. Change current language, instead');
+  }
+  $('[data-input="'+current_field+'"]').remove();
+}
+
+function show_lang(field_id) {
+  let field_base = field_id.split('_')[0];
+  $('[id^="'+field_base+'_"]').hide();
+  $('#'+field_id).show();
+  var target_lang = field_id.split('_')[1];
+  $('#languages-'+field_base).find('.selected-lang').removeClass('selected-lang');
+  console.log('[title="text language: '+target_lang.toUpperCase()+'"]')
+  $('#languages-'+field_base).find('[title="text language: '+target_lang.toUpperCase()+'"]').addClass('selected-lang')
+}
+
+/////////////////////////
+//// SUBRECORDS VIEW ////
+/////////////////////////
+function add_subtemplate(el) {
+  var hide = el.hasClass('oneValue');
+  var subtemplate_values = el.find('p');
+  subtemplate_values.each(function() {
+  var externalLink = $(this).find('a').eq(0);
+
+    if (!hide) {
+      // organize subrecords as an accordion
+      $(this).addClass('subtemplateValue')
+      $(this).append('<span class="subtamplate"><i class="fa fa-chevron-down" aria-hidden="true"></i></span>')
+      externalLink.prepend("<i class='fas fa-external-link-alt'></i>  ")
+
+      // show and hide inner values
+      $(this).bind('click', function(e){
+        if (!($(e.target).parent().context.localName == "i")) {
+          e.preventDefault();
+          if ($(e.target).parent().is($(this))) {
+            $($(e.target).parent()).find('div').eq(0).toggleClass('hidden-subrecord');
+            $(e.target).parent().toggleClass('subtemplateValueOpen');
+          }
+        }
+      })
+    } else {
+      $(this).parent().hide();
+    }
+
+    var calledValue = $(this);
+    var calledRecord = externalLink.attr('href').replace("term", "view");
+    $.ajax({
+      type:'GET',
+      url:calledRecord,
+      dataType:"html",
+      success:function(data) {
+          var calledRecordData = $(data).find('.articleBox').find('.col-md-8.row').find('section');
+          
+          if (!hide) {
+            calledRecordData.each(function() {
+              var cls = $(this).attr('class');
+              var new_cls = cls.replace("col-md-5", "col-md-12")
+              $(this).attr('class', new_cls);
+              $(this).find('.wikiEntity').append(wd_img);
+              $(this).find('.geoEntity').append(geo_img);
+              $(this).find('.viafEntity').append(viaf_img);
+            })
+            calledValue.append($('<div class="hidden-subrecord"></div>').append(calledRecordData));
+          } else {
+            calledRecordData.find('.wikiEntity').append(wd_img);
+            calledRecordData.find('.geoEntity').append(geo_img);
+            calledRecordData.find('.viafEntity').append(viaf_img);
+            calledValue.parent().after(calledRecordData)
+          }
+
+          
+
+          var new_values = calledValue.find('.subtemplateField');
+          new_values.each(function() {
+            add_subtemplate($(this));
+          });
+
+      },
+      error:function() {
+          console.log("Error: requested resource is not available");
+      }
+    })
+  }); 
+}
+
+>>>>>>> Stashed changes
 //////////////
 // BACKEND //
 //////////////

@@ -39,6 +39,7 @@ TEMPLATE_LIST = conf.template_list
 def getValuesFromFields(fieldPrefix, recordData, fields=None, field_type=None):
 	""" request form fields by field prefix, check if multiple values are available,
 	returns a set of tuples including ID (for the URI) and label of values """
+	result_dict = {'type':'URI'}
 	results = set()
 	for key, value in recordData.items():
 		if key.startswith(fieldPrefix+'-'): # multiple values from text box (wikidata) + URL 
@@ -54,8 +55,20 @@ def getValuesFromFields(fieldPrefix, recordData, fields=None, field_type=None):
 				values = value.split(',')
 				for val in values:
 					results.add(( val.strip(), val.strip() ))
-	return results
+	result_dict['results'] = results
+	return result_dict
 
+def getValuesFromTextualFields(fieldPrefix, recordData):
+	""" request form fields by field prefix, check if multiple languages are available,
+	returns a set of tuples including textual values and their language """
+	result_dict = {'type':'Literal'}
+	results = set()
+	for key, value in recordData.items():
+		if key.startswith(fieldPrefix+'_'):
+			lang = key.rsplit('_')[1]
+			results.add((value,lang))
+	result_dict['results'] = results
+	return result_dict
 
 def getRightURIbase(value):
 	return WD+value if value.startswith('Q') else GEO+value if value.isdecimal() else VIAF+value[4:] if value.startswith("viaf") else ''+value if value.startswith("http") else base+value.lstrip().rstrip()
@@ -102,7 +115,7 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 
 		# retrieve hidden triples (to be saved) and re-introduce them in the named graph
 		to_be_saved = queries.saveHiddenTriples(graphToClear, tpl_form)
-		if to_be_saved:
+		if to_be_saved['results']['bindings'] != [{}]:
 			for binding in to_be_saved['results']['bindings']:
 				subject = URIRef(binding['subject']['value'])
 				for predicate_obj, inner_dict in binding.items():
@@ -133,13 +146,17 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 	for field in fields:
 		if field['type'] not in ['KnowledgeExtractor', 'Subtemplate']:
 			# URI, Textarea (only text at this stage), Literals
-			value = getValuesFromFields(field['id'], recordData, fields) \
-					if 'value' in field and field['value'] in ['URI','Place'] else getValuesFromFields(field['id'], recordData, field_type=field['type']) if 'value' in field and field['value'] == 'URL' else recordData[field['id']]
+			value = getValuesFromFields(field['id'], recordData, fields) if 'value' in field and field['value'] in ['URI','Place'] \
+					else getValuesFromFields(field['id'], recordData, field_type=field['type']) if 'value' in field and field['value'] == 'URL' \
+					else getValuesFromTextualFields(field['id'], recordData) if 'value' in field and field['value'] == 'Literal' else recordData[field['id']]
 			# TODO disambiguate as URI, value
 			if field["disambiguate"] == 'True': # use the key 'disambiguate' as title of the graph
-				wd.add(( URIRef(base+graph_name+'/'), URIRef(field['property']), Literal(value) ))
-				wd.add(( URIRef(base+graph_name), RDFS.label, Literal(value) ))
-				wd.add(( URIRef(base+graph_name+'/'), RDFS.label, Literal(value) ))
+				main_value = [label for label in value['results'] if label[1] == conf.mainLang][0]
+				main_label = main_value[0]
+				main_lang = main_value[1]
+				wd.add(( URIRef(base+graph_name+'/'), URIRef(field['property']), Literal(main_label, lang=main_lang) ))
+				wd.add(( URIRef(base+graph_name), RDFS.label, Literal(main_label) ))
+				wd.add(( URIRef(base+graph_name+'/'), RDFS.label, Literal(main_label) ))
 
 			# the main entity has the same URI of the graph but the final /
 
@@ -166,16 +183,22 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 						if not to_add.startswith("http"):
 							to_add = "http://" + to_add
 						wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(to_add) ))
-			else: # object properties
-				for entity in value:
-					entityURI = getRightURIbase(entity[0]) # Wikidata or new entity 
-					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(entityURI) ))
-					wd.add(( URIRef( entityURI ), RDFS.label, Literal(entity[1].lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
-
+			elif isinstance(value,dict):
+				if value['type'] == 'URI': #object properties
+					for entity in value['results']:
+						entityURI = getRightURIbase(entity[0]) # Wikidata or new entity 
+						wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(entityURI) ))
+						wd.add(( URIRef( entityURI ), RDFS.label, Literal(entity[1].lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
+				elif value['type'] == 'Literal':
+					for literal in value['results']:
+						val, lang = literal
+						val = val.replace('\n','').replace('\r','')
+						wd.add(( URIRef(base+graph_name), URIRef(field['property']), Literal(val, lang=lang)))
 			# now get also the entities associated to textareas (record creation)
 			if field['type'] == 'Textarea':
 				value = getValuesFromFields(field['id'], recordData, fields, 'Textarea')
-				for entity in value:
+				print('HERE', value)
+				for entity in value['results']:
 					entityURI = getRightURIbase(entity[0])+entity[0]
 					wd.add(( URIRef(base+graph_name), SCHEMA.keywords, URIRef(entityURI) ))
 					wd.add(( URIRef( entityURI ), RDFS.label, Literal(entity[1].lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))

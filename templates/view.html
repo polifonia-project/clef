@@ -6,7 +6,7 @@ $var project = project
 
 <section class="row articleBox" vocab="https://schema.org/" typeof="Thing">
 	<section class="col-md-8 row">
-			<h2 class="articleTitle col-md-12" property="name">$title
+			<h2 class="articleTitle col-md-12" property="name" xml:lang="$title[1]">$title[0]
 			$if 'modified' in stage:
 				<span>draft</span>
 			</h2>
@@ -21,6 +21,10 @@ $var project = project
 							$else:
 								$ value = value[0]
 							<p property="$properties[field][0]">$value</p>
+						$elif isinstance(value[0],tuple):
+							<h4 class="articleSubtitle">$field </h4>
+							$for literal in value:
+								<p property="$properties[field][0]" xml:lang="$literal[1]">$literal[0]</p>
 						$else:
 							$if len(value[0][1]) > 0:
 								<h4 class="articleSubtitle">$field </h4>

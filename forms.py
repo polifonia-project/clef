@@ -90,6 +90,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 				if "disambiguate" in field and field["disambiguate"] == 'True':
 					#vpass = form.regexp(r".{0,200}$", 'must be between 1 and 200 characters') # TODO: check the regex (either set it to {0, 200} or remove it in case of Subtemplates' primary keys)
 					params = params + (form.Textbox(myid, #vpass,
+					type='text',
 					description = description,
 					id=myid,
 					placeholder=placeholder,

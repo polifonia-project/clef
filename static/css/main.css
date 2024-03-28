@@ -1417,7 +1417,7 @@ footer .articleSubtitle {
 }
 
 option[selected='selected'] {
-  background-color: rgba(100, 23, 180, 1);
+  background-color: #ced4da;
 }
 
 /* Style the arrow inside the select element: */
@@ -2126,7 +2126,6 @@ input[subtemplate]+.fa-plus-circle {
   line-height: 1.5;
   padding: .375rem 1.75rem .375rem .75rem;
 }
-
 .lang-item:first-of-type {
   padding-left: 0.8em !important;
 }
@@ -2136,7 +2135,6 @@ input[subtemplate]+.fa-plus-circle {
   text-decoration: none !important;
   cursor: pointer;
 }
-
 .lang-item.selected-lang, .lang-item:hover {
   text-decoration: underline !important;
   color: rgb(100, 23, 180) !important;
@@ -2151,7 +2149,6 @@ input[subtemplate]+.fa-plus-circle {
   border: solid 1px black;
   border-radius: 5px;
 }
-
 #lang-form:after {
   content: " ";
   position: absolute;
@@ -2162,17 +2159,24 @@ input[subtemplate]+.fa-plus-circle {
   border-left: 10px solid transparent;
   border-bottom: 10px solid rgba(100, 23, 180, 1);
 }
-
 #lang-form section:first-child div {
   z-index: 1001;
   position: relative;
 }
-
 #lang-form section:nth-child(2) div {
   z-index: 1000;
   position: relative;
 }
+#lang-form .current-lang {
+  background-color: #ced4da;
+}
 
+.info-language .lang-item {
+  font-size: 0.9em !important;
+}
+.info-language .lang-item:first-of-type {
+  padding-left: 0px !important;
+}
 
 /* extra */
 .fa-globe, .fa-plus-circle, .fa-eye, .fa-trash{color: rgba(100,23,180,1); cursor: pointer;}

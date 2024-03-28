@@ -988,9 +988,10 @@ class View(object):
 			with open(res_template) as tpl_form:
 				fields = json.load(tpl_form)
 			try:
-				title = [data[k][0] for k,v in data.items() \
+				title_field = [v for k,v in data.items() \
 					for field in fields if (field['disambiguate'] == "True" \
 					and k == field['id'])][0]
+				title = [lang_value for lang_value in title_field if len(lang_value) == 3][0]
 			except Exception as e:
 				title = "No title"
 			properties = {field["label"]:[field["property"], field["type"], field["view_class"]] for field in fields if 'property' in field}

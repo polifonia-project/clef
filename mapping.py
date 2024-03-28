@@ -42,7 +42,7 @@ def getValuesFromFields(fieldPrefix, recordData, fields=None, field_type=None):
 	result_dict = {'type':'URI'}
 	results = set()
 	for key, value in recordData.items():
-		if key.startswith(fieldPrefix+'-'): # multiple values from text box (wikidata) + URL 
+		if key.startswith(fieldPrefix+'_'): # multiple values from text box (wikidata) + URL 
 			values = value.split(',', 1)
 			results.add(( values[0].strip(), urllib.parse.unquote(values[1]) )) # (id, label)
 		elif key == fieldPrefix and field_type != 'Textarea': # uri from dropdown (single value from controlled vocabulary) + URL
@@ -66,7 +66,10 @@ def getValuesFromTextualFields(fieldPrefix, recordData):
 	for key, value in recordData.items():
 		if key.startswith(fieldPrefix+'_'):
 			lang = key.rsplit('_')[1]
-			results.add((value,lang))
+			if lang == 'mainLang':
+				result_dict['mainLang'] = value
+			else:
+				results.add((value,lang))
 	result_dict['results'] = results
 	return result_dict
 
@@ -76,7 +79,7 @@ def getRightURIbase(value):
 
 def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=None,tpl_form=None):
 	""" transform input data into RDF, upload data to the triplestore, dump data locally """
-
+	print("RECORD:", recordData)
 	# MAPPING FORM / PROPERTIES
 	if tpl_form:
 		with open(tpl_form) as config_form:
@@ -114,6 +117,7 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 
 		# retrieve hidden triples (to be saved) and re-introduce them in the modified named graph
 		to_be_saved = queries.saveHiddenTriples(graphToClear, tpl_form)
+		print(type(to_be_saved))
 		if to_be_saved['results']['bindings'] != [{}]:
 			for binding in to_be_saved['results']['bindings']:
 				subject = URIRef(binding['subject']['value'])
@@ -150,12 +154,13 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 					else getValuesFromTextualFields(field['id'], recordData) if 'value' in field and field['value'] == 'Literal' else recordData[field['id']]
 			# TODO disambiguate as URI, value
 			if field["disambiguate"] == 'True': # use the key 'disambiguate' as title of the graph
-				main_value = [label for label in value['results'] if label[1] == conf.mainLang][0]
-				main_label = main_value[0]
-				main_lang = main_value[1]
+				main_lang = value['mainLang']
+				main_value = [label for label in value['results'] if label[1] == main_lang]
+				main_value = list(value['results']) if len(main_value) == 0 else main_value
+				main_label = main_value[0][0]
 				wd.add(( URIRef(base+graph_name+'/'), URIRef(field['property']), Literal(main_label, lang=main_lang) ))
-				wd.add(( URIRef(base+graph_name), RDFS.label, Literal(main_label) ))
-				wd.add(( URIRef(base+graph_name+'/'), RDFS.label, Literal(main_label) ))
+				wd.add(( URIRef(base+graph_name), RDFS.label, Literal(main_label, lang=main_lang) ))
+				wd.add(( URIRef(base+graph_name+'/'), RDFS.label, Literal(main_label, lang=main_lang) ))
 
 			# the main entity has the same URI of the graph but the final /
 
@@ -188,7 +193,7 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 						entityURI = getRightURIbase(entity[0]) # Wikidata or new entity 
 						wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(entityURI) ))
 						wd.add(( URIRef( entityURI ), RDFS.label, Literal(entity[1].lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
-				elif value['type'] == 'Literal':
+				elif value['type'] == 'Literal': #multi-language Literals
 					for literal in value['results']:
 						val, lang = literal
 						val = val.replace('\n','').replace('\r','')
@@ -196,7 +201,6 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 			# now get also the entities associated to textareas (record creation)
 			if field['type'] == 'Textarea':
 				value = getValuesFromFields(field['id'], recordData, fields, 'Textarea')
-				print('HERE', value)
 				for entity in value['results']:
 					entityURI = getRightURIbase(entity[0])+entity[0]
 					wd.add(( URIRef(base+graph_name), SCHEMA.keywords, URIRef(entityURI) ))
@@ -221,25 +225,25 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 					wd_extraction.serialize(destination='records/'+recordID+"-extraction-"+str(graph['internalID'])+'.ttl', format='ttl', encoding='utf-8')
 					server.update('load <file:///'+dir_path+'/records/'+recordID+"-extraction-"+str(graph['internalID'])+'.ttl> into graph <'+base+extraction_graph_name+'/>')
 		# SUBTEMPLATE
-		elif field['type']=="Subtemplate":
+		elif field['type']=="Subtemplate" and field['id'] in recordData:
 			print(recordData[field['id']])
 			if type(recordData[field['id']]) != type([]) and field['id']+"-subrecords" in recordData:
+				# get the list of subrecords associated to a 'Subtemplate' field
 				subrecords = recordData[field['id']+"-subrecords"].split(",") if recordData[field['id']+"-subrecords"] != "" else []
 				for subrecord in subrecords:
 					if ";" in subrecord:
 						subrecord_id, retrieved_label = subrecord.split(";",1)
 					else:
+						# process a new subrecord, send its data to the triplestore, and link it to the main record
 						subrecord_id = subrecord
 						subrecord_template = field['import_subtemplate']
-						label_id = find_label(subrecord_template)
-						label_value = [recordData[label] for label in recordData[subrecord].split(",") if label == label_id+"__"+subrecord or (label == label_id and recordData[label] != '')]
-						retrieved_label = label_value[0] if len(label_value) > 0 else field['label']+"-"+subrecord
-						process_new_subrecord(recordData,userID,stage,knowledge_extraction,subrecord_template,subrecord)
+						processed_subrecord = process_new_subrecord(recordData,userID,stage,knowledge_extraction,subrecord_template,subrecord)
+						subrecord_id, retrieved_label = processed_subrecord
 					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+subrecord_id) ))
 					wd.add(( URIRef(base+subrecord_id), RDFS.label, Literal(retrieved_label, datatype="http://www.w3.org/2001/XMLSchema#string")))
 			else:
 				for entity in recordData[field['id']]:
-					entity_URI, entity_label = entity.split(",",1)
+					entity_URI, entity_label = entity
 					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+entity_URI) ))
 					wd.add(( URIRef(base+entity_URI), RDFS.label, Literal(entity_label, datatype="http://www.w3.org/2001/XMLSchema#string")))
 
@@ -262,45 +266,53 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 	return 'records/'+recordID+'.ttl'
 	
 def process_new_subrecord(data, userID, stage, knowledge_extraction, sub_tpl, subrecord_id):
-	subrecord_fields = data[subrecord_id].split(",")
 	# prepare a new dict to store data of subrecord-x
 	new_record_data = {'recordID': subrecord_id,}
+
 	with open(sub_tpl) as fields:
 		subtemplate = json.load(fields)
 	# process the input data related to subrecord-x
-	for subrecord_field in subrecord_fields:
-		subrecord_field__base_id = subrecord_field.split("__")[0]
+	for subtemplate_field in subtemplate:
+		subfield_id = subtemplate_field['id']
 
-		# check inner subrecords (subrecord-y associated with subrecord-x's 'Subtemplate' field
-		if subrecord_field+"-subrecords" in data:
-			new_record_data[subrecord_field__base_id] = [[]]
-			inner_subtemplate = [key['import_subtemplate'] for key in subtemplate if key['id'] == subrecord_field__base_id][0]
-			for inner_subrecord in data[subrecord_field + "-subrecords"].split(","):
-				if ";" in inner_subrecord:
-					processed_subrecord = inner_subrecord.replace(';', ",", 1)
-				else:
-					processed_subrecord = process_new_subrecord(data,userID,stage,knowledge_extraction,inner_subtemplate,inner_subrecord)
-				new_record_data[subrecord_field__base_id][0].append(processed_subrecord)
-		# check single value fields (e.g. Date/Literal)
-		elif data[subrecord_field] != "":
-			key = subrecord_field.split("__")[0]
-			new_record_data[key] = data[subrecord_field]
-		# check multiple values fields (e.g. Entities, SKOS Vocabs)
-		else:
-			multiple_values = [key for key in data if key.startswith(subrecord_field+"-")]
-			if multiple_values != []:
-				for value in multiple_values:
-					new_key = value.split("__")[0] + "-" + value.split("-")[-1]
-					new_record_data[new_key] = data[value]
-			else:
-				new_record_data[subrecord_field.split("__")[0]] = ""
+		# Subtemplate
+		if subtemplate_field['type'] == 'Subtemplate':
+			key = subfield_id+"_"+subrecord_id
+			# Process inner-subrecords and retrieve their ids,labels in order to provide a link to them in the upper-level subrecord
+			if key+"-subrecords" in data:
+				new_record_data[subfield_id] = [[]]
+				inner_subtemplate = subtemplate_field['import_subtemplate']
+				for inner_subrecord in data[key+"-subrecords"].split(","):
+					if ";" in inner_subrecord:
+						processed_subrecord = inner_subrecord.replace(';', ",", 1)
+					else:
+						processed_subrecord = process_new_subrecord(data,userID,stage,knowledge_extraction,inner_subtemplate,inner_subrecord)
+					new_record_data[subfield_id][0].append(processed_subrecord) # store the id,label pair inside the subrecord dict
 
-	label = new_record_data[find_label(sub_tpl)]
+		# Date
+		elif subtemplate_field['type'] == 'Date':
+			key = subtemplate_field['id']+"_"+subrecord_id
+			new_record_data[subtemplate_field['id']] = data[key]
+
+		# Multiple values fields: Literals or URI
+		elif subtemplate_field['value'] == 'Literal' or subtemplate_field['value'] in ['URI','URL']:
+			keys = [input_id for input_id in data.keys() if input_id.startswith(subtemplate_field['id']+"_") and input_id.endswith("_"+subrecord_id)]
+			for key in keys:
+				shortened_key = key.rsplit("_",1)[0]
+				new_record_data[shortened_key] = data[key]
+
+			# Label: disambiguate field
+			if subtemplate_field['disambiguate'] == "True":
+				main_lang_input_field = subfield_id+'_mainLang_'+subrecord_id 
+				main_lang = data[main_lang_input_field] if main_lang_input_field in data else "No main lang"
+				label_input_field = subfield_id+"_"+main_lang+"_"+subrecord_id
+				label = data[label_input_field] if label_input_field in data else "No label"
+
 	print("\nDATA:\n",new_record_data)
 	store_data = storify(new_record_data)
 	grapht_to_clear = None if stage == 'not modified' else base+subrecord_id+"/"
 	inputToRDF(store_data,userID,stage,knowledge_extraction,graphToClear=grapht_to_clear,tpl_form=sub_tpl)
-	result = subrecord_id+","+label
+	result = [subrecord_id,label]
 	return result
 
 def find_label(tpl):

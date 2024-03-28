@@ -239,14 +239,16 @@ def getData(graph,res_template):
 		return False
 
 	data = defaultdict(list)
-	print("#DATA:\n", results)
 	for result in results["results"]["bindings"]:
 		result.pop('subject',None)
-		result.pop('graph_title',None)
+		label = result.pop('graph_title',None)
 		for k,v in result.items():
 			if '_label' not in k and v['type'] == 'literal': # string values
-				if v['value'] not in data[k]: # unique values
-					data[k].append(v['value'])
+				value = v['value']
+				if 'xml:lang' in v:
+					value = (v['value'],v['xml:lang'],'mainLang') if v['value']==label['value'] and v['xml:lang']==label['xml:lang'] else (v['value'],v['xml:lang'])
+				if value not in data[k]:
+					data[k].append(value)
 			elif v['type'] == 'uri': # uri values
 
 				if k+'_label' in result:
@@ -362,7 +364,7 @@ def saveHiddenTriples(graph, tpl):
 	with open(tpl) as template:
 		fields = json.load(template)
 
-	results = []
+	results = {'results': {'bindings': [{}]}}
 	hidden_fields = [field for field in fields if field['hidden'] == 'True']
 	patterns = [ 'OPTIONAL {?subject <'+hidden_field['property']+'> ?'+hidden_field['id']+'. ?subject ?'+hidden_field['id']+'_property ?'+hidden_field['id']+'}. '  if hidden_field['value'] in ['Literal','Date','gYearMonth','gYear','URL'] else 'OPTIONAL {?subject <'+hidden_field['property']+'> ?'+hidden_field['id']+'. ?'+hidden_field['id']+' rdfs:label ?'+hidden_field['id']+'_label . ?subject ?'+hidden_field['id']+'_property ?'+hidden_field['id']+'}.' for hidden_field in hidden_fields if 'value' in hidden_field and hidden_field['hidden'] == 'True']
 	if patterns != []:

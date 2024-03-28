@@ -3,7 +3,7 @@ $def with (graphdata, pageID, record_form, user, ids_dropdown,is_git_auth,invali
 $var user = user
 $var is_git_auth = is_git_auth
 $var project = project
-<script type="text/javascript">console.log('$graphdata')</script>
+
 <header class="row needDoc">
 	<button id="showRight">&gt; help</button>
 	<script type="text/javascript">
@@ -73,9 +73,9 @@ $var project = project
 												</script>
 
 										$else:
-											$:input.render()
 											<!-- SKOS vocabs -->
 											$if " vocabularyField " in input.attrs["class"]:
+												$:input.render()
 												$ list_vocabs = "//".join(list(skos_vocabs.keys()))
 												$ selectedVocabs = str(skos_vocabs)
 												<script type="text/javascript">
@@ -86,11 +86,28 @@ $var project = project
 												</script>
 											<!-- text box with URI,label; includes subrecords -->
 											$if len(graphdata[id]) > 0 and "multimedia" not in input.attrs["class"] and "websitePreview" not in input.attrs["class"]:
-												$for k_v in graphdata[id]:
+												$if type(graphdata[id][0]) is list:
+													<!-- Entities and subrecords -->
+													$:input.render()
+													$for k_v in graphdata[id]:
+														$ input_name = id+'_'+k_v[0]
 														<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>
-														<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
+														<input type='hidden' class='hiddenInput $k_v[0]' name='$input_name' value="$k_v[0],$:k_v[1]"/>
+												$elif type(graphdata[id][0]) is tuple:
+													<!-- Multi-lang Literals -->		
+													$for k_v in graphdata[id]:
+														$ lang = k_v[1]
+														$ lang_id = id+'_'+lang
+														$if input.type=="text":
+															<input type="text" value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" mandatory="$input.attrs['mandatory']"/>
+														$else:
+															<textarea value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" mandatory="$input.attrs['mandatory']">$k_v[0]</textarea>
+														$if len(k_v) == 3:
+															$ lang_id = id+'_mainLang'
+															<input type="hidden" value="$lang" id="$lang_id" name="$lang_id">
 											$elif "multimedia" in input.attrs["class"]:
 												<!-- multimedia -->
+												$:input.render()
 												$for k_v in graphdata[id]:
 													<div class='multimediaTag $k_v[0]'>
 														$ format = k_v[1].split(".")[-1]
@@ -111,6 +128,7 @@ $var project = project
 													<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
 									$else:
 										$:input.render()
+										<script>console.log('$type(input)')</script>
 										$if type(input) == Dropdown:
 											<script type="text/javascript">
 												$$('#$id').prepend($$('<option selected=selected value="None">Select from the list</option>'));

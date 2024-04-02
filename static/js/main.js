@@ -372,55 +372,9 @@ $(document).ready(function() {
   // detect URLs in inputs - popup send to wayback machine
   detectInputWebPage("detect_web_page");
 
-  // language tags handling: main lang
-  $('[lang]:first-of-type').each(function() {
-    // check if a value exists
-    if ($(this).val() != '') {
-      $(this).attr('type','text');
-    }
-    const section = $(this).parent().prev();
-    var id = $(this).attr('id').split('_')[0];
-    var new_id = id+"_"+$(this).attr('lang');
-    $(this).attr('name',new_id);
-    $(this).attr('id',new_id);
-    var lang = $(this).attr('lang').toUpperCase();
-    const languages_list = $('<div id="languages-'+id+'"><i class="fas fa-globe" aria-hidden="true" onclick="language_form(this)"></i></div>');
-    const first_lang = $('<a class="lang-item selected-lang" title="text language: '+lang+'" onclick="show_lang(\''+new_id+'\')">'+lang+'</a>');
-    first_lang.on('click', function(e) {
-      e.preventDefault();
-    });
-
-    // primary keys: specify main language
-    if ($(this).hasClass('disambiguate')) {
-      if ($('#'+id+'_mainLang').length == 0) {
-        const hidden_main_lang = $('<input type="hidden" id="'+id+'_mainLang" name="'+id+'_mainLang" value="'+$(this).attr('lang')+'"/>')
-        $(this).after(hidden_main_lang);
-        first_lang.addClass('main-lang');
-      } else if ($('#'+id+'_mainLang').val() === $(this).attr('lang')) {
-        first_lang.addClass('main-lang');
-      }
-    }
-
-    languages_list.append(first_lang);
-    section.append(languages_list)
-  });
-
-  // language tags handling: other lang (only in modify and review)
-  $('[lang]:not(:first-of-type)').each(function() {
-    var base_id = $(this).attr('id').split('_')[0];
-    if ($(this).attr('id') !== base_id+'_mainLang') {
-      const main_lang = $('#'+base_id+'_mainLang').val();
-      const section = $(this).parent().prev();
-      var lang = $(this).attr('lang');
-      const languages_list = $('#languages-'+base_id);
-      const other_lang = $('<a class="lang-item" title="text language: '+lang.toUpperCase()+'" onclick="show_lang(\''+$(this).attr('id')+'\')">'+lang.toUpperCase()+'</a>');
-      if ($(this).hasClass('disambiguate') && lang===main_lang) {
-        other_lang.addClass('main-lang');
-      }
-      $(this).hide();
-      languages_list.append(other_lang);
-      section.append(languages_list);
-    }
+  // language tags handling
+  $('[lang]').each(function() {
+    modify_lang_inputs($(this));
   });
 
   // multiple languages final visualization
@@ -451,49 +405,92 @@ $(document).ready(function() {
 
   // display subtemplates ('Subtemplate' fields)
   $("[subtemplate]").each(function() {
+    // get the class of the subtemplate and its fields
     var subtemplate_class = $(this).attr("subtemplate");
     var subtemplate_fields = $("[class~='("+subtemplate_class+")']");
 
     if ($(this).hasClass("oneValue")) {
       // merged subtemplates: hide the 'subtemplate' field then link it to its sub-fields
-      $(this).parent().prev().hide();
-      $(this).prev().hide();
+      $(this).parent().parent().hide();
       $(this).attr('type', 'hidden');
       var sub_tpl_id = $(this).attr('id');
+      var form_id = $('.corners form').attr('id'); // either 'recordForm' or 'modifyForm'
+
+      // define a new id (timespan) for the subrecord or retrieve the existing one
+      let subform_id = '';
       var now = new Date().valueOf();
-      var subform_id = (now / 1000).toString().replace('.', '-');
-      var form_id = $('.corners form').attr('id');
+      var timespan_id = (now / 1000).toString().replace('.', '-');
+      if($(this).next('span').next('.hiddenInput').length) {
+        var existing_subform = $(this).next().next().val();
+        subform_id = existing_subform.split(',')[0];
+      } else {
+        subform_id = timespan_id;
+      }
+
+      // adapt the subrecord's input fields to the defined schema
       subtemplate_fields.each(function() {
-        if ($(this).hasClass('disambiguate')) {
-          var base_id = $(this).attr('id').split('_')[0];
-          var main_lang_input_id = base_id+'_mainLang_'+subform_id;
-          $('#'+base_id+'_mainLang').attr('id', main_lang_input_id);      
-          $('#'+main_lang_input_id).attr('name',main_lang_input_id);
+        var base_id = $(this).attr('id').split('_')[0];
+
+        // subrecord's input fields and the main language hidden input must be like: 'inputFieldID_subrecordID'
+        if (form_id === 'recordForm') {
+          // modify the main language id for primary keys
+          if ($(this).hasClass('disambiguate')) {
+            var main_lang_input_id = base_id+'_mainLang_'+subform_id;
+            $('#'+base_id+'_mainLang').attr('id', main_lang_input_id);      
+            $('#'+main_lang_input_id).attr('name',main_lang_input_id);
+          }
+          // modify sub-fields' ids
+          $(this).attr('id', $(this).attr('id')+"_"+subform_id);
+          $(this).attr('name', $(this).attr('id'));
+          $(this).attr('data-subform',subform_id);
         }
-        $(this).attr('id', $(this).attr('id')+"_"+subform_id);
-        $(this).attr('name', $(this).attr('id'));
-        $(this).attr('data-supertemplate',sub_tpl_id);
+
+        // modify show_language onclick (literal input fields)
+        $('#'+'languages-'+base_id).find('a').each(function() {
+          var onclick_attr = $(this).attr('onclick');
+          var regex = /'([^"]*)'/g;
+          var original_id_extended = onclick_attr.match(regex)[0];
+          var original_id = original_id_extended.substring(1, original_id_extended.length-1)
+          $(this).attr('onclick', onclick_attr.replace(original_id, original_id+'_'+subform_id));
+        });
       });
+
+      // associate the 'Subtemplate' input field to its Subrecord
       var hidden_subrecord_link = $('<input type="hidden" name="'+sub_tpl_id+'-subrecords" value="'+subform_id+'"/>');
       $('#'+form_id).append(hidden_subrecord_link);
 
-      // check if a subrecord is already associated with this 'subtemplate' field and fill its fields
-      if($(this).next('span').length) {
+      // check if a subrecord is already associated with this 'subtemplate' field and fill the subtemplate with its data
+      if(subform_id !== timespan_id) {
         $(this).next().hide();
-        var target_record = $(this).next().attr('id');
+        $(this).next().next().remove();
         var current_url = window.location.href.split("/");
         var current_action = current_url[current_url.length-1].split("-")[0]; // modify or review
-        var request_url = '/'+current_action+"-"+target_record
+        var request_url = '/'+current_action+"-"+subform_id;
         $.ajax({
           type:'GET',
           url:request_url,
           dataType:"html",
           success:function(data) {
-            var input_fields = $('[name="'+subform_id+'"]').val().split(",");
-            for (let i=0; i < input_fields.length; i++) {
-              var input_replace = $(data).find('#'+input_fields[i]).parent().parent();
-              $('#'+input_fields[i]).parent().parent().replaceWith(input_replace);
-            }   
+            subtemplate_fields.each(function() {
+              var subtemplate_field_id = $(this).attr('id');
+              var id_root = subtemplate_field_id.split('_')[0];
+              var clone_elements = $(data).find('[id^="'+id_root+'"]').parent();
+              let main_lang = '';
+              if (clone_elements.find('#'+id_root+'_mainLang').length) { main_lang = clone_elements.find('#'+id_root+'_mainLang').val().toUpperCase()}
+              clone_elements.find('input').each(function() {
+                clone_id = $(this).attr('name')+'_'+subform_id;
+                $(this).attr('name', clone_id);
+                $(this).attr('id', clone_id);
+                $(this).addClass('subrecord-field');
+                $(this).attr('data-subform', subform_id)
+              });
+              $(this).parent().replaceWith(clone_elements);
+              clone_elements.find('[lang]').each(function() {
+                modify_lang_inputs($(this));
+              });
+              clone_elements.parent().find('.main-lang').removeClass('main-lang');
+              clone_elements.parent().find('[title="text language: '+main_lang+'"]').addClass('main-lang');
+            });
           }
         });
       }
@@ -510,7 +507,11 @@ $(document).ready(function() {
       });
       // get the display name assigned to the 'Subtemplate' field and create a button for adding new subrecords
       var field_name = $(this).parent().prev().text();
-      $(this).after("<i class='fas fa-plus-circle' onclick='create_subrecord(`" + subtemplate_class + "`,`"+field_name+"`,$(this))'></i>");
+      const create_btn = $("<i class='fas fa-plus-circle'></i>");
+      create_btn.on('click', function() {
+        create_subrecord(subtemplate_class,field_name,create_btn)
+      });
+      $(this).after(create_btn);
       
       // create hidden fields to store subrecords information when loading a previously created Record (only in modify/review page)
       if ($('.corners form').attr('id') === "modifyForm") {
@@ -529,6 +530,49 @@ $(document).ready(function() {
 /////////////////////////
 // MULTIPLE LANGUAGES ///
 /////////////////////////
+function modify_lang_inputs(el) {
+  var base_id = $(el).attr('id').split('_')[0];
+  const label_section = $(el).parent().prev();
+
+  // check if it's first of type
+  if ($(el).is('[lang]:first-of-type')) {
+    if (!($(el).hasClass('subrecord-field'))) {
+      var new_id = base_id+"_"+$(el).attr('lang');
+      $(el).attr('name',new_id);
+      $(el).attr('id',new_id);
+      var lang = $(el).attr('lang').toUpperCase();
+      const languages_list = $('<div id="languages-'+base_id+'"><i class="fas fa-globe" aria-hidden="true" onclick="language_form(this)"></i></div>');
+      const first_lang = $('<a class="lang-item selected-lang" title="text language: '+lang+'" onclick="show_lang(\''+new_id+'\')">'+lang+'</a>');
+
+      // primary keys: specify main language
+      if ($(el).hasClass('disambiguate')) {
+        if ($('#'+base_id+'_mainLang').length == 0) {
+          const hidden_main_lang = $('<input type="hidden" id="'+base_id+'_mainLang" name="'+base_id+'_mainLang" value="'+$(el).attr('lang')+'"/>')
+          $(el).after(hidden_main_lang);
+          first_lang.addClass('main-lang');
+        } else if ($('#'+base_id+'_mainLang').val() === $(el).attr('lang')) {
+          first_lang.addClass('main-lang');
+        }
+      }
+      languages_list.append(first_lang);
+      label_section.append(languages_list);
+    }
+  } 
+  else {
+    // language tags handling: other lang (only in modify and review)
+    const main_lang = $('#'+base_id+'_mainLang').val();
+    var lang = $(el).attr('lang');
+    const languages_list = $('#languages-'+base_id);
+    const other_lang = $('<a class="lang-item" title="text language: '+lang.toUpperCase()+'" onclick="show_lang(\''+$(el).attr('id')+'\')">'+lang.toUpperCase()+'</a>');
+    if ($(el).hasClass('disambiguate') && lang===main_lang) {
+      other_lang.addClass('main-lang');
+    }
+    $(el).hide();
+    languages_list.append(other_lang);
+    label_section.append(languages_list);
+  }
+}
+
 function language_form(el) {
   if ($('#lang-form').length > 0) {
     $('#lang-form').remove()
@@ -540,15 +584,17 @@ function language_form(el) {
     var field_id = input.attr('id');
 
     // set a variable to modify the subrecord's list of fields in case the textbox is part of a subtemplate
-    var supertemplate = $('#'+field_id).attr('data-supertemplate');
-    var modify_supertemplate = supertemplate ? ",record=`" + supertemplate + "`" : "";
+    var subform = $('#'+field_id).attr('data-subform');
+    var modify_subform = subform ? subform : null
     
 
     const lang_form = $('<section id="lang-form" data-input="'+field_id+'"></section>');
-    const change_language = $('<section class="form_row"><label>Change current language:</label><input type="textbox" class="custom-select" onclick="activate_filter(this'+modify_supertemplate+')"></input><div class="language-options"></div></section>');
-    const add_language = $('<section class="form_row"><label>Add another language:</label><input type="textbox" class="custom-select" placeholder="Select a new language" onclick="activate_filter(this'+modify_supertemplate+')"><div class="language-options"></input></div></section>')
-    const main_lang = $('<section class="form_row"><label>Set this primary language:</label><select class="custom-select" onchange="change_main_lang(this'+modify_supertemplate+')"></select></section>');
-    const remove_lang = $('<section class="form_row"><label>Remove current language: </label> <i class="far fa-trash-alt" onclick="remove_current_language(this'+modify_supertemplate+')"></i></section>');
+    const change_language = $('<section class="form_row"><label>Change current language:</label><input type="textbox" class="custom-select" onclick="activate_filter(this)"></input><div class="language-options"></div></section>');
+    const add_language = $('<section class="form_row"><label>Add another language:</label><input type="textbox" class="custom-select" placeholder="Select a new language" onclick="activate_filter(this)"><div class="language-options"></input></div></section>')
+    const main_lang = $('<section class="form_row"><label>Set this primary language:</label><select class="custom-select"></select></section>');
+    main_lang.find('select').on('change', function() {change_main_lang(this,modify_subform)});
+    const remove_lang = $('<section class="form_row"><label>Remove current language: </label> <i class="far fa-trash-alt" onclick="remove_current_language(this,'+modify_subform+')"></i></section>');
+    remove_lang.on('click', function() {remove_lang(this,modify_subform)});
     $.ajax({
       type: 'GET',
       url: "https://raw.githubusercontent.com/mattcg/language-subtag-registry/master/data/json/registry.json",
@@ -561,8 +607,17 @@ function language_form(el) {
             if (obj.Type === "language" && !("Deprecated" in obj)) {
               var lang = obj.Description[0];
               var tag = obj.Subtag;
-              var change_select = $("<a href='#"+tag+"' lang='"+lang+"' onclick='change_current_language(this)'>"+lang+" ("+tag+")</a>");;
-              var add_select = $("<a href='#"+tag+"' lang='"+lang+"' onclick='add_new_language(this)'>"+lang+" ("+tag+")</a>");
+
+              // prepare the 'Change Language' and 'Add Language' options
+              var change_select = $("<a href='#"+tag+"' lang='"+lang+"'>"+lang+" ("+tag+")</a>");
+              var add_select = $("<a href='#"+tag+"' lang='"+lang+"'>"+lang+" ("+tag+")</a>");
+              change_select.on("click", function() {
+                change_current_language(this,modify_subform);
+              });
+              add_select.on("click", function() {
+                console.log(modify_subform)
+                add_new_language(this,modify_subform)
+              });
               if (tag === current_lang) {
                 change_language.find('input').attr('placeholder',lang+' ('+tag+')');
                 change_select.addClass('current-lang');
@@ -622,11 +677,13 @@ function activate_filter(el){
   }
 }
 
-function add_new_language(el) {
+function add_new_language(el,record) {
+  console.log(record)
   var new_lang = $(el).attr('href').replace("#","");
   var last_lang_id = $(el).parent().parent().parent().attr('data-input');
   const new_lang_input = $('#'+last_lang_id).clone();
   var new_lang_input_id = last_lang_id.split('_')[0] + "_" + new_lang;
+  if (record) {new_lang_input_id += '_' + record}
   $('#languages-'+last_lang_id.split('_')[0]).find('.selected-lang').removeClass('selected-lang');
   $('#languages-'+last_lang_id.split('_')[0]).append("<a class='lang-item selected-lang' title='text language: "+new_lang.toUpperCase()+"' onclick='show_lang(\""+new_lang_input_id+"\")'>"+new_lang.toUpperCase()+"</a>");
   new_lang_input.attr('id', new_lang_input_id);
@@ -638,13 +695,18 @@ function add_new_language(el) {
   $(el).parent().parent().parent().remove();
 }
 
-function change_current_language(el) {
+function change_current_language(el,record) {
   var new_lang = $(el).attr('href').replace("#","");
   var id = $(el).parent().parent().parent().attr('data-input');
   var current_lang = $('#languages-'+id.split('_')[0]).find('.selected-lang').eq(0);
   var current_lang_field_id =  id.split('_')[0] +"_"+current_lang.text().toLowerCase();
   if (current_lang.text().toLowerCase() !== new_lang) {
     var new_id = id.split('_')[0] + '_'  + new_lang;
+    if (record) {
+      new_id += '_' + record;
+      current_lang_field_id += '_' + record;
+      console.log(current_lang_field_id)
+    }
     var title = 'text language: '+new_lang.toUpperCase();
     current_lang.attr('title',title);
     current_lang.attr('onclick','show_lang("'+new_id+'")');
@@ -661,22 +723,27 @@ function change_current_language(el) {
     });
   } 
   if (current_lang.hasClass('main-lang')) {
-    $('#'+id.split('_')[0]+'_mainLang').val(new_lang);
+    var main_lang_id = '#'+id.split('_')[0]+'_mainLang';
+    if (record) {
+      main_lang_id += '_' + record;
+    }
+    $(main_lang_id).val(new_lang);
   }
 }
 
-function change_main_lang(el) {
+function change_main_lang(el,record) {
   var id = $(el).parent().parent().attr('data-input');
-  let field_base =  id.split('_')[0];
+  let field_base = id.split('_')[0];
   $('#languages-'+field_base).find('.main-lang').removeClass('main-lang');
   var new_main_lang = $(el).val();
-  console.log('[title="text language: '+new_main_lang.toUpperCase()+'"]')
   $('#languages-'+field_base).find('[title="text language: '+new_main_lang.toUpperCase()+'"]').addClass('main-lang');
   $(el).parent().parent().remove();
-  $('#'+field_base+'_mainLang').val(new_main_lang)
+  var main_lang_input_id = '#'+field_base+'_mainLang';
+  if (record) {main_lang_input_id+='_'+record}
+  $(main_lang_input_id).val(new_main_lang);
 }
 
-function remove_current_language(el) {
+function remove_current_language(el,record) {
   var current_field = $(el).parent().parent().attr('data-input');
   let field_base = current_field.split('_')[0];
   var current_lang_tag = $('#languages-'+field_base).find('.selected-lang');
@@ -692,7 +759,9 @@ function remove_current_language(el) {
     var prev_lang = current_lang_tag.prev('a').text().toLowerCase();
     current_lang_tag.remove();
     $('#'+current_field).remove();
-    $('#'+field_base+'_'+prev_lang).show();
+    var show_lang_id = '#'+field_base+'_'+prev_lang;
+    if (record) {show_lang_id+='_'+record}
+    $(show_lang_id).show();
   } else {
     alert('Not allowed. Change current language, instead');
   }
@@ -1821,7 +1890,7 @@ function create_subrecord(resource_class, field_name, el, subform_id=null ) {
     var now = new Date().valueOf();
     subform_id = (now / 1000).toString().replace('.', '-');
   }
-  var form_id = $('.corners').eq(0).find('form').eq(0).attr('id'); // either recordForm or modifyForm
+  var form_id = $('.corners').eq(0).find('form').eq(0).attr('id'); // either 'recordForm' or 'modifyForm'
   replace_existing_subforms();
 
   // prepare the new subrecord form
@@ -1831,14 +1900,28 @@ function create_subrecord(resource_class, field_name, el, subform_id=null ) {
 
   // create a clone for each input belonging to the requested (sub-)template
   $("[class~='("+resource_class+")'][class~='original_subtemplate']").each(function() {
-    // create a secondary webform to define a new instance of the requested entity
-    const clone_element = $(this).parent().parent().clone();
-    clone_element.attr("style", "display: block");
+    // CREATE A CLONE ELEMENT
+    const clone_element = $(this).parent().parent().clone(true);
+    clone_element.attr("style", "display: block"); // make it visible
+    clone_element.find('input').attr('data-subform',subform_id); // associate the input field with the subrecord id
     clone_element.find('input').removeClass('original_subtemplate');
     // associate proper identifiers to input fields belonging to the subrecord form
     var input_id = clone_element.find('input:not([type="hidden"])').attr('id');
     clone_element.find('input:not([type="hidden"])').attr('id', input_id+"_"+subform_id.toString());
     clone_element.find('input:not([type="hidden"])').attr('name', input_id+"_"+subform_id.toString());
+
+    // SET LITERAL INPUT FIELDS
+    if (clone_element.find('[lang]').length>0) {
+      var literal_input = clone_element.find('[lang]');
+      var language_list_section = literal_input.parent().prev();
+      language_list_section.find('a').each(function() {
+        var onclick_attr = $(this).attr('onclick');
+        var regex = /'([^"]*)'/g;
+        var original_id_extended = onclick_attr.match(regex)[0];
+        var original_id = original_id_extended.substring(1, original_id_extended.length-1)
+        $(this).attr('onclick', onclick_attr.replace(original_id, original_id+'_'+subform_id));
+      })
+    }
     // add a main-lang hidden input in case of primary key
     if (clone_element.find('input.disambiguate').next('[type="hidden"]').length > 0) {
       var primary_key_lang_id = clone_element.find('input.disambiguate').next('[type="hidden"]').attr('id');

@@ -101,6 +101,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					lang=conf.mainLang) , )
 				else:
 					params = params + (form.Textbox(myid,
+					type='text',
 					description = description,
 					id=myid,
 					placeholder=placeholder,

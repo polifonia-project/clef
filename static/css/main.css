@@ -2148,6 +2148,7 @@ input[subtemplate]+.fa-plus-circle {
   padding: 20px;
   border: solid 1px black;
   border-radius: 5px;
+  z-index: 1023;
 }
 #lang-form:after {
   content: " ";

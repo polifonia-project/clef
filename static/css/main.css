@@ -764,6 +764,8 @@ span[class^='tag Q']:hover {
 
 input[type='text'],
 input[type='textarea'],
+input[type='date'],
+input[type='month'],
 textarea {
   padding-left: 0.4em !important;
   padding-bottom: 0.5em;
@@ -776,6 +778,8 @@ textarea {
 
 input[type='text']:focus,
 input[type='textarea']:focus,
+input[type='date']:focus,
+input[type='month']:focus,
 textarea:focus {
   outline: none !important;
   border-bottom: solid 2px rgba(100, 23, 180, 1);

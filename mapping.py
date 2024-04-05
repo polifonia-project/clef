@@ -284,7 +284,7 @@ def process_new_subrecord(data, userID, stage, knowledge_extraction, sub_tpl, su
 				inner_subtemplate = subtemplate_field['import_subtemplate']
 				for inner_subrecord in data[key+"-subrecords"].split(","):
 					if ";" in inner_subrecord:
-						processed_subrecord = inner_subrecord.replace(';', ",", 1)
+						processed_subrecord = inner_subrecord.split(";",1)
 					else:
 						processed_subrecord = process_new_subrecord(data,userID,stage,knowledge_extraction,inner_subtemplate,inner_subrecord)
 					new_record_data[subfield_id][0].append(processed_subrecord) # store the id,label pair inside the subrecord dict

@@ -180,6 +180,7 @@ $(document).ready(function() {
     if ( $(this).attr('subtemplate') != undefined) {
       searchCatalogueByClass(searchID);
     }
+
 	});
 
   // create preview buttons for multimedia urls (click on MMtag, i.e., MultiMediaTag)
@@ -379,28 +380,12 @@ $(document).ready(function() {
 
   // multiple languages final visualization
   $('.info-item [xml\\:lang]').each(function(){
-    var lang = $(this).attr('xml:lang');
-    const language_item = $('<a class="lang-item">'+lang.toUpperCase()+'</a>');
-    if ($(this).prev('p').length != 1) {
-      const languages_list = $('<div class="info-language"></div>');
-      language_item.addClass('selected-lang');
-      $(this).before(languages_list.append(language_item));
-    } else {
-      $(this).parent().find('.info-language').append(language_item);
-      $(this).hide();
-    }
-    language_item.on('click', function() {
-      var new_lang = $(this).text().toLowerCase();
-      $(this).parent().parent().find('p').hide();
-      $(this).parent().parent().find('p[xml\\:lang="'+new_lang+'"]').show();
-      $(this).parent().find('.selected-lang').removeClass('selected-lang')
-      $(this).addClass('selected-lang');
-    })
+    visualize_subrecord_literals($(this));
   })
 
   // visualize subrecords ('Subtemplate' fields)
   $('.subtemplateField').each(function() {
-    add_subtemplate($(this));
+    visualize_subrecord($(this));
   });
 
   // display subtemplates ('Subtemplate' fields)
@@ -781,31 +766,31 @@ function show_lang(field_id) {
 /////////////////////////
 //// SUBRECORDS VIEW ////
 /////////////////////////
-function add_subtemplate(el) {
+function visualize_subrecord(el) {
   var hide = el.hasClass('oneValue');
   var subtemplate_values = el.find('p');
   subtemplate_values.each(function() {
-  var externalLink = $(this).find('a').eq(0);
+    var externalLink = $(this).find('a').eq(0);
 
-    if (!hide) {
-      // organize subrecords as an accordion
-      $(this).addClass('subtemplateValue')
-      $(this).append('<span class="subtamplate"><i class="fa fa-chevron-down" aria-hidden="true"></i></span>')
-      externalLink.prepend("<i class='fas fa-external-link-alt'></i>  ")
+  if (!hide) {
+    // organize subrecords as an accordion
+    $(this).addClass('subtemplateValue')
+    $(this).append('<span class="subtamplate"><i class="fa fa-chevron-down" aria-hidden="true"></i></span>')
+    externalLink.prepend("<i class='fas fa-external-link-alt'></i>  ")
 
-      // show and hide inner values
-      $(this).bind('click', function(e){
-        if (!($(e.target).parent().context.localName == "i")) {
-          e.preventDefault();
-          if ($(e.target).parent().is($(this))) {
-            $($(e.target).parent()).find('div').eq(0).toggleClass('hidden-subrecord');
-            $(e.target).parent().toggleClass('subtemplateValueOpen');
-          }
+    // show and hide inner values
+    $(this).bind('click', function(e){
+      if (!($(e.target).parent().context.localName == "i")) {
+        e.preventDefault();
+        if ($(e.target).parent().is($(this))) {
+          $($(e.target).parent()).find('div').eq(0).toggleClass('hidden-subrecord');
+          $(e.target).parent().toggleClass('subtemplateValueOpen');
         }
-      })
-    } else {
-      $(this).parent().hide();
-    }
+      }
+    })
+  } else {
+    $(this).parent().hide();
+  }
 
     var calledValue = $(this);
     var calledRecord = externalLink.attr('href').replace("term", "view");
@@ -824,12 +809,18 @@ function add_subtemplate(el) {
               $(this).find('.wikiEntity').append(wd_img);
               $(this).find('.geoEntity').append(geo_img);
               $(this).find('.viafEntity').append(viaf_img);
+              $(this).find('[xml\\:lang]').each(function() {
+                visualize_subrecord_literals($(this));
+              })
             })
             calledValue.append($('<div class="hidden-subrecord"></div>').append(calledRecordData));
           } else {
             calledRecordData.find('.wikiEntity').append(wd_img);
             calledRecordData.find('.geoEntity').append(geo_img);
             calledRecordData.find('.viafEntity').append(viaf_img);
+            calledRecordData.find('[xml\\:lang]').each(function() {
+              visualize_subrecord_literals($(this));
+            })
             calledValue.parent().after(calledRecordData)
           }
 
@@ -837,7 +828,7 @@ function add_subtemplate(el) {
 
           var new_values = calledValue.find('.subtemplateField');
           new_values.each(function() {
-            add_subtemplate($(this));
+            visualize_subrecord($(this));
           });
 
       },
@@ -846,6 +837,26 @@ function add_subtemplate(el) {
       }
     })
   }); 
+}
+
+function visualize_subrecord_literals(el) {
+  var lang = $(el).attr('xml:lang');
+  const language_item = $('<a class="lang-item">'+lang.toUpperCase()+'</a>');
+  if ($(el).prev('p').length != 1) {
+    const languages_list = $('<div class="info-language"></div>');
+    language_item.addClass('selected-lang');
+    $(el).before(languages_list.append(language_item));
+  } else {
+    $(el).parent().find('.info-language').append(language_item);
+    $(el).hide();
+  }
+  language_item.on('click', function() {
+    var new_lang = $(this).text().toLowerCase();
+    $(this).parent().parent().find('p').hide();
+    $(this).parent().parent().find('p[xml\\:lang="'+new_lang+'"]').show();
+    $(this).parent().find('.selected-lang').removeClass('selected-lang');
+    $(this).addClass('selected-lang');
+  });
 }
 
 //////////////
@@ -1298,7 +1309,6 @@ function searchWD(searchterm) {
           }
 
           // look for the query term in the catalogue (regardless of VIAF and WD results)
-
           var cataloguePromise = searchCatalogueIntermediate(q)
           cataloguePromise.then(function(catalogueEntries) {
             $(".fromCatalogue").remove(); // to remove previously retrieved elements
@@ -1885,6 +1895,7 @@ function replace_existing_subforms() {
 
 // create subrecords
 function create_subrecord(resource_class, field_name, el, subform_id=null ) {
+
   // prepare a new subrecord id 
   if (!subform_id) {
     var now = new Date().valueOf();
@@ -1901,12 +1912,13 @@ function create_subrecord(resource_class, field_name, el, subform_id=null ) {
   // create a clone for each input belonging to the requested (sub-)template
   $("[class~='("+resource_class+")'][class~='original_subtemplate']").each(function() {
     // CREATE A CLONE ELEMENT
-    const clone_element = $(this).parent().parent().clone(true);
+    const clone_element = $(this).parent().parent().clone();
     clone_element.attr("style", "display: block"); // make it visible
     clone_element.find('input').attr('data-subform',subform_id); // associate the input field with the subrecord id
     clone_element.find('input').removeClass('original_subtemplate');
     // associate proper identifiers to input fields belonging to the subrecord form
     var input_id = clone_element.find('input:not([type="hidden"])').attr('id');
+    console.log(input_id)
     clone_element.find('input:not([type="hidden"])').attr('id', input_id+"_"+subform_id.toString());
     clone_element.find('input:not([type="hidden"])').attr('name', input_id+"_"+subform_id.toString());
 
@@ -1920,7 +1932,7 @@ function create_subrecord(resource_class, field_name, el, subform_id=null ) {
         var original_id_extended = onclick_attr.match(regex)[0];
         var original_id = original_id_extended.substring(1, original_id_extended.length-1)
         $(this).attr('onclick', onclick_attr.replace(original_id, original_id+'_'+subform_id));
-      })
+      });
     }
     // add a main-lang hidden input in case of primary key
     if (clone_element.find('input.disambiguate').next('[type="hidden"]').length > 0) {
@@ -1928,55 +1940,91 @@ function create_subrecord(resource_class, field_name, el, subform_id=null ) {
       clone_element.find('input[type="hidden"]').attr('id', primary_key_lang_id+"_"+subform_id.toString());
       clone_element.find('input[type="hidden"]').attr('name', primary_key_lang_id+"_"+subform_id.toString());
     }
+    
+    // SET SUBTEMPLATE FIELDS '+' BUTTON
+    clone_element.find('[subtemplate]').each(function(){
+      var subtemplate_class = $(this).attr('subtemplate');
+      var field_name = $(this).parent().prev().text();
+      var add_subrecord_btn = $(this).next('i');
+      add_subrecord_btn.on('click', function(){
+        create_subrecord(subtemplate_class,field_name,add_subrecord_btn);
+      })
+    })
+
+    console.log($('[name="'+input_id+'_'+subform_id+'-subrecords"]'))
 
     // retrieve previously provided values in case they are available (i.e., modify subrecords):
+    let clone_element_values = [];
     // a) single value 
     if ($('#'+form_id+' #'+input_id+"_"+subform_id).length >0) {
-      to_modify = $('#'+form_id+' #'+input_id+'_'+subform_id);
-      clone_element.find('input').val(to_modify.val());
+      const to_be_modified = $('#'+form_id+' #'+input_id+'_'+subform_id);
+      clone_element.find('input').val(to_be_modified.val());
     } 
-    // b) multiple values: imported values and subrecords
-    let clone_element_values = [];
-    if ($('#'+form_id+' [name*="'+input_id+'_'+subform_id+'-"]').length >0) {
-      var imported_values = $('#'+form_id+' [name*="'+input_id+'__'+subform_id+'-"]');
-      imported_values.each(function(){
-        if ($(this).attr('name').endsWith('-subrecords')) {
-          // retrieve subrecords
-          var subrecords = $(this).val().split(',');
-          var subtemplate_field_id = $(this).attr('name').replace('-subrecords', '');
-          console.log($('#'+subtemplate_field_id).attr('class'))
-          var subrecord_cls = $('#'+subtemplate_field_id).attr('subtemplate')
-          for (let i=0; i<subrecords.length;i++){
-            var code = subrecords[i];
-            if (subrecords[i].includes(";")) {
-              code = subrecords[i].split(";")[0];
-              var label = subrecords[i].split(";")[1];
-            } else {
-              var subrecord_fields = $('#'+subrecords[i]).val().split(",");
-              var label = "";
-              for (let j=0; j<subrecord_fields.length;j++){
-                console.log(subrecord_fields[j])
-                if ($("#"+subrecord_fields[j].split("__")[0]).hasClass('disambiguate')) {
-                  label = $("#"+subrecord_fields[j]).val();
-                }
-              } 
-            }
-            var subrecord_value_span = $("<span class='tag-subrecord "+subrecord_cls+"' id='"+code+"-tag'>"+label+"</span>")
-            var modify_button = $('<i class="far fa-edit" onclick="modify_subrecord(`'+code+'`, keep=true)"></i>')
-            var delete_button = $('<i class="far fa-trash-alt" onclick="modify_subrecord(`'+code+'`, keep=false)"></i>')
-            clone_element_values.push(subrecord_value_span, modify_button, delete_button);
-          }
-        } else {
-          // imported multiple values
-          var value = $(this).val();
-          var code = value.split(",")[0];
-          var label = decodeURIComponent(value.split(",")[1]);
-          var imported_value_span = $("<span class='tag "+code+"' data-input='"+input_id+'__'+subform_id+"' data-id='"+code+"'>"+label+"</span>");
-          clone_element_values.push(imported_value_span);
+    // b) multiple values
+    if ($('#'+form_id+' [name^="'+input_id+'_"][name$="_'+subform_id+'"]:not([name="'+input_id.split('_')[0]+'_'+subform_id+'"])').length >0) {
+      var imported_values = $('#'+form_id+' [name^="'+input_id.split('_')[0]+'_"][name$="_'+subform_id+'"]:not([name="'+input_id.split('_')[0]+'_'+subform_id+'"])');
+      clone_element.find('.label div a').remove();
+      if ($('#'+input_id).hasClass('searchWikidata') || $('#'+input_id).hasClass('searchVocab') || $('#'+input_id).hasClass('searchGeonamaes')) {
+        imported_values.each(function(){
+            // imported values and URIs
+            var value = $(this).val();
+            var code = value.split(",")[0];
+            var label = decodeURIComponent(value.split(",")[1]);
+            var imported_value_span = $("<span class='tag "+code+"' data-input='"+input_id+'__'+subform_id+"' data-id='"+code+"'>"+label+"</span>");
+            clone_element_values.push(imported_value_span);
+            clone_element_values.push($(this));
+            $(this).remove();
+        });
+      } else {
+        imported_values.each(function(){
+          // multiple-lang literal values
           clone_element_values.push($(this));
-          $(this).remove();
+          clone_element.find('input').remove();
+          if($(this).attr('lang') != undefined) {
+            let lang = $(this).attr('lang');
+            const new_lang_item = $('<a class="lang-item" title="text language: '+lang.toUpperCase()+'" onclick="show_lang(\''+$(this).attr('id')+'\')">'+lang+'</a>');
+            clone_element.find('div').append(new_lang_item);
+          } else {
+            let main_lang = $(this).val();
+            clone_element.find('div a[title="text language: '+main_lang.toUpperCase()+'"]').addClass('main-lang');
+          }       
+        });
+        clone_element.find('div a').eq(0).addClass('selected-lang');
+        clone_element_values[0].show();
+        console.log(clone_element_values)
+      }
+    } 
+    // c) subrecords
+    if ($('[name="'+input_id+'_'+subform_id+'-subrecords"]').length>0) {
+      // retrieve subrecords
+      var subrecords = $('[name="'+input_id+'_'+subform_id+'-subrecords"]').val().split(',');
+      console.log(subrecords)
+      var subtemplate_field_id = $(this).attr('name').replace('-subrecords', '');
+      console.log($('#'+subtemplate_field_id).attr('class'))
+      var subrecord_cls = $('#'+subtemplate_field_id).attr('subtemplate')
+      for (let i=0; i<subrecords.length;i++){
+        var code = subrecords[i];
+        let label = "";
+        if (subrecords[i].includes(";")) {
+          code = subrecords[i].split(";")[0];
+          label = subrecords[i].split(";")[1];
+        } else {          
+          var subrecord_label_field = $('.original_subtemplate.disambiguate[class*="('+subrecord_cls+')"]');
+          console.log(subrecord_label_field)
+          if (subrecord_label_field.length > 0) {
+            var main_lang = $('#'+subrecord_label_field.attr('id').split('_')[0] + '_mainLang_' + code).val();
+            console.log('#'+subrecord_label_field.attr('id').split('_')[0] + '_mainLang_' + code)
+            label = $('#'+subrecord_label_field.attr('id').split('_')[0]+'_'+main_lang+'_'+code).val();
+            console.log('#'+subrecord_label_field.attr('id').split('_')[0]+'_'+main_lang+'_'+code)
+            console.log(label)
+          }
         }
-      })
+        var subrecord_value_span = $("<span class='tag-subrecord "+subrecord_cls+"' id='"+code+"-tag'>"+label+"</span>")
+        var modify_button = $('<i class="far fa-edit" onclick="modify_subrecord(`'+code+'`, keep=true)"></i>')
+        var delete_button = $('<i class="far fa-trash-alt" onclick="modify_subrecord(`'+code+'`, keep=false)"></i>')
+        clone_element_values.push(subrecord_value_span, modify_button, delete_button);
+      }
+    
     }
     clone_element.find('.input_or_select').eq(0).append(clone_element_values);
     subrecord_form.append(clone_element);
@@ -1987,12 +2035,15 @@ function create_subrecord(resource_class, field_name, el, subform_id=null ) {
   const save_subrecord_btn = $("<input id='subrecord_save' class='btn btn-dark' style='margin-left:20px' value='Add'>");
   const cancel_subrecord_btn = $("<input id='subrecord_cancel' class='btn btn-dark' style='margin-left:20px' value='Cancel'>");
 
+  console.log(el)
   // SAVE SUBRECORD
   save_subrecord_btn.on('click', function(e) {
     // generate a tag
     var is_valid = check_mandatory_fields(this);
     if (is_valid) {
-      var tag_label = subrecord_form.find('.disambiguate').val() || (field_name + "-" + subform_id);
+      var label_field = subrecord_form.find('.disambiguate').eq(0);
+      var label_main_lang = $('#'+label_field.attr('id').replace(label_field.attr('lang'), 'mainLang')).val();
+      var tag_label = subrecord_form.find('.disambiguate[lang="'+label_main_lang+'"]').val() || (field_name + "-" + subform_id);
       
       // store all the input ids to be associated with a subrecord
       // append those inputs to the main record form to pass their values to the back-end application
@@ -2004,15 +2055,12 @@ function create_subrecord(resource_class, field_name, el, subform_id=null ) {
           if($(this).attr('lang')!== undefined) {
             console.log($(this).attr('id').split('_')[0]+"_"+$(this).attr('id').split('_')[2]);
             subinputs.push($(this).attr('id').split('_')[0]+"_"+$(this).attr('id').split('_')[2]); // field_id + "_" + subrecord_id
-            console.log(subinputs);
           } else {
             subinputs.push($(this).attr('id'));
           }
         };
       });
-
       el.after("<br/><span id='"+subform_id+"-tag' class='tag-subrecord "+resource_class+"'>" + tag_label + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+subform_id+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+subform_id+"\", keep=false)'></i>");
-      $('#'+form_id).append("<input type='hidden' name='"+subform_id+"' id='"+subform_id+"' value='"+subinputs.toString()+"'></input>");
 
       // for each subtemplate field, create an hidden input value including a list of related subrecords
       // this is needed to streamline the creation of records (back-end application)
@@ -2068,13 +2116,13 @@ function modify_subrecord(sub_id, keep) {
 
   if (!keep) {
     // remove all inputs
-    var inner_inputs = $('#'+sub_id).val().split(",");
-    delete_inner_subrecord(inner_inputs); // collect nested inputs and remove them
+    var subrecords_list_str = $('[name$="-subrecords"][value*='+sub_id+'"]');
+    var subrecords_list_arr = subrecords_list_str.split(',');
+    var idx = subrecords_list_arr.indexOf(sub_id);
+    var new_list = subrecords_list_arr.splice(idx, 1);
+    subrecords_list.val(new_list.join(','));
   }
   else {
-    // recollect the first level nested inputs to be displayed
-    var inner_inputs = $('#'+sub_id).val().split(",");
-
     // recreate subrecord_section
     var field_name = $('#'+sub_id+'-tag').parent().prev().text();
     var el = $('#'+sub_id+'-tag').prevAll('.fa-plus-circle').first();
@@ -2426,7 +2474,7 @@ function add_field(field, res_type, backend_file=null) {
   console.log(field);
   var contents = "";
   var temp_id = Date.now().toString(); // to be replaced with label id before submitting
-
+  console.log(temp_id)
   var field_type = "<section class='row'>\
     <label class='col-md-3'>FIELD TYPE</label>\
     <select onchange='change_fields(this)' class='col-md-8 ("+res_type+") custom-select' id='type__"+temp_id+"' name='type__"+temp_id+"'>\
@@ -2710,6 +2758,37 @@ function add_disambiguate(temp_id, el) {
       $("section[id*='addons__"+temp_id+"']").after(field_browse);
       $("input[id*='disambiguate__"+temp_id+"']").parent().remove();
     } else { $("section[id*='addons__"+temp_id+"']").after(field_browse); }
+    if (el.value == 'URI') {
+      var field_SPARQL_constraint = $("<section class='row'>\
+        <label class='col-md-3'>SPARQL CONSTRAINTS <br><span class='comment'>add constraints to narrow the search query</span></label>\
+        <select class='custom-select col-md-8'>\
+          <option value='None'>Select a service</option>\
+          <option value='WD'>Wikidata</option>\
+          <option value='catalogue'>This catalogue SPARQL endpoint</option>\
+        </select>\
+        <textarea placeholder='SELECT Distinct' disabled='true' style='display: none;'></textarea>\
+      </section>");
+      field_SPARQL_constraint.find('select').on('change', function() {
+        let fake_object = "";
+        var selected_option = $(this).val();
+        if (selected_option === 'WD') {
+          fake_object = "?wd_entity"
+        } 
+        var field_constraints = $("<div class='col-md-12' id='yasqe'></div>")
+        $(this).after(field_constraints);
+        var yasqe = YASQE(document.getElementById("yasqe"), {
+          sparql: {
+            showQueryButton: false,
+            endpoint: myPublicEndpoint,
+            requestMethod: "POST" // TODO: this does not work with GET
+          }
+        });
+        yasqe.setValue("SELECT DISTINCT * WHERE {?s ?p "+fake_object+"} LIMIT 10");
+      })
+      $(el).parent().next().after(field_SPARQL_constraint);
+      console.log($('.yasqe_buttons'))
+      $('.yasqe_buttons').remove();
+    }
 
     updateindex();
     moveUpAndDown() ;

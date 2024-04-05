@@ -101,7 +101,7 @@ $var project = project
 														$if input.type=="text":
 															<input type="text" value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" mandatory="$input.attrs['mandatory']"/>
 														$else:
-															<textarea value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" mandatory="$input.attrs['mandatory']">$k_v[0]</textarea>
+															<textarea value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" mandatory="$input.attrs['mandatory']">$k_v[0]</textarea>	
 														$if len(k_v) == 3:
 															$ lang_id = id+'_mainLang'
 															<input type="hidden" value="$lang" id="$lang_id" name="$lang_id">
@@ -128,7 +128,6 @@ $var project = project
 													<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
 									$else:
 										$:input.render()
-										<script>console.log('$type(input)')</script>
 										$if type(input) == Dropdown:
 											<script type="text/javascript">
 												$$('#$id').prepend($$('<option selected=selected value="None">Select from the list</option>'));

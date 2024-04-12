@@ -49,7 +49,7 @@ $ id = templates.get_default_id()
 										<option value="Checkbox">Checkbox (multiple choice)</option>
 										<option value="Date">Date (select a day/month/year/timespan)</option>
 										<option value="Multimedia">Multimedia (audio, image, video)</option>
-										<option value="Vocab">Vocabulary (SKOS)</option>
+										<option value="Skos">Vocabulary (SKOS)</option>
 										<option value='WebsitePreview'>Website Preview (iframe)</option>
 										<option value='Subtemplate'>Subtemplate</option>
 										</select>
@@ -134,20 +134,20 @@ $ id = templates.get_default_id()
 													$$("#multimedia__$id option[value$$='"+"$field['multimedia']"+"']").attr("selected","selected");
 												</script>
 											</section>
-										$elif field['type'] == 'Vocab':
+										$elif field['type'] == 'Skos':
 											<!-- VOCABULARIES LIST -->
 											<section class='row'>
 												<label class='col-md-3'>VOCABULARIES LIST</label>
 												<section class="col-md-8">
 												$if len(skos_vocabs) > 0:
 													$ n = 0
-													$for voc in skos_vocabs:
+													$for vocabulary in skos_vocabs:
 														$ n+=1
 														$ idx = str(n) + "__" + id
-														<label for='vocab$idx'>$voc.upper()<input type='checkbox' id='vocab$idx' name='vocab$idx' value='$voc'></label><br>
-														$if voc in field['vocab']:
+														<label for='skos$idx'>$vocabulary.upper()<input type='checkbox' id='skos$idx' name='skos$idx' value='$vocabulary'></label><br>
+														$if vocabulary in field['skosThesauri']:
 															<script type="text/javascript">
-																$$('#vocab$idx').attr('checked','checked');
+																$$('#skos$idx').attr('checked','checked');
 															</script>
 													<label class="add_vocabulary_button">ADD A NEW VOCABULARY <i class='fas fa-plus-circle' onClick='add_skos_vocab(this)'></i></label>
 												</section>
@@ -211,7 +211,6 @@ $ id = templates.get_default_id()
 												$$("#import_subtemplate__$id").append(importable_templates);
 												$$("#import_subtemplate__$id option[value$$='"+"$field['import_subtemplate']"+"']").attr("selected","selected");
 												import_subtemplate($$("#import_subtemplate__$id")[0]);
-
 											</script>
 										$else:
 											<!-- VALUES -->
@@ -268,13 +267,13 @@ $ id = templates.get_default_id()
 					<a class="link_btn" onclick="add_field('Checkbox','$res_type')" name="add_checkbox">Add Checkbox</a>
 					<a class="link_btn" onclick="add_field('Date','$res_type')" name="add_date">Add Date</a>
 					<a class="link_btn" onclick="add_field('Multimedia','$res_type')" name="add_multimedia">Add Multimedia</a>
-					$ vocabs = "//".join(list(skos_vocabs.keys()))
-					<a class="link_btn" onclick="add_field('Vocab','$res_type', '$vocabs')" name="add_vocabulary">Add Vocabulary</a>
+					$ skos_thesauri = "//".join(list(skos_vocabs.keys()))
+					<a class="link_btn" onclick="add_field('Skos','$res_type', '$skos_thesauri')" name="add_vocabulary">Add Vocabulary</a>
 					<a class="link_btn" onclick="add_field('WebsitePreview','$res_type')" name="add_preview">Add Website Preview</a>
 					<a class="link_btn" onclick="add_field('KnowledgeExtractor','$res_type')" name="add_extractor">Add Knowledge Extraction</a>
 					<a class="link_btn" onclick="add_field('Subtemplate','$res_type')" name="add_extractor">Add Subtemplate</a>
 					<script type="text/javascript">
-						var available_skos_vocabularies = '$vocabs';
+						var available_skos_vocabularies = '$skos_thesauri';
 					</script>
 				</section>
 			</section>

@@ -2183,6 +2183,27 @@ input[subtemplate]+.fa-plus-circle {
   padding-left: 0px !important;
 }
 
+/* custom YASQE */
+.yasqe-buttons {
+  background-color: #F7F7F7;
+  border: solid 1px #D1D1D1;
+  border-top: none;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.yasqe-buttons span {
+  margin-right: 20px;
+  font-size: 0.9em;
+  padding-top: 8px;
+  padding-bottom: 5px;
+}
+
+.yasqe-buttons i {
+  color: rgba(100,23,180,1); cursor: pointer;
+}
+
+
 /* extra */
 .fa-globe, .fa-plus-circle, .fa-eye, .fa-trash{color: rgba(100,23,180,1); cursor: pointer;}
 .link_btn, .btn {white-space: nowrap;}

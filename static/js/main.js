@@ -3,6 +3,7 @@ if (graph.length) {var in_graph = "FROM <"+graph+">"} else {var in_graph = ""}
 const wd_img = ' <img src="https://upload.wikimedia.org/wikipedia/commons/d/d2/Wikidata-logo-without-paddings.svg" style="width:20px ; padding-bottom: 5px; filter: grayscale(100%);"/>'
 const geo_img = '<img src="https://www.geonames.org/img/globe.gif" style="width:20px ; padding-bottom: 5px; filter: grayscale(100%);"/>';
 const viaf_img = '<img src="https://upload.wikimedia.org/wikipedia/commons/1/19/Viaf_icon.png" style="width:20px ; padding-bottom: 5px; filter: grayscale(100%);"/>';
+const wikidataEndpoint = "https://query.wikidata.org/sparql"
 $(document).ready(function() {
 
   // loader
@@ -100,20 +101,22 @@ $(document).ready(function() {
   areas.forEach(element => {  element.after(tags); nlpText(element.id); });
 
   // Suggest vocabularies links
-  $("input[type='text'][class*=' vocabularyField ']").each(function() {
-    const vocabs_link = [];
-    const id = $(this).attr("id");
-    var selected_vocabs = $("#"+id).attr("class").split(" ");
+  $("input[type='text'].searchSkos").each(function() {
+    let vocabs_link = [];
+    var id = $(this).attr("id");
 
-    selected_vocabs.forEach(function(vocab_name) {
-      if (list_vocabs.includes(vocab_name)) {
-        const vocab_name_clean = vocab_name.replace("-", " ");
-        console.log(vocab_name);
-        const vocab_url = vocab_name_clean + "," + skos_vocabs_json[vocab_name].url;
-        vocabs_link.push(vocab_url);
-      } 
-    });
+    // check which SKOS vocabularies have been associated with the input field
+    if (id in query_templates) {
+      var selected_vocabs = query_templates[id];
+      selected_vocabs.forEach(function(obj, idx) {
+        var vocab_name = Object.keys(obj)[0]
+        var vocab_name_clean = vocab_name.replace("-", " ");
+        var vocab_link = vocab_name_clean + "," + obj[vocab_name].url;
+        vocabs_link.push(vocab_link);
+      });
+    }
 
+    // create a div to store the shortcuts to Thesauri
     const div = $("<div id='" + id + "__vocabsLink' class='suggested-vocabs-div'>");
     if ($(this).prev().length > 0) {
       div.insertBefore($(this).prev());
@@ -122,6 +125,7 @@ $(document).ready(function() {
     }
     div.append("<span style='font-weight:100'>Check available vocabularies:</span></br>");
     
+    // create a shortcut for each vocabulary
     vocabs_link.forEach(function(link) {
       const name = link.split(",")[0].toUpperCase();
       const url = link.split(",")[1];
@@ -141,12 +145,24 @@ $(document).ready(function() {
       $(this).closest('form').parent().after(searchresult);
     }
 
-		if ( $(this).hasClass('searchWikidata') ) {
+		if ( $(this).hasClass('searchWikidata') && !($(this).hasClass('wikidataConstraint')) && !($(this).hasClass('catalogueConstraint')) ) {
 			searchWD(searchID);
+		};
+
+    if ( $(this).hasClass('searchWikidata') && ($(this).hasClass('wikidataConstraint'))) {
+			searchWDAdvanced(searchID);
+		};
+
+    if ( $(this).hasClass('searchWikidata') && ($(this).hasClass('catalogueConstraint'))) {
+			searchCatalogueAdvanced(searchID);
 		};
 
     if ( $(this).hasClass('searchGeonames') ) {
 			searchGeonames(searchID);
+		};
+
+    if ( $(this).hasClass('searchSkos') ) {
+			searchSkos(searchID);
 		};
 
 		if ( $(this).hasClass('searchGeneral') ) {
@@ -163,10 +179,6 @@ $(document).ready(function() {
 
     if ( $(this).hasClass('yearField') ) {
 			searchYear(searchID);
-		};
-
-    if ( $(this).hasClass('vocabularyField') ) {
-			searchVocab(searchID);
 		};
 
     if ( $(this).hasClass('multimediaField')) {
@@ -550,10 +562,17 @@ function modify_lang_inputs(el) {
     const languages_list = $('#languages-'+base_id);
     const other_lang = $('<a class="lang-item" title="text language: '+lang.toUpperCase()+'" onclick="show_lang(\''+$(el).attr('id')+'\')">'+lang.toUpperCase()+'</a>');
     if ($(el).hasClass('disambiguate') && lang===main_lang) {
+      var first_lang = languages_list.find('i').next('a');
       other_lang.addClass('main-lang');
+      other_lang.addClass('selected-lang');
+      first_lang.removeClass('selected-lang');
+      first_lang.before(other_lang);
+      $('#'+base_id+'_'+first_lang.text().toLowerCase()).hide();
+      $(el).show();
+    } else {
+      languages_list.append(other_lang);
+      $(el).hide();
     }
-    $(el).hide();
-    languages_list.append(other_lang);
     label_section.append(languages_list);
   }
 }
@@ -1426,6 +1445,145 @@ function searchCatalogue(searchterm) {
   });
 }
 
+// Wikidata SPARQL query (for advanced search only: see function searchWDAdvanced below)
+function makeSPARQLQuery( endpointUrl, sparqlQuery, doneCallback ) {
+	var settings = {
+		headers: { Accept: 'application/sparql-results+json' },
+		data: { query: sparqlQuery }
+	};
+	return $.ajax( endpointUrl, settings ).then( doneCallback );
+}
+
+// search Wikidata with SPARQL patterns
+function searchWDAdvanced(searchterm) {
+  let newSparqlQuery = "";
+  var rawQuery = query_templates[searchterm];
+  var sparqlQuery =  rawQuery.replaceAll('&lt;','<').replaceAll('&gt;','>').replaceAll(/&quot;/g, '"');
+  var endpointUrl = wikidataEndpoint;
+  
+  $('#'+searchterm).on('keyup',function(){
+    $("#searchresult").show();
+
+    var position = $('#'+searchterm).position();
+    var leftpos = position.left+80;
+    var offset = $('#'+searchterm).offset();
+    var height = $('#'+searchterm).height();
+    var width = $('#'+searchterm).width();
+    var top = offset.top + height + "px";
+    var right = offset.left + width + "px";
+
+    $('#searchresult').css( {
+        'position': 'absolute',
+        'margin-left': leftpos+'px',
+        'top': top,
+        'z-index':1000,
+        'background-color': 'white',
+        'border':'solid 1px grey',
+        'max-width':'600px',
+        'border-radius': '4px',
+        'max-height': '300px',
+        'overflow-y': 'auto'
+    });
+    $("#searchresult").empty();
+
+    var value = $('#'+searchterm).val().toLowerCase();
+    newSparqlQuery = sparqlQuery.replace("insertQueryTerm",value);
+
+    if (value.length>0) {
+      makeSPARQLQuery( endpointUrl, newSparqlQuery, function( data ) {
+        $("#searchresult").empty();
+        data.results.bindings.forEach(function(obj,idx) {
+          let idSplit = obj.item.value.split('/');
+          var wdId = idSplit[idSplit.length-1];
+          var newItemDiv = $('<div class="wditem"><a class="blue" target="_blank" href="'+obj.item.value+'">'+wd_img+'</a> <a class="blue" data-id="'+wdId+'">'+obj.itemLabel.value+'</a> - '+obj.itemDescription.value+'</div>');
+          newItemDiv.find('[data-id]').bind('click', function(e) {
+            e.preventDefault();
+            var oldID = $(this).attr('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
+            var oldLabel = $(this).text();
+            $('#' + searchterm).after("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(JSON.stringify(obj)) + "\"/>");
+            $("#searchresult").hide();
+            $('#' + searchterm).val('');
+          });
+          $("#searchresult").append(newItemDiv);
+        });
+        if ($("#searchresult div").length == 0 && value.length <= 3){
+          $("#searchresult").append('<div class="wditem">No matches found: try to type more characters</div>')
+        } else if ($("#searchresult div").length == 0){
+          $("#searchresult").append('<div class="wditem">No matches found</div>')
+        };
+
+      });
+    }
+    
+  });
+}
+
+// 
+function searchCatalogueAdvanced(searchterm) {
+  let newSparqlQuery = "";
+  var rawQuery = query_templates[searchterm];
+  var sparqlQuery =  rawQuery.replaceAll('&lt;','<').replaceAll('&gt;','>').replaceAll(/&quot;/g, '"');
+  var endpointUrl = myPublicEndpoint;
+
+  $('#'+searchterm).on('keyup',function(){
+    $("#searchresult").show();
+
+    var position = $('#'+searchterm).position();
+    var leftpos = position.left+80;
+    var offset = $('#'+searchterm).offset();
+    var height = $('#'+searchterm).height();
+    var width = $('#'+searchterm).width();
+    var top = offset.top + height + "px";
+    var right = offset.left + width + "px";
+
+    $('#searchresult').css( {
+        'position': 'absolute',
+        'margin-left': leftpos+'px',
+        'top': top,
+        'z-index':1000,
+        'background-color': 'white',
+        'border':'solid 1px grey',
+        'max-width':'600px',
+        'border-radius': '4px',
+        'max-height': '300px',
+        'overflow-y': 'auto'
+    });
+    $("#searchresult").empty();
+
+    var value = $('#'+searchterm).val().toLowerCase();
+    newSparqlQuery = sparqlQuery.replace("insertQueryTerm",value);
+
+    if (value.length>0) {
+      makeSPARQLQuery( endpointUrl, newSparqlQuery, function( data ) {
+        $("#searchresult").empty();
+        data.results.bindings.forEach(function(obj,idx) {
+          let idSplit = obj.item.value.split('/');
+          var catalogueId = idSplit[idSplit.length-1];
+          if ($('#searchresult [data-id="'+catalogueId+'"]').length == 0) {
+            var newItemDiv = $('<div class="wditem"><a class="blue" target="_blank" href="'+obj.item.value+'"><i class="fas fa-external-link-alt"></i></a> <a class="blue" data-id="'+catalogueId+'">'+obj.itemLabel.value+'</a></div>');
+            newItemDiv.find('[data-id]').bind('click', function(e) {
+              e.preventDefault();
+              var oldID = $(this).attr('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
+              var oldLabel = $(this).text();
+              $('#' + searchterm).after("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(JSON.stringify(obj)) + "\"/>");
+              $("#searchresult").hide();
+              $('#' + searchterm).val('');
+            });
+            $("#searchresult").append(newItemDiv);
+          };
+        });
+        if ($("#searchresult div").length == 0 && value.length <= 3){
+          $("#searchresult").append('<div class="wditem">No matches found: try to type more characters</div>')
+        } else if ($("#searchresult div").length == 0){
+          $("#searchresult").append('<div class="wditem">No matches found</div>')
+        };
+
+      });
+    }
+  });
+
+}
+
 // search a rdf property in LOV
 function searchLOV(searchterm) {
 	$('#'+searchterm).off('keyup').on('keyup',function(e) {
@@ -1605,43 +1763,45 @@ function searchYear(searchYear) {
 }
 
 // search through SKOS vocabularies
-function searchVocab(searchterm) {
-  /* Some JS variables have been specified in the HTML pages record.html, modify.html:
-  var skos_vocabs_json = a JSON object containing all the information about each vocabulary;
-  var list_vocabs = an array conatining the name of each vocabulary in the JSON object
-  */
+function searchSkos(searchterm) {
+
   $('#' + searchterm).keyup(function(e) {
     if ($('#' + searchterm).val().length > 1) {
       $("#searchresult").hide();
-      var requests = []; // prepare an array to collect all the requests to the selected vocabs' endpoints
-      var vocabs_array = []; // prepare an array to access the results returned by the query
-      var skos_vocabs = $('#' + searchterm).attr('class').split(/\s+/); // SELECTED vocabs are specified as classes of the input field
-      skos_vocabs.forEach(function(item) {
-        if (list_vocabs.includes(item)) {
-          if (skos_vocabs_json[item].type == "API") {
-            // retrieve the parameters of the request to properly call the API
-            var json_parameters = Object.assign({}, skos_vocabs_json[item].parameters);
-            // get the keys of the parameters object: the first key (keys[0]) must be associated with the query-term (i.e., input value)
-            var keys = Object.keys(json_parameters);
-            json_parameters[keys[0]] = $('#' + searchterm).val() + "*"; 
-            console.log(json_parameters);
-            const request = $.getJSON(skos_vocabs_json[item].endpoint, json_parameters);
-            requests.push(request);
-            // specify how to access the results of the query
-            vocabs_array.push(item);
-          } else if (skos_vocabs_json[item].type == "SPARQL") {
-            // the string 'QUERY-TERM' inside the query must be replaced with the input value; special charachters must be checked 
-            var query = (skos_vocabs_json[item].query).replace("QUERY-TERM", ("^" + $('#' + searchterm).val())).replace("&gt;", ">").replace("&lt;", "<").replace(/&quot;/g, '"');
-            var request_parameters = {
-              type: 'GET',
-              url: '/sparqlanything?q=' + encodeURIComponent(query)
-            }
-            console.log(request_parameters);
-            const request = $.ajax(request_parameters);
-            requests.push(request);
-            // specify how to access the results of the query
-            vocabs_array.push(item);
+      var requests = []; // prepare an array to collect all the requests to the selected thesauri's endpoints
+      var results_array = []; // prepare an array to access the results returned by the query
+      var vocabs_array = []; // prepare an array to store the selected thesauri's names
+
+      var skos_vocabs = query_templates[searchterm]; // look at the back-end app for query_templates
+      skos_vocabs.forEach(function(obj, idx) {
+        // isolate each SKOS resource associated with the input field and prepare an ajax request
+        var vocabulary_name = Object.keys(obj)[0]
+        if (obj[vocabulary_name].type == "API") {
+
+          // retrieve the parameters of the request to properly call the API
+          var query_parameters = Object.assign({}, obj[vocabulary_name].parameters);
+          // get the keys of the parameters object: the first key (keys[0]) must be associated with the query-term (i.e., input value)
+          var keys = Object.keys(query_parameters);
+          query_parameters[keys[0]] = $('#' + searchterm).val() + "*"; 
+          const request = $.getJSON(obj[vocabulary_name].endpoint, query_parameters);
+
+          requests.push(request);
+          results_array.push(obj[vocabulary_name].results);
+          vocabs_array.push(vocabulary_name);
+          
+        } else if (obj[vocabulary_name].type == "SPARQL") {
+
+          // the string 'QUERY-TERM' inside the query must be replaced with the input value; special charachters must be checked 
+          var query = (obj[vocabulary_name].query).replace("QUERY-TERM", ("^" + $('#' + searchterm).val())).replace("&gt;", ">").replace("&lt;", "<").replace(/&quot;/g, '"');
+          var request_parameters = {
+            type: 'GET',
+            url: '/sparqlanything?q=' + encodeURIComponent(query)
           }
+          const request = $.ajax(request_parameters);
+
+          requests.push(request);
+          results_array.push(obj[vocabulary_name].results);
+          vocabs_array.push(vocabulary_name);
 
         }
       });
@@ -1652,7 +1812,7 @@ function searchVocab(searchterm) {
           console.log(results); // results = ALL the resulting objects of ALL the queries
           results.forEach(function(data, index) {
             console.log(data) // the resulting object of a query
-            var path = skos_vocabs_json[vocabs_array[index]].results ;
+            var path = results_array[index];
             var main_path = path.array.split(".");
             let result = data;
             main_path.forEach(key => {
@@ -2485,7 +2645,7 @@ function add_field(field, res_type, backend_file=null) {
       <option value='Checkbox' "+is_selected('Checkbox',field)+">Checkbox (multiple choice)</option>\
       <option value='Date' "+is_selected('Date',field)+">Date (select a day/month/year)</option>\
       <option value='Multimedia' "+is_selected('Multimedia',field)+">Multimedia (audio, image, video)</option>\
-      <option value='Vocab' "+is_selected('Vocab',field)+">Vocabulary (SKOS)</option>\
+      <option value='Skos' "+is_selected('Skos',field)+">Vocabulary (SKOS)</option>\
       <option value='WebsitePreview' "+is_selected('WebsitePreview',field)+">Website Preview (iframe)</option>\
       <option value='KnowledgeExtractor' "+is_selected('KnowledgeExtractor',field)+">Knowledge Extraction</option>\
       <option value='Subtemplate' "+is_selected('Subtemplate',field)+">Subtemplate</option>\
@@ -2532,7 +2692,7 @@ function add_field(field, res_type, backend_file=null) {
     var skos_vocabs = backend_file.split("//");
     var skos_labels = "";
     for (let i = 0; i < skos_vocabs.length; i++) {
-      skos_labels = skos_labels + "<label for='vocab"+i+"__"+temp_id+"'>"+skos_vocabs[i].toUpperCase()+"<input type='checkbox' id='vocab"+i+"__"+temp_id+"' name='vocab"+i+"__"+temp_id+"' value='"+skos_vocabs[i]+"'></label></br>";
+      skos_labels = skos_labels + "<label for='skos"+i+"__"+temp_id+"'>"+skos_vocabs[i].toUpperCase()+"<input type='checkbox' id='skos"+i+"__"+temp_id+"' name='skos"+i+"__"+temp_id+"' value='"+skos_vocabs[i]+"'></label></br>";
     }
   } else {
     var skos_labels = "";
@@ -2647,7 +2807,7 @@ function add_field(field, res_type, backend_file=null) {
   if (field =='Textbox') { contents += field_value + field_placeholder + field_mandatory + field_hide; }
   else if (field =='Textarea') { contents += field_placeholder + field_mandatory + field_hide; }
   else if (field =='Date') { contents += field_calendar + field_mandatory + field_hide + field_browse ; }
-  else if (field =='Vocab') { contents += field_available_vocabularies + accepted_values_vocabularies + field_placeholder + field_mandatory + field_hide + field_browse ; }
+  else if (field =='Skos') { contents += field_available_vocabularies + accepted_values_vocabularies + field_placeholder + field_mandatory + field_hide + field_browse ; }
   else if (field =='Multimedia') { contents += field_multimedia + field_placeholder + field_mandatory + field_hide; }
   else if (field =='WebsitePreview') { contents += field_placeholder + field_mandatory + field_hide; }
   else if (field =='Subtemplate') { contents = field_type + field_name + field_prepend + field_property + field_subtemplate_import + field_subtemplate_name + field_subtemplate_class + field_check_subtemplate + field_cardinality + field_mandatory + field_hide + field_browse + open_addons; }
@@ -2758,6 +2918,8 @@ function add_disambiguate(temp_id, el) {
       $("section[id*='addons__"+temp_id+"']").after(field_browse);
       $("input[id*='disambiguate__"+temp_id+"']").parent().remove();
     } else { $("section[id*='addons__"+temp_id+"']").after(field_browse); }
+
+    // YASQE editor for SPARQL query patterns
     if (el.value == 'URI') {
       var field_SPARQL_constraint = $("<section class='row'>\
         <label class='col-md-3'>SPARQL CONSTRAINTS <br><span class='comment'>add constraints to narrow the search query</span></label>\
@@ -2766,28 +2928,12 @@ function add_disambiguate(temp_id, el) {
           <option value='WD'>Wikidata</option>\
           <option value='catalogue'>This catalogue SPARQL endpoint</option>\
         </select>\
-        <textarea placeholder='SELECT Distinct' disabled='true' style='display: none;'></textarea>\
       </section>");
       field_SPARQL_constraint.find('select').on('change', function() {
-        let fake_object = "";
-        var selected_option = $(this).val();
-        if (selected_option === 'WD') {
-          fake_object = "?wd_entity"
-        } 
-        var field_constraints = $("<div class='col-md-12' id='yasqe'></div>")
-        $(this).after(field_constraints);
-        var yasqe = YASQE(document.getElementById("yasqe"), {
-          sparql: {
-            showQueryButton: false,
-            endpoint: myPublicEndpoint,
-            requestMethod: "POST" // TODO: this does not work with GET
-          }
-        });
-        yasqe.setValue("SELECT DISTINCT * WHERE {?s ?p "+fake_object+"} LIMIT 10");
-      })
-      $(el).parent().next().after(field_SPARQL_constraint);
-      console.log($('.yasqe_buttons'))
-      $('.yasqe_buttons').remove();
+        // generate a SPARQL editor instance
+        SPARQL_constraint_editor(el,this,temp_id);
+      });
+      $(el).parent().after(field_SPARQL_constraint);
     }
 
     updateindex();
@@ -2826,6 +2972,78 @@ function disable_other_cb(ckType) {
   console.log(mandatory_checkbox_id)
   $('#'+mandatory_checkbox_id).prop('checked', true); 
 };
+
+
+// generate an instance of the YASQE editor to introduce a new SPARQL query constraint
+function SPARQL_constraint_editor(field,el,temp_id) {
+  var select_input = $(el);
+  let endpoint = "";
+  let value_to_set = "";
+  var selected_option = select_input.val();
+
+  // set the editor parameters based on the selected service
+  if (selected_option === 'WD') {
+    // wikidata
+    endpoint = wikidataEndpoint;
+    var id = $(field).attr('id').split('__')[0] + '__wikidataConstraint__' + temp_id;
+    value_to_set = `SELECT ?item ?itemLabel ?itemDescription WHERE {
+    ?item wdt:P31 wd:Q5 .
+    ?item wdt:P106 wd:Q2526255 .
+    SERVICE wikibase:mwapi {
+        bd:serviceParam wikibase:endpoint "www.wikidata.org";
+          wikibase:api "EntitySearch";
+          mwapi:search "insertQueryTerm";
+          mwapi:language "en".
+        ?item wikibase:apiOutputItem mwapi:item.
+    }
+    SERVICE wikibase:label {bd:serviceParam wikibase:language "en".}
+}`
+  } else {
+    // catalogue 
+    endpoint = myPublicEndpoint
+    var id = $(field).attr('id').split('__')[0] + '__catalogueConstraint__' + temp_id;
+    value_to_set = `SELECT ?item ?itemLabel WHERE {
+  ?item rdf:type ?itemClass.
+  ?item rdfs:label ?itemLabel .
+}`
+  };
+  
+  // set the HTML environment for the YASQE editor and add buttons
+  var field_constraints = $("<div class='col-md-12' id='yasqe'></div>");
+  var button_save = $("<span class='comment'>Save constraint: <i class='fas fa-save'></i></span>");
+  var button_delete = $("<span class='comment'>Remove constraint: <i class='far fa-trash-alt'></i></span>");
+  var button_help = $("<span class='comment'>Help: <i class='far fa-lightbulb'></i></span>");
+
+  // save the SPARQL constraint on click
+  button_save.find('i').on('click', function() {
+    // generate an hidden input to store the query constraints:
+    // retrieve the query from the YASQE editor and set it as the value of the hidden input
+    const new_hidden_field = $("<textarea class='hiddenInput' style='display: none;' name='"+id+"'></textarea>");
+    var value = yasqe_to_hidden_field(this);
+    new_hidden_field.val(value);
+    select_input.after(new_hidden_field);
+    $(this).remove();
+    select_input.remove();
+  });
+
+  // delete the SPARQL constraint on click
+  button_delete.find('i').on('click', function() {
+    $(this).parent().parent().parent().remove();
+    $('[name="'+id+'"]').remove();
+  })
+  select_input.after(field_constraints);
+
+  // complete the creation of the YASQE editor
+  var yasqe = YASQE(document.getElementById("yasqe"), {
+    sparql: {
+      showQueryButton: false,
+      endpoint: endpoint,
+    }
+  });
+  yasqe.setValue(value_to_set);
+  $('#yasqe').append('<div class="yasqe-buttons"></div>')
+  $('.yasqe-buttons').append(button_save, button_delete, button_help);
+}
 
 // make hidden fields recognisable
 function hide_field(el) { 
@@ -2926,7 +3144,7 @@ function add_skos_vocab(element) {
   </section>\
   <section class='row skos_vocab_generator'>\
   <label class='col-md-3'><span class='comment'>SPARQL query to get a label (?label) and a uri (?uri) for each vocable</span></label>\
-  <textarea id='vocabQuery' rows='5' placeholder='e.g.: select distinct ?label ?uri where' class='col-md-8'>select distinct ?label ?uri where {\n\n      ... ADD QUERY CONSTRAINTS  ...    \n\nFILTER(REGEX(?label, \"QUERY-TERM\", \"i\")) } LIMIT 100</textarea>\
+  <div id='yasqe' style='margin-left:1em; width: 66.7%'></div>\
   </section>\
   <section class='row skos_vocab_generator'>\
   <label class='col-md-3'><span class='comment'>SPARQL query endpoint</span></label>\
@@ -2937,6 +3155,14 @@ function add_skos_vocab(element) {
   <input id='save_skos' class='btn btn-dark' style='margin-left:20px' value='Add Vocabulary' onClick='save_vocab(this)'>\
   </section>"
   $(element).closest('.row').after(form);
+  var yasqe = YASQE($('section.skos_vocab_generator #yasqe'), {
+    sparql: {
+      showQueryButton: false,
+      endpoint: myPublicEndpoint,
+    }
+  });
+  yasqe.setValue("SELECT DISTINCT ?label ?uri \nWHERE {?uri ?p ?label} \nLIMIT 10");
+  yasqe.setSize(width='100%',height='200px');
 }
 
 function save_vocab(element) {
@@ -2946,7 +3172,8 @@ function save_vocab(element) {
   // extract a label, a url, a query, and an endpoint to store a new vocab
   var label = $('#vocabLabel').val();
   var url = $('#vocabUrl').val();
-  var query = encodeURIComponent($('#vocabQuery').val());
+  var query = yasqe_to_hidden_field($(element).parent());
+  console.log(query)
   var endpoint = $('#vocabEndpoint').val();
   // combine the pieces of information together and check whether some info is missing
   var infoArray = [label, url, query, endpoint];
@@ -2993,7 +3220,24 @@ function check_input_form(input_array) {
   }
 };
 
-
+function yasqe_to_hidden_field(el) {
+  let value = '';
+  var yasqe_div = $(el).parent().parent().parent();
+  var yasqe_lines = yasqe_div.find('.CodeMirror-code div');
+  yasqe_lines.each(function() {
+    var tokens = $(this).find('pre span span');
+    tokens.each(function() {
+      if (!$(this).hasClass('cm-ws')) {
+        value+= $(this).text();
+      } else {
+        value+=' ';
+      }
+    });
+    value += ' ';
+  });
+  yasqe_div.remove();
+  return value
+}
 
 ////////////////////
 //// EXTRACTION ////

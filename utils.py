@@ -12,10 +12,10 @@ from importlib import reload
 from json.decoder import JSONDecodeError
 import urllib.parse
 
-
 RESOURCE_TEMPLATES = 'resource_templates/'
 TEMPLATE_LIST = RESOURCE_TEMPLATES+"template_list.json"
 ASK_CLASS = RESOURCE_TEMPLATES+"ask_class.json"
+SKOS_VOCAB = conf.skos_vocabularies 
 
 # WEBPY STUFF
 
@@ -106,6 +106,7 @@ def split_uri(term):
 
 def get_LOV_labels(term, term_type=None):
 	""" get class/ property labels from the form"""
+	print(term)
 	term, label = term, split_uri(term)
 	lov_api = "https://lov.linkeddata.es/dataset/lov/api/v2/term/search?q="
 	t = "&type="+term_type if term_type else ''
@@ -114,6 +115,7 @@ def get_LOV_labels(term, term_type=None):
 
 	if req.status_code == 200:
 		res = req.json()
+		print(res)
 		for result in res["results"]:
 			if result["uri"][0] in [term, term.replace("https","http")]:
 				label = result["highlight"][label_en][0] \
@@ -155,6 +157,7 @@ def fields_to_json(data, json_file, skos_file):
 			list_dicts[int(idx)]["id"] = field_id
 			list_dicts[int(idx)][json_key] = v
 	list_dicts = dict(list_dicts)
+	print(list_dicts)
 	for n,d in list_dicts.items():
 		# cleanup existing k,v
 		if 'values' in d:
@@ -176,7 +179,7 @@ def fields_to_json(data, json_file, skos_file):
 				d["value"] = "gYearMonth"
 			else:
 				d["value"] = "gYear"
-		if d['type'] in ["Vocab", "Subtemplate"]:
+		if d['type'] in ["Skos", "Subtemplate"]:
 			d["value"] = "URI"
 		# multimedia
 		if d['type'] in ["Multimedia", "WebsitePreview"]:
@@ -193,13 +196,13 @@ def fields_to_json(data, json_file, skos_file):
 				d["property"] = "http://example.org/"+d["id"]
 		# add default values
 		d['searchWikidata'] = "True" if d['type'] == 'Textbox' and d['value'] == 'URI' else "False"
-		d['searchVocab'] = "True" if d['type'] == 'Vocab' else "False"
 		d['searchGeonames'] = "True" if d['type'] == 'Textbox' and d['value'] == 'Place' else "False"
+		d['searchSkos'] = "True" if d['type'] == 'Skos' else "False"
 		d['url'] = "True" if d['type'] == 'Textbox' and d['value'] == 'URL' else "False"
-		vocab_data = update_skos_vocabs(d, skos_file)
-		d['vocab'] = vocab_data[0]
+		vocab_data = update_skos_vocabs(d, SKOS_VOCAB)
+		d['skosThesauri'] = vocab_data[0]
 		for idx in range(len(vocab_data[1])):
-			d['vocab'+vocab_data[1][idx]] = d['vocab'][idx] 
+			d['skos'+vocab_data[1][idx]] = d['skos'][idx] 
 		d["disabled"] = "False"
 		d["class"]= "col-md-11 yearField" if d["type"] == "Date" and d["calendar"] == "Year" else "col-md-11"
 		d["cache_autocomplete"] ="off"
@@ -426,7 +429,7 @@ def update_skos_vocabs(d, skos):
 	selected_vocabs = []
 	number_list = []
 	for key in list(d.keys()):
-		if key.startswith("vocab") and key != "vocables":
+		if key.startswith("skos") and key != "vocables":
 			number = int(re.search(r'\d+', key).group())
 			if number > len(skos_file):
 				number_list.append(str(number))
@@ -507,4 +510,39 @@ def check_mandatory_fields(recordData):
 		if 'mandatory' in field and field['mandatory'] == 'True':
 			if recordData[field['id']] == '' and not any(key.startswith(field['id']) and recordData[key] != '' for key in recordData):
 				return False
-	return True
+	return True	
+
+def get_query_templates(res_tpl):
+	# initialize a blank dict
+	query_dict = {}
+
+	# get SKOS Thesauri
+	if not os.path.isfile(SKOS_VOCAB):
+		skos_file = None
+	else:
+		with open(SKOS_VOCAB, 'r') as skos_list:
+			skos_file = json.load(skos_list)
+
+	# get the template fields	
+	with open(res_tpl,'r') as tpl_file:
+		tpl_fields = json.load(tpl_file)
+	for field in tpl_fields:
+		# get SKOS thesauri settings for 'Vocab' type fields
+		if 'type' in field and field['type'] == 'Skos':
+			field_id = field['id']
+			field_thesauri = field['skosThesauri']
+			query_dict[field_id] = []
+			for thesaurus in field_thesauri:
+				print(query_dict[field_id])
+				if thesaurus in skos_file:
+					included_thesauri = query_dict[field_id]
+					included_thesauri.append({ thesaurus: skos_file[thesaurus] })
+					query_dict[field_id] = included_thesauri
+		# get SPARQL constraints for 'Textbox (Entity)' type fields
+		if 'searchWikidata' in field and field['searchWikidata'] == 'True':
+			field_id = field['id']
+			if 'wikidataConstraint' in field:
+				query_dict[field_id] = field['wikidataConstraint']
+			if 'catalogueConstraint' in field:
+				query_dict[field_id] = field['catalogueConstraint']
+	return query_dict

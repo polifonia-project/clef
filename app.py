@@ -563,7 +563,7 @@ class Record(object):
 		return render.record(record_form=f, pageID=name, user=user,
 							alert=block_user, limit=limit,
 							is_git_auth=is_git_auth,invalid=False,
-							project=conf.myProject,template=None,skos_vocabs=None,knowledge_extractor=False)
+							project=conf.myProject,template=None,query_templates=None,knowledge_extractor=False)
 
 	def POST(self, name):
 		""" Submit a new record
@@ -591,24 +591,21 @@ class Record(object):
 			u.log_output('SUBMIT INVALID FORM', session['logged_in'], session['username'],name)
 			return render.record(record_form=f, pageID=name, user=user, alert=block_user,
 								limit=limit, is_git_auth=is_git_auth,invalid=True,
-								project=conf.myProject,template=None,skos_vocabs=None,knowledge_extractor=False)
+								project=conf.myProject,template=None,query_templates=None,knowledge_extractor=False)
 		else:
 			recordData = web.input()
 			print("inputData", recordData)
-			if not os.path.isfile(SKOS_VOCAB):
-				skos_file = None
-			else:
-				with open(SKOS_VOCAB, 'r') as skos_list:
-					skos_file = json.load(skos_list)
+			
 
 			# load the template selected by the user
 			if 'res_name' in recordData:
 				if recordData.res_name != 'None':
 					f = forms.get_form(recordData.res_name)
+					query_templates = u.get_query_templates(recordData.res_name)
 					extractor = u.has_extractor(recordData.res_name) 
 					return render.record(record_form=f, pageID=name, user=user, alert=block_user,
 									limit=limit, is_git_auth=is_git_auth,invalid=False,
-									project=conf.myProject,template=recordData.res_name,skos_vocabs=skos_file,knowledge_extractor=extractor)
+									project=conf.myProject,template=recordData.res_name,query_templates=query_templates,knowledge_extractor=extractor)
 				else:
 					raise web.seeother(prefixLocal+'record-'+name)
 

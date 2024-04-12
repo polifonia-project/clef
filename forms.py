@@ -63,15 +63,17 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 			prepend = pre_a+html.escape(field['prepend'])+pre_b if 'prepend' in field and len(field['prepend']) > 0 else ''
 			disabled = 'disabled' if 'disabled' in field and field['disabled'] == "True" else ''
 			classes = field['class'] if 'class' in field and len(field['class']) > 0 else ''
-			if 'vocab' in field:
-				for vocab in field['vocab']:
-					classes = classes + " " + vocab
+			if 'skos' in field:
+				for vocabulary in field['skos']:
+					classes = classes + " " + vocabulary
 			classes = classes+' searchWikidata' if 'searchWikidata' in field and field['searchWikidata'] == 'True' else classes
 			classes = classes+' searchGeonames' if 'searchGeonames' in field and field['searchGeonames'] == 'True' else classes
+			classes = classes+' searchSkos' if 'searchSkos' in field and field['searchSkos'] == 'True' else classes
+			classes = classes+' wikidataConstraint' if 'wikidataConstraint' in field else classes+' catalogueConstraint' if 'catalogueConstraint' in field else classes
 			classes = classes+' urlField' if 'url' in field and field['url'] == 'True' else classes
 			classes = classes+' disambiguate' if "disambiguate" in field and field["disambiguate"] == 'True' else classes
 			classes = classes+' multimediaField '+ field['multimedia'] if field['type'] == 'Multimedia' else classes
-			classes = classes+' vocabularyField' if field['type'] == 'Vocab' else classes
+			classes = classes+' vocabularyField' if field['type'] == 'Skos' else classes
 			classes = classes+' oneVocableAccepted' if 'vocables' in field and field['vocables'] == 'oneVocable' else classes
 			classes = classes+' websitePreview' if field['type'] == 'WebsitePreview' else classes
 			classes = classes+' ('+res_class+') '+disabled
@@ -112,7 +114,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					lang=conf.mainLang), )
 
 			# Entities, SKOS thesauri, links
-			if field['type'] in ['Vocab', 'WebsitePreview'] or (field['type'] == 'Textbox' and field['value'] in ['URL', 'URI']):
+			if field['type'] in ['Skos', 'WebsitePreview'] or (field['type'] == 'Textbox' and field['value'] in ['URL', 'URI']):
 				params = params + (form.Textbox(myid,
 					description = description,
 					id=myid,

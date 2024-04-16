@@ -58,7 +58,7 @@ def getValuesFromFields(fieldPrefix, recordData, fields=None, field_type=None):
 	result_dict['results'] = results
 	return result_dict
 
-def getValuesFromTextualFields(fieldPrefix, recordData):
+def getLiteralValuesFromFields(fieldPrefix, recordData):
 	""" request form fields by field prefix, check if multiple languages are available,
 	returns a set of tuples including textual values and their language """
 	result_dict = {'type':'Literal'}
@@ -151,7 +151,7 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 			# URI, Textarea (only text at this stage), Literals
 			value = getValuesFromFields(field['id'], recordData, fields) if 'value' in field and field['value'] in ['URI','Place'] \
 					else getValuesFromFields(field['id'], recordData, field_type=field['type']) if 'value' in field and field['value'] == 'URL' \
-					else getValuesFromTextualFields(field['id'], recordData) if 'value' in field and field['value'] == 'Literal' else recordData[field['id']]
+					else getLiteralValuesFromFields(field['id'], recordData) if 'value' in field and field['value'] == 'Literal' else recordData[field['id']]
 			# TODO disambiguate as URI, value
 			if field["disambiguate"] == 'True': # use the key 'disambiguate' as title of the graph
 				main_lang = value['mainLang']

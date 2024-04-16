@@ -541,8 +541,10 @@ def get_query_templates(res_tpl):
 		# get SPARQL constraints for 'Textbox (Entity)' type fields
 		if 'searchWikidata' in field and field['searchWikidata'] == 'True':
 			field_id = field['id']
-			if 'wikidataConstraint' in field:
+			if 'wikidataConstraint' in field and 'catalogueConstraint' in field:
+				query_dict[field_id] = {'wikidata':field['wikidataConstraint'], 'catalogue':field['catalogueConstraint']}
+			elif 'wikidataConstraint' in field:
 				query_dict[field_id] = field['wikidataConstraint']
-			if 'catalogueConstraint' in field:
+			elif 'catalogueConstraint' in field:
 				query_dict[field_id] = field['catalogueConstraint']
 	return query_dict

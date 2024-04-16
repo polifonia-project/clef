@@ -145,15 +145,13 @@ $(document).ready(function() {
       $(this).closest('form').parent().after(searchresult);
     }
 
-		if ( $(this).hasClass('searchWikidata') && !($(this).hasClass('wikidataConstraint')) && !($(this).hasClass('catalogueConstraint')) ) {
+		if ( $(this).hasClass('searchWikidata') && $(this).hasClass('wikidataConstraint') && $(this).hasClass('catalogueConstraint')) {
+      searchWDCatalogueAdvanced(searchID);
+    } else if ( $(this).hasClass('searchWikidata') && !($(this).hasClass('wikidataConstraint')) && !($(this).hasClass('catalogueConstraint')) ) {
 			searchWD(searchID);
-		};
-
-    if ( $(this).hasClass('searchWikidata') && ($(this).hasClass('wikidataConstraint'))) {
+		} else if ( $(this).hasClass('searchWikidata') && $(this).hasClass('wikidataConstraint')) {
 			searchWDAdvanced(searchID);
-		};
-
-    if ( $(this).hasClass('searchWikidata') && ($(this).hasClass('catalogueConstraint'))) {
+		} else if ( $(this).hasClass('searchWikidata') && $(this).hasClass('catalogueConstraint')) {
 			searchCatalogueAdvanced(searchID);
 		};
 
@@ -958,6 +956,52 @@ function throttle(f, delay){
     };
 };
 
+
+//////////////////////////////
+// Query services functions //
+//////////////////////////////
+
+// Ancillary function: call VIAF API
+function callViafAPI(querySubstring, doneCallback){
+  var requestUrl = "https://viaf.org/viaf/AutoSuggest?query=" + querySubstring + "&callback=?";
+  $.getJSON(requestUrl, doneCallback);
+}
+
+// Ancillary function: make a SPARQL query (Wikidata/catalogue, for advanced search only)
+function makeSPARQLQuery( endpointUrl, sparqlQuery, doneCallback ) {
+	var settings = {
+		headers: { Accept: 'application/sparql-results+json' },
+		data: { query: sparqlQuery }
+	};
+	return $.ajax( endpointUrl, settings ).then( doneCallback );
+}
+
+// Anctillary function: set #searchresult div position (css)
+function setSearchResult(searchterm){
+  var position = $('#'+searchterm).position();
+  var leftpos = position.left+80;
+  var offset = $('#'+searchterm).offset();
+  var height = $('#'+searchterm).height();
+  var width = $('#'+searchterm).width();
+  var top = offset.top + height + "px";
+  var right = offset.left + width + "px";
+
+  $('#searchresult').css( {
+      'position': 'absolute',
+      'margin-left': leftpos+'px',
+      'top': top,
+      'z-index':1000,
+      'background-color': 'white',
+      'border':'solid 1px grey',
+      'max-width':'600px',
+      'border-radius': '4px',
+      'max-height': '300px',
+      'overflow-y': 'auto'
+  });
+  $("#searchresult").empty();
+}
+
+// SEARCH GEONAMES
 // search in geonames and my catalogue
 function searchGeonames(searchterm) {
 	// wikidata autocomplete on keyup
@@ -1085,7 +1129,97 @@ function searchGeonames(searchterm) {
 	});
 };
 
-// a function to look for catalogue's records belonging to a desired class 
+// SEARCH CATALOGUE
+// search bar menu
+function searchCatalogue(searchterm) {
+  $('#'+searchterm).keyup(function(e) {
+    $("#searchresultmenu").show();
+    var q = $('#'+searchterm).val();
+    var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o "+in_graph+" where { ?o bds:search '"+q+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o ; a ?class .}"
+    var encoded = encodeURIComponent(query)
+    if (q == '') { $("#searchresultmenu").hide();}
+    $.ajax({
+          type: 'GET',
+          url: myPublicEndpoint+'?query=' + encoded,
+          headers: { Accept: 'application/sparql-results+json; charset=utf-8'},
+          success: function(returnedJson) {
+            $("#searchresultmenu").empty();
+            // autocomplete positioning
+  	      	setSearchResult(searchterm);
+
+            if (!returnedJson.length) {
+                  $("#searchresultmenu").empty();
+                  var nores = "<div class='wditem noresults'>Searching...</div>";
+                  $("#searchresultmenu").append(nores);
+                  // remove messages after 1 second
+                  setTimeout(function(){
+                    if ($('.noresults').length > 0) {
+                      $('.noresults').remove();
+                      }
+                    }, 1000);
+            };
+
+            for (i = 0; i < returnedJson.results.bindings.length; i++) {
+              var myUrl = returnedJson.results.bindings[i].s.value;
+              // exclude named graphs from results
+              if ( myUrl.substring(myUrl.length-1) != "/") {
+                var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1)
+                $("#searchresultmenu").append("<div class='wditem'><a class='blue orangeText' target='_blank' href='view-"+resID+"'><i class='fas fa-external-link-alt'></i> " + returnedJson.results.bindings[i].o.value + "</a></div>");
+                  };
+              };
+
+          }
+    });
+  });
+};
+
+// search catalogue through advanced triple patterns
+function searchCatalogueAdvanced(searchterm) {
+  let newSparqlQuery = "";
+  var rawQuery = query_templates[searchterm];
+  var sparqlQuery =  rawQuery.replaceAll('&lt;','<').replaceAll('&gt;','>').replaceAll(/&quot;/g, '"');
+  var endpointUrl = myPublicEndpoint;
+
+  $('#'+searchterm).off('keyup').on('keyup', function() {
+    $("#searchresult").show();
+    setSearchResult(searchterm);
+    $("#searchresult").empty();
+
+    var value = $('#'+searchterm).val().toLowerCase();
+    newSparqlQuery = sparqlQuery.replace("insertQueryTerm",value);
+
+    if (value.length>0) {
+      makeSPARQLQuery( endpointUrl, newSparqlQuery, function( data ) {
+        $("#searchresult").empty();
+        data.results.bindings.forEach(function(obj,idx) {
+          let idSplit = obj.item.value.split('/');
+          var catalogueId = idSplit[idSplit.length-1];
+          if ($('#searchresult [data-id="'+catalogueId+'"]').length == 0) {
+            var newItemDiv = $('<div class="wditem"><a class="blue" target="_blank" href="'+obj.item.value+'"><i class="fas fa-external-link-alt"></i></a> <a class="blue" data-id="'+catalogueId+'">'+obj.itemLabel.value+'</a></div>');
+            newItemDiv.find('[data-id]').bind('click', function(e) {
+              e.preventDefault();
+              var oldID = $(this).attr('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
+              var oldLabel = $(this).text();
+              $('#' + searchterm).after("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(JSON.stringify(obj)) + "\"/>");
+              $("#searchresult").hide();
+              $('#' + searchterm).val('');
+            });
+            $("#searchresult").append(newItemDiv);
+          };
+        });
+        if ($("#searchresult div").length == 0 && value.length <= 3){
+          $("#searchresult").append('<div class="wditem">No matches found: try to type more characters</div>')
+        } else if ($("#searchresult div").length == 0){
+          $("#searchresult").append('<div class="wditem">No matches found</div>')
+        };
+
+      });
+    }
+  });
+
+}
+
+// search catalogue's records belonging to a desired class 
 function searchCatalogueByClass(searchterm) {
   // get the required class
   var resource_class = $('#'+searchterm).attr('subtemplate');
@@ -1234,7 +1368,7 @@ function searchCatalogueIntermediate(q) {
   });
 }
 
-
+// SEARCH WIKIDATA (includes SEARCH VIAF)
 // search in wikidata, viaf and my catalogue
 function searchWD(searchterm) {
 	// wikidata autocomplete on keyup
@@ -1275,8 +1409,7 @@ function searchWD(searchterm) {
           
           // VIAF lookup in case nothing is found in Wikidata
           if (!data.search || !data.search.length) {
-            var http = "https://viaf.org/viaf/AutoSuggest?query=" + q + "&callback=?";
-            $.getJSON(http, function (viafData) {
+            callViafAPI(q, function (viafData) {
               if (viafData.result) {
                 // to avoid repetitions of the same element: $("#searchresult").find("[data-id="+item.viafid+"]").length === 0
                 $.each(viafData.result, function (i, item) {
@@ -1383,77 +1516,6 @@ function searchWD(searchterm) {
 	});
 };
 
-// search bar menu
-function searchCatalogue(searchterm) {
-  $('#'+searchterm).keyup(function(e) {
-    $("#searchresultmenu").show();
-    var q = $('#'+searchterm).val();
-    var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o "+in_graph+" where { ?o bds:search '"+q+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o ; a ?class .}"
-    var encoded = encodeURIComponent(query)
-    if (q == '') { $("#searchresultmenu").hide();}
-    $.ajax({
-          type: 'GET',
-          url: myPublicEndpoint+'?query=' + encoded,
-          headers: { Accept: 'application/sparql-results+json; charset=utf-8'},
-          success: function(returnedJson) {
-            $("#searchresultmenu").empty();
-            // autocomplete positioning
-  	      	var position = $('#'+searchterm).position();
-  	      	var leftpos = position.left;
-  	      	var offset = $('#'+searchterm).offset();
-      			var height = $('#'+searchterm).height();
-      			var width = $('#'+searchterm).width();
-      			var top = offset.top + height + 14 + "px";
-      			var right = offset.left + "px";
-
-      			$('#searchresultmenu').css( {
-      			    'position': 'absolute',
-      			    'margin-right': leftpos+'px',
-      			    'top': top,
-                'left': right,
-      			    'z-index':1000,
-      			    'background-color': 'white',
-      			    'border':'solid 1px grey',
-      			    'max-width':'600px',
-      			    'border-radius': '4px'
-      			});
-      	    $("#searchresultmenu").empty();
-
-            if (!returnedJson.length) {
-                  $("#searchresultmenu").empty();
-                  var nores = "<div class='wditem noresults'>Searching...</div>";
-                  $("#searchresultmenu").append(nores);
-                  // remove messages after 1 second
-                  setTimeout(function(){
-                    if ($('.noresults').length > 0) {
-                      $('.noresults').remove();
-                      }
-                    }, 1000);
-            };
-
-            for (i = 0; i < returnedJson.results.bindings.length; i++) {
-              var myUrl = returnedJson.results.bindings[i].s.value;
-              // exclude named graphs from results
-              if ( myUrl.substring(myUrl.length-1) != "/") {
-                var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1)
-                $("#searchresultmenu").append("<div class='wditem'><a class='blue orangeText' target='_blank' href='view-"+resID+"'><i class='fas fa-external-link-alt'></i> " + returnedJson.results.bindings[i].o.value + "</a></div>");
-                  };
-              };
-
-          }
-    });
-  });
-}
-
-// Wikidata SPARQL query (for advanced search only: see function searchWDAdvanced below)
-function makeSPARQLQuery( endpointUrl, sparqlQuery, doneCallback ) {
-	var settings = {
-		headers: { Accept: 'application/sparql-results+json' },
-		data: { query: sparqlQuery }
-	};
-	return $.ajax( endpointUrl, settings ).then( doneCallback );
-}
-
 // search Wikidata with SPARQL patterns
 function searchWDAdvanced(searchterm) {
   let newSparqlQuery = "";
@@ -1461,33 +1523,12 @@ function searchWDAdvanced(searchterm) {
   var sparqlQuery =  rawQuery.replaceAll('&lt;','<').replaceAll('&gt;','>').replaceAll(/&quot;/g, '"');
   var endpointUrl = wikidataEndpoint;
   
-  $('#'+searchterm).on('keyup',function(){
+  $('#'+searchterm).off('keyup').on('keyup', function() {
     $("#searchresult").show();
-
-    var position = $('#'+searchterm).position();
-    var leftpos = position.left+80;
-    var offset = $('#'+searchterm).offset();
-    var height = $('#'+searchterm).height();
-    var width = $('#'+searchterm).width();
-    var top = offset.top + height + "px";
-    var right = offset.left + width + "px";
-
-    $('#searchresult').css( {
-        'position': 'absolute',
-        'margin-left': leftpos+'px',
-        'top': top,
-        'z-index':1000,
-        'background-color': 'white',
-        'border':'solid 1px grey',
-        'max-width':'600px',
-        'border-radius': '4px',
-        'max-height': '300px',
-        'overflow-y': 'auto'
-    });
-    $("#searchresult").empty();
-
+    setSearchResult(searchterm);
     var value = $('#'+searchterm).val().toLowerCase();
     newSparqlQuery = sparqlQuery.replace("insertQueryTerm",value);
+
 
     if (value.length>0) {
       makeSPARQLQuery( endpointUrl, newSparqlQuery, function( data ) {
@@ -1500,62 +1541,139 @@ function searchWDAdvanced(searchterm) {
             e.preventDefault();
             var oldID = $(this).attr('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
             var oldLabel = $(this).text();
-            $('#' + searchterm).after("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(JSON.stringify(obj)) + "\"/>");
+            $('#' + searchterm).after("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "_" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(JSON.stringify(obj)) + "\"/>");
             $("#searchresult").hide();
             $('#' + searchterm).val('');
           });
           $("#searchresult").append(newItemDiv);
         });
-        if ($("#searchresult div").length == 0 && value.length <= 3){
-          $("#searchresult").append('<div class="wditem">No matches found: try to type more characters</div>')
-        } else if ($("#searchresult div").length == 0){
-          $("#searchresult").append('<div class="wditem">No matches found</div>')
-        };
+        if (!data.results.bindings.length){
+          $("#searchresult").append('<div class="wditem">No matches in Wikidata: try to type more characters</div>');
 
+          // search for results in VIAF and CATALOGUE in case no result is returned by WD:
+          // VIAF:
+          callViafAPI(value, function(viafData) {
+            if (viafData.result) {
+              // to avoid repetitions of the same element: $("#searchresult").find("[data-id="+item.viafid+"]").length === 0
+              $.each(viafData.result, function (i, item) {
+                if ($("#searchresult").find("[data-id="+item.viafid+"]").length === 0 && $("#searchresult > .viafitem").length <5) {
+                  $("#searchresult").append("<div class='viafitem'><a class='blue' target='_blank' href='http://www.viaf.org/viaf/" + item.viafid + "'>" + viaf_img + "</a> <a class='blue' data-id='" + item.viafid + "'>" + item.term + "</a> " + "</div>"); // no item.DESCRIPTION!
+      
+                  // add tag if the user chooses an item from viaf
+                  $('a[data-id="' + item.viafid + '"]').each(function () {
+                    $(this).bind('click', function (e) {
+                      e.preventDefault();
+                      var input_name = (searchterm.split('_').length == 2) ? searchterm.split('')[0] + item.viafid + searchterm.split('_')[1] : searchterm + '-' + item.viafid;
+                      $('#' + searchterm).after("<span class='tag " + item.viafid + "' data-input='" + searchterm + "' data-id='" + item.viafid + "'>" + item.term + "</span><input type='hidden' class='hiddenInput " + item.viafid + "' name='" + input_name + "' value=\"viaf" + item.viafid + "," + encodeURIComponent(item.term) + "\"/>");
+                      $("#searchresult").hide();
+                      $('#' + searchterm).val('');
+                    });
+                  });
+                  
+                }
+              });
+            }
+          });
+          // CATALOGUE:
+          var catalogueSearchPromise = searchCatalogueIntermediate(value)
+          catalogeRequest = catalogueSearchPromise.then(function(catalogueData) {
+            $(".fromCatalogue").remove(); // to remove previously retrieved elements
+            $.each(catalogueData, function (i, item) {
+              var myUrl = item.s.value;
+              // exclude named graphs from results
+              if (myUrl.substring(myUrl.length - 1) != "/") {
+                var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1);
+                if (item.desc !== undefined) {
+                  var desc = '- ' + catalogueEntries[i].desc.value;
+                } else {
+                  var desc = '';
+                }
+                if ($("#searchresult div.wditem  a[data-id='" + item.s.value + "']").length == 0) {
+                  $("#searchresult").append("<div class='wditem fromCatalogue'><a class='blue orangeText' target='_blank' href='view-" + resID + "'><i class='fas fa-external-link-alt'></i></a> <a class='blue orangeText' data-id=" + item.s.value + ">" + item.o.value + "</a> " + desc + "</div>");
+                }
+              }
+            });
+            
+            // add tag if the user chooses an item from the catalogue
+            $('a[data-id^="' + base + '"]').each(function () {
+              $(this).bind('click', function (e) {
+                e.preventDefault();
+                var oldID = this.getAttribute('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
+                var oldLabel = $(this).text();
+                $('#' + searchterm).after("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(oldLabel) + "\"/>");
+                $("#searchresult").hide();
+                $('#' + searchterm).val('');
+              });
+
+            });
+          })
+        }
       });
     }
     
   });
 }
 
-// 
-function searchCatalogueAdvanced(searchterm) {
-  let newSparqlQuery = "";
-  var rawQuery = query_templates[searchterm];
-  var sparqlQuery =  rawQuery.replaceAll('&lt;','<').replaceAll('&gt;','>').replaceAll(/&quot;/g, '"');
-  var endpointUrl = myPublicEndpoint;
-
-  $('#'+searchterm).on('keyup',function(){
+// search for entities through SPARQL triple patterns in Wikidata and Catalogue
+function searchWDCatalogueAdvanced(searchterm){
+  let newSparqlQueryWD = "";
+  let newSparqlQueryCatalogue = "";
+  var rawQueryWD = query_templates[searchterm]['wikidata'];
+  var rawQueryCatalogue = query_templates[searchterm]['catalogue'];
+  var sparqlQueryWD =  rawQueryWD.replaceAll('&lt;','<').replaceAll('&gt;','>').replaceAll(/&quot;/g, '"');
+  var sparqlQueryCatalogue =  rawQueryCatalogue.replaceAll('&lt;','<').replaceAll('&gt;','>').replaceAll(/&quot;/g, '"');
+  
+  $('#'+searchterm).off('keyup').on('keyup', function() {
     $("#searchresult").show();
-
-    var position = $('#'+searchterm).position();
-    var leftpos = position.left+80;
-    var offset = $('#'+searchterm).offset();
-    var height = $('#'+searchterm).height();
-    var width = $('#'+searchterm).width();
-    var top = offset.top + height + "px";
-    var right = offset.left + width + "px";
-
-    $('#searchresult').css( {
-        'position': 'absolute',
-        'margin-left': leftpos+'px',
-        'top': top,
-        'z-index':1000,
-        'background-color': 'white',
-        'border':'solid 1px grey',
-        'max-width':'600px',
-        'border-radius': '4px',
-        'max-height': '300px',
-        'overflow-y': 'auto'
-    });
-    $("#searchresult").empty();
-
+    setSearchResult(searchterm);
     var value = $('#'+searchterm).val().toLowerCase();
-    newSparqlQuery = sparqlQuery.replace("insertQueryTerm",value);
+    newSparqlQueryWD = sparqlQueryWD.replace("insertQueryTerm",value);
+    newSparqlQueryCatalogue = sparqlQueryCatalogue.replace("insertQueryTerm",value);
 
     if (value.length>0) {
-      makeSPARQLQuery( endpointUrl, newSparqlQuery, function( data ) {
-        $("#searchresult").empty();
+      $("#searchresult").empty();
+      requestWD = makeSPARQLQuery( wikidataEndpoint, newSparqlQueryWD, function( data ) {
+        data.results.bindings.forEach(function(obj,idx) {
+          let idSplit = obj.item.value.split('/');
+          var wdId = idSplit[idSplit.length-1];
+          var newItemDiv = $('<div class="wditem"><a class="blue" target="_blank" href="'+obj.item.value+'">'+wd_img+'</a> <a class="blue" data-id="'+wdId+'">'+obj.itemLabel.value+'</a> - '+obj.itemDescription.value+'</div>');
+          newItemDiv.find('[data-id]').bind('click', function(e) {
+            e.preventDefault();
+            var oldID = $(this).attr('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
+            var oldLabel = $(this).text();
+            $('#' + searchterm).after("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "_" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(JSON.stringify(obj)) + "\"/>");
+            $("#searchresult").hide();
+            $('#' + searchterm).val('');
+          });
+          $("#searchresult").append(newItemDiv);
+        });
+        // call VIAF API in case no result is available in WD
+        if (!data.search || !data.search.length) {
+          callViafAPI(value, function (viafData) {
+            if (viafData.result && $('#'+searchterm).val().toLowerCase() === value && $("#searchresult div").length === 0) {
+              // to avoid repetitions of the same element: $("#searchresult").find("[data-id="+item.viafid+"]").length === 0
+              $.each(viafData.result, function (i, item) {
+                if ($("#searchresult").find("[data-id="+item.viafid+"]").length === 0 && $("#searchresult > .viafitem").length <5) {
+                  $("#searchresult").append("<div class='viafitem'><a class='blue' target='_blank' href='http://www.viaf.org/viaf/" + item.viafid + "'>" + viaf_img + "</a> <a class='blue' data-id='" + item.viafid + "'>" + item.term + "</a> " + "</div>"); // no item.DESCRIPTION!
+      
+                  // add tag if the user chooses an item from viaf
+                  $('a[data-id="' + item.viafid + '"]').each(function () {
+                    $(this).bind('click', function (e) {
+                      e.preventDefault();
+                      var input_name = (searchterm.split('_').length == 2) ? searchterm.split('')[0] + item.viafid + searchterm.split('_')[1] : searchterm + '-' + item.viafid;
+                      $('#' + searchterm).after("<span class='tag " + item.viafid + "' data-input='" + searchterm + "' data-id='" + item.viafid + "'>" + item.term + "</span><input type='hidden' class='hiddenInput " + item.viafid + "' name='" + input_name + "' value=\"viaf" + item.viafid + "," + encodeURIComponent(item.term) + "\"/>");
+                      $("#searchresult").hide();
+                      $('#' + searchterm).val('');
+                      //colorForm();
+                    });
+                  });
+                };
+              });
+            }
+          });
+        };
+      });
+      requestCatalogue = makeSPARQLQuery( myPublicEndpoint, newSparqlQueryCatalogue, function( data ) {
         data.results.bindings.forEach(function(obj,idx) {
           let idSplit = obj.item.value.split('/');
           var catalogueId = idSplit[idSplit.length-1];
@@ -1572,16 +1690,10 @@ function searchCatalogueAdvanced(searchterm) {
             $("#searchresult").append(newItemDiv);
           };
         });
-        if ($("#searchresult div").length == 0 && value.length <= 3){
-          $("#searchresult").append('<div class="wditem">No matches found: try to type more characters</div>')
-        } else if ($("#searchresult div").length == 0){
-          $("#searchresult").append('<div class="wditem">No matches found</div>')
-        };
-
       });
-    }
-  });
 
+    };
+  });
 }
 
 // search a rdf property in LOV
@@ -2922,8 +3034,8 @@ function add_disambiguate(temp_id, el) {
     // YASQE editor for SPARQL query patterns
     if (el.value == 'URI') {
       var field_SPARQL_constraint = $("<section class='row'>\
-        <label class='col-md-3'>SPARQL CONSTRAINTS <br><span class='comment'>add constraints to narrow the search query</span></label>\
-        <select class='custom-select col-md-8'>\
+        <label class='col-md-3'>SPARQL CONSTRAINTS <br><span class='comment'>select a service to show, modify, or add a constraint</span></label>\
+        <select class='custom-select col-md-8' name='service__"+temp_id+"'>\
           <option value='None'>Select a service</option>\
           <option value='WD'>Wikidata</option>\
           <option value='catalogue'>This catalogue SPARQL endpoint</option>\
@@ -2981,9 +3093,17 @@ function SPARQL_constraint_editor(field,el,temp_id) {
   let value_to_set = "";
   var selected_option = select_input.val();
 
-  // set the editor parameters based on the selected service
+  // hide existing YASQE editors
+  $(el).parent().find('div[id*="'+temp_id+'"]').hide();
+
+
+  // set the editor parameters based on the selected service:
+  // no service selected
+  if (selected_option === 'None') {
+    return null
+  }
+  // wikidata
   if (selected_option === 'WD') {
-    // wikidata
     endpoint = wikidataEndpoint;
     var id = $(field).attr('id').split('__')[0] + '__wikidataConstraint__' + temp_id;
     value_to_set = `SELECT ?item ?itemLabel ?itemDescription WHERE {
@@ -2998,51 +3118,67 @@ function SPARQL_constraint_editor(field,el,temp_id) {
     }
     SERVICE wikibase:label {bd:serviceParam wikibase:language "en".}
 }`
-  } else {
-    // catalogue 
+  }
+  // catalogue 
+  if (selected_option === 'catalogue') {
     endpoint = myPublicEndpoint
     var id = $(field).attr('id').split('__')[0] + '__catalogueConstraint__' + temp_id;
-    value_to_set = `SELECT ?item ?itemLabel WHERE {
-  ?item rdf:type ?itemClass.
-  ?item rdfs:label ?itemLabel .
+    value_to_set = `PREFIX bds: <http://www.bigdata.com/rdf/search#> 
+SELECT DISTINCT * WHERE { 
+  ?item rdfs:label ?itemLabel . 
+  ?item rdf:type ?itemClass .
+  ?itemLabel bds:search "insertQueryTerm*" . 
+  OPTIONAL { ?item rdfs:comment ?desc } . 
 }`
   };
-  
-  // set the HTML environment for the YASQE editor and add buttons
-  var field_constraints = $("<div class='col-md-12' id='yasqe'></div>");
-  var button_save = $("<span class='comment'>Save constraint: <i class='fas fa-save'></i></span>");
-  var button_delete = $("<span class='comment'>Remove constraint: <i class='far fa-trash-alt'></i></span>");
-  var button_help = $("<span class='comment'>Help: <i class='far fa-lightbulb'></i></span>");
 
-  // save the SPARQL constraint on click
-  button_save.find('i').on('click', function() {
-    // generate an hidden input to store the query constraints:
-    // retrieve the query from the YASQE editor and set it as the value of the hidden input
-    const new_hidden_field = $("<textarea class='hiddenInput' style='display: none;' name='"+id+"'></textarea>");
-    var value = yasqe_to_hidden_field(this);
-    new_hidden_field.val(value);
-    select_input.after(new_hidden_field);
-    $(this).remove();
-    select_input.remove();
-  });
+  var cls = selected_option + "_" + id;
+  // retrieve the previously created yasqe editor if available else create a new one
+  if ($('.'+cls).length > 0) {
+    $('.'+cls).show();
+  } else { 
+    // set the HTML environment for the YASQE editor and add buttons
+    var field_constraints = $("<div class='col-md-12 "+cls+"' id='yasqe_"+cls+"'></div>");
+    var button_save = $("<span class='comment'>Save constraint: <i class='fas fa-save'></i></span>");
+    var button_delete = $("<span class='comment'>Remove constraint: <i class='far fa-trash-alt'></i></span>");
+    var button_help = $("<span class='comment'>Help: <i class='far fa-lightbulb'></i></span>");
 
-  // delete the SPARQL constraint on click
-  button_delete.find('i').on('click', function() {
-    $(this).parent().parent().parent().remove();
-    $('[name="'+id+'"]').remove();
-  })
-  select_input.after(field_constraints);
+    // save the SPARQL constraint on click
+    button_save.find('i').on('click', function() {
+      // generate an hidden input to store the query constraints:
+      // retrieve the query from the YASQE editor and set it as the value of the hidden input
+      var value = yasqe_to_hidden_field(this, keep=true);
 
-  // complete the creation of the YASQE editor
-  var yasqe = YASQE(document.getElementById("yasqe"), {
-    sparql: {
-      showQueryButton: false,
-      endpoint: endpoint,
-    }
-  });
-  yasqe.setValue(value_to_set);
-  $('#yasqe').append('<div class="yasqe-buttons"></div>')
-  $('.yasqe-buttons').append(button_save, button_delete, button_help);
+      // modify the hidden input in case it already exists else create a new one
+      if ($('[name="'+id+'"]').length >0) {
+        $('[name="'+id+'"]').val(value);
+      } else {
+        const new_hidden_field = $("<textarea class='hiddenInput' style='display: none;' name='"+id+"'></textarea>");
+        new_hidden_field.val(value);
+        select_input.after(new_hidden_field);
+      }
+      // reset the dropdown to its first option ('value="None"')
+      select_input.find('option:first').prop('selected', true);
+    });
+
+    // delete the SPARQL constraint on click
+    button_delete.find('i').on('click', function() {
+      $(this).parent().parent().parent().remove();
+      $('[name="'+id+'"]').remove();
+    })
+    select_input.after(field_constraints);
+
+    // complete the creation of the YASQE editor
+    var yasqe = YASQE(document.getElementById("yasqe_"+cls), {
+      sparql: {
+        showQueryButton: false,
+        endpoint: endpoint,
+      }
+    });
+    yasqe.setValue(value_to_set);
+    $('.'+cls).append('<div class="yasqe-buttons"></div>')
+    $('.'+cls+' .yasqe-buttons').append(button_save, button_delete, button_help);
+  }
 }
 
 // make hidden fields recognisable
@@ -3220,7 +3356,7 @@ function check_input_form(input_array) {
   }
 };
 
-function yasqe_to_hidden_field(el) {
+function yasqe_to_hidden_field(el,keep=false) {
   let value = '';
   var yasqe_div = $(el).parent().parent().parent();
   var yasqe_lines = yasqe_div.find('.CodeMirror-code div');
@@ -3235,7 +3371,7 @@ function yasqe_to_hidden_field(el) {
     });
     value += ' ';
   });
-  yasqe_div.remove();
+  if (keep===false){ yasqe_div.remove(); } else { yasqe_div.hide(); }
   return value
 }
 

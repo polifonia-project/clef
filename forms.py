@@ -69,7 +69,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 			classes = classes+' searchWikidata' if 'searchWikidata' in field and field['searchWikidata'] == 'True' else classes
 			classes = classes+' searchGeonames' if 'searchGeonames' in field and field['searchGeonames'] == 'True' else classes
 			classes = classes+' searchSkos' if 'searchSkos' in field and field['searchSkos'] == 'True' else classes
-			classes = classes+' wikidataConstraint' if 'wikidataConstraint' in field else classes+' catalogueConstraint' if 'catalogueConstraint' in field else classes
+			classes = classes+' wikidataConstraint' if 'wikidataConstraint' in field else classes
+			classes = classes+' catalogueConstraint' if 'catalogueConstraint' in field else classes
 			classes = classes+' urlField' if 'url' in field and field['url'] == 'True' else classes
 			classes = classes+' disambiguate' if "disambiguate" in field and field["disambiguate"] == 'True' else classes
 			classes = classes+' multimediaField '+ field['multimedia'] if field['type'] == 'Multimedia' else classes

@@ -93,7 +93,26 @@ $ id = templates.get_default_id()
 													$$("#value__$id option[value$$=$field['value']]").attr("selected","selected");
 												</script>
 											</section>
-
+											<!-- SPARQL CONSTRAINT -->
+											$if field['value'] == 'URI':
+												<section class='row'>
+													<label class='col-md-3'>SPARQL CONSTRAINTS <br><span class='comment'>select a service to show, modify, or add a constraint</span></label>
+													<select class='custom-select col-md-8' name='service__$id' onchange='SPARQL_constraint_editor($$(this).parent().prev().find("select"),this,$id)'>
+													<option value='None'>Select a service</option>
+													<option value='WD'>Wikidata</option>
+													<option value='catalogue'>This catalogue SPARQL endpoint</option>
+													</select>
+												</section>
+												$if 'wikidataConstraint' in field:
+													<textarea class='hiddenInput' style='display: none;' name='wikidataConstraint__$id'></textarea>	
+													<script type="text/javascript">
+														$$('[name*="wikidataConstraint__$id"]').val(`$field['wikidataConstraint']`)
+													</script>
+												$if 'catalogueConstraint' in field: 
+													<textarea class='hiddenInput' style='display: none;' name='catalogueConstraint__$id' value='$field["catalogueConstraint"]'></textarea>
+													<script type="text/javascript">
+														$$('[name*="catalogueConstraint__$id"]').val(`$field['catalogueConstraint']`)
+													</script>
 											<!-- PLACEHOLDER -->
 											<section class="row">
 												<label class='col-md-3'>PLACEHOLDER <br><span class="comment">an example value to be shown to the user (optional)</span></label>
@@ -332,3 +351,4 @@ $ id = templates.get_default_id()
 <script src='static/js/yasqe.bundled.min.js'></script>
 <script src="static/js/sparql.js"></script>
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script type="text/javascript">var ip ='$session["ip_address"]'</script>

@@ -545,6 +545,7 @@ class Record(object):
 			the record ID (a timestamp)
 		"""
 
+		web.header("X-Forwarded-For", session['ip_address'])
 		web.header("Cache-Control", "no-cache, max-age=0, must-revalidate, no-store")
 		web.header("Content-Type","text/html; charset=utf-8")
 		web.header('Access-Control-Allow-Origin', '*')
@@ -574,6 +575,7 @@ class Record(object):
 			the record ID (a timestamp)
 		"""
 
+		web.header("X-Forwarded-For", session['ip_address'])
 		web.header("Content-Type","text/html; charset=utf-8")
 		web.header('Access-Control-Allow-Origin', '*')
 		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')

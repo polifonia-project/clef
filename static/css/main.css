@@ -2204,7 +2204,36 @@ input[subtemplate]+.fa-plus-circle {
 }
 
 
+/* tips */
+.bold {
+  font-weight: bold;
+}
+
+.tips-div {
+  padding: 10px 15px;
+  overflow:auto;
+}
+
+.tips-div .fa-caret-right {
+  position: absolute;
+  top: 15px;
+  font-size: 40px;
+  right: 45px;
+  color: rgb(100, 23, 180);
+  cursor: pointer;
+}
+
+.tips-div .fa-caret-left {
+  position: absolute;
+  top: 15px;
+  font-size: 40px;
+  right: 70px;
+  color: rgb(100, 23, 180);
+  cursor: pointer;
+}
+
 /* extra */
 .fa-globe, .fa-plus-circle, .fa-eye, .fa-trash{color: rgba(100,23,180,1); cursor: pointer;}
 .link_btn, .btn {white-space: nowrap;}
 .add_fields .link_btn {display: inline-block; margin-bottom: 8px}
+

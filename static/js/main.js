@@ -234,7 +234,9 @@ $(document).ready(function() {
 
 	// autoresize textarea
 	$('textarea').each(function () {
-		this.setAttribute('style', 'height:' + (this.scrollHeight)/2 + 'px;overflow-y:hidden;');
+    var styleAttr= 'height:' + (this.scrollHeight)/2 + 'px;overflow-y:hidden;';
+    if (this.classList.contains('hiddenInput')) { styleAttr += 'display:none;'}
+		this.setAttribute('style', styleAttr);
 	}).on('input', function () {
 		this.style.height = 'auto';
 		this.style.height = (this.scrollHeight) + 'px';
@@ -521,6 +523,31 @@ $(document).ready(function() {
     }
   });
 });
+
+$(window).on('resize', function() {
+  
+  $('.tips-div').each(function() {
+    var target = $(this).attr('data-target');
+    var yasqeObj = $('#'+target+'>.yasqe');
+    var offset = yasqeObj.offset();
+    var left = offset.left;
+    var top = offset.top;
+    var width = yasqeObj.width()+1;
+    var height = yasqeObj.height();
+
+    $(this).css({
+      left: left+"px",
+      top: top+"px",
+      width: width+"px",
+      height: height+"px",
+      position: "absolute",
+      "z-index": "5",
+      "background-color": "white",
+      border: "1px solid #D1D1D1",
+    })
+  })
+});
+
 
 /////////////////////////
 // MULTIPLE LANGUAGES ///
@@ -970,7 +997,9 @@ function callViafAPI(querySubstring, doneCallback){
 // Ancillary function: make a SPARQL query (Wikidata/catalogue, for advanced search only)
 function makeSPARQLQuery( endpointUrl, sparqlQuery, doneCallback ) {
 	var settings = {
-		headers: { Accept: 'application/sparql-results+json' },
+		headers: { 
+      Accept: 'application/sparql-results+json',
+      Forwarded: "for="+ip},
 		data: { query: sparqlQuery }
 	};
 	return $.ajax( endpointUrl, settings ).then( doneCallback );
@@ -3087,7 +3116,7 @@ function disable_other_cb(ckType) {
 
 
 // generate an instance of the YASQE editor to introduce a new SPARQL query constraint
-function SPARQL_constraint_editor(field,el,temp_id) {
+function SPARQL_constraint_editor(field,el,temp_id,reset=false) {
   var select_input = $(el);
   let endpoint = "";
   let value_to_set = "";
@@ -3106,7 +3135,10 @@ function SPARQL_constraint_editor(field,el,temp_id) {
   if (selected_option === 'WD') {
     endpoint = wikidataEndpoint;
     var id = $(field).attr('id').split('__')[0] + '__wikidataConstraint__' + temp_id;
-    value_to_set = `SELECT ?item ?itemLabel ?itemDescription WHERE {
+    if ($('[name="'+id+'"]').length>0 && reset==false) {
+      value_to_set = $('[name="'+id+'"]').val().replaceAll('&lt;','<').replaceAll('&gt;','>').replaceAll(/&quot;/g, '"');;
+    } else {
+      value_to_set = `SELECT ?item ?itemLabel ?itemDescription WHERE {
     ?item wdt:P31 wd:Q5 .
     ?item wdt:P106 wd:Q2526255 .
     SERVICE wikibase:mwapi {
@@ -3118,18 +3150,23 @@ function SPARQL_constraint_editor(field,el,temp_id) {
     }
     SERVICE wikibase:label {bd:serviceParam wikibase:language "en".}
 }`
+    }
   }
   // catalogue 
   if (selected_option === 'catalogue') {
     endpoint = myPublicEndpoint
     var id = $(field).attr('id').split('__')[0] + '__catalogueConstraint__' + temp_id;
-    value_to_set = `PREFIX bds: <http://www.bigdata.com/rdf/search#> 
+    if ($('[name="'+id+'"]').length>0 && reset==false) {
+      value_to_set = $('[name="'+id+'"]').val().replaceAll('&lt;','<').replaceAll('&gt;','>').replaceAll(/&quot;/g, '"');;
+    } else {
+      value_to_set = `PREFIX bds: <http://www.bigdata.com/rdf/search#> 
 SELECT DISTINCT * WHERE { 
   ?item rdfs:label ?itemLabel . 
   ?item rdf:type ?itemClass .
   ?itemLabel bds:search "insertQueryTerm*" . 
   OPTIONAL { ?item rdfs:comment ?desc } . 
 }`
+    }
   };
 
   var cls = selected_option + "_" + id;
@@ -3141,6 +3178,7 @@ SELECT DISTINCT * WHERE {
     var field_constraints = $("<div class='col-md-12 "+cls+"' id='yasqe_"+cls+"'></div>");
     var button_save = $("<span class='comment'>Save constraint: <i class='fas fa-save'></i></span>");
     var button_delete = $("<span class='comment'>Remove constraint: <i class='far fa-trash-alt'></i></span>");
+    var button_reset = $("<span class='comment'>Reset constraint: <i class='fas fa-redo'></i></span>");
     var button_help = $("<span class='comment'>Help: <i class='far fa-lightbulb'></i></span>");
 
     // save the SPARQL constraint on click
@@ -3165,7 +3203,109 @@ SELECT DISTINCT * WHERE {
     button_delete.find('i').on('click', function() {
       $(this).parent().parent().parent().remove();
       $('[name="'+id+'"]').remove();
-    })
+    });
+
+    // refresh the SPARQL constraint and get back to the default value
+    button_reset.find('i').on('click', function() {
+      $(this).parent().parent().parent().remove();
+      $('[name="'+id+'"]').remove();
+      SPARQL_constraint_editor(field,el,temp_id,reset=true);
+    });
+
+    // get some tips
+    button_help.find('i').on('click', function() {
+      var buttonsDiv = $(this).parent().parent();
+      var goBackButton = $("<span class='comment'>Go back to editor: <i class='fas fa-undo'></i></span>");
+      goBackButton.find('i').on('click', function() {
+        $('.tips-div').remove();
+        buttonsDiv.find('span').show();
+        $(this).parent().remove();
+      })
+      buttonsDiv.find('span').hide();
+      buttonsDiv.append(goBackButton);
+
+
+      // create a new div to show the tips and anchor it to the .yasqe div
+      const yasqeObj = $(this).parent().parent().prev();
+      var offset = yasqeObj.offset();
+      var left = offset.left;
+      var top = offset.top;
+      var width = yasqeObj.width()+1;
+      var height = yasqeObj.height();
+
+      const newDiv = $('<div class="tips-div" data-target="yasqe_'+cls+'"></div>');
+      newDiv.css({
+        left: left+"px",
+        top: top+"px",
+        width: width+"px",
+        height: height+"px",
+        position: "absolute",
+        "z-index": "5",
+        "background-color": "white",
+        border: "1px solid #D1D1D1",
+      })
+
+      // retrieve the tips
+      $.getJSON("./static/json/help.json", function(data) {
+        const wikidataTipsObj = data.wikidataConstraint;
+        $.each(wikidataTipsObj, function(pageNumber, pageContent) {
+
+          // create a clone of the model div and populate it with HTML content
+          let cloneDiv = newDiv.clone();
+          cloneDiv.html(pageContent);
+
+          // set the clone div attributes and css properties
+          $(cloneDiv).attr('data-number', pageNumber.replace('page',''));
+          if (pageNumber !== 'page1') {
+            $(cloneDiv).hide();
+          } else {
+            $(cloneDiv).addClass('active-page');
+          }
+          $('body').append(cloneDiv);
+        });
+
+        $('.tips-div[data-target="yasqe_'+cls+'"]').each(function() {
+          var prevButton = $('<i class="fas fa-caret-left"></i>');
+          var nextButton = $('<i class="fas fa-caret-right"></i>');
+
+          // previous page
+          prevButton.on('click', function() {
+            var currentPage = $('.tips-div.active-page[data-target="yasqe_'+cls+'"]').attr('data-number');
+            var newPageNumber = parseInt(currentPage)-1;
+            var targetPage = $('.tips-div[data-target="yasqe_'+cls+'"][data-number="'+newPageNumber+'"]');
+            $('.tips-div.active-page[data-target="yasqe_'+cls+'"]').hide();
+            $('.tips-div.active-page[data-target="yasqe_'+cls+'"]').removeClass('active-page');
+            targetPage.show();
+            targetPage.addClass('active-page');
+          });
+
+          // next page
+          nextButton.on('click', function() {
+            console.log('c')
+            var currentPage = $('.tips-div.active-page[data-target="yasqe_'+cls+'"]').attr('data-number');
+            console.log(currentPage)
+
+            var newPageNumber = parseInt(currentPage)+1;
+            var targetPage = $('.tips-div[data-target="yasqe_'+cls+'"][data-number="'+newPageNumber+'"]');
+            $('.tips-div.active-page[data-target="yasqe_'+cls+'"]').hide();
+            $('.tips-div.active-page[data-target="yasqe_'+cls+'"]').removeClass('active-page');
+            targetPage.show();
+            targetPage.addClass('active-page');
+          });
+          
+          if ($(this).prev('div').length>0) {
+            $(this).append(prevButton)
+          };
+          if ($(this).next('div').length>0) {
+            $(this).append(nextButton)
+          };
+        })
+
+      });
+
+    });
+    // end of tips section
+
     select_input.after(field_constraints);
 
     // complete the creation of the YASQE editor
@@ -3176,8 +3316,8 @@ SELECT DISTINCT * WHERE {
       }
     });
     yasqe.setValue(value_to_set);
-    $('.'+cls).append('<div class="yasqe-buttons"></div>')
-    $('.'+cls+' .yasqe-buttons').append(button_save, button_delete, button_help);
+    $('.'+cls).append('<div class="yasqe-buttons"></div>');
+    $('.'+cls+' .yasqe-buttons').append(button_save, button_delete, button_reset, button_help);
   }
 }
 
@@ -3359,7 +3499,7 @@ function check_input_form(input_array) {
 function yasqe_to_hidden_field(el,keep=false) {
   let value = '';
   var yasqe_div = $(el).parent().parent().parent();
-  var yasqe_lines = yasqe_div.find('.CodeMirror-code div');
+  var yasqe_lines = yasqe_div.find('.CodeMirror-code>div');
   yasqe_lines.each(function() {
     var tokens = $(this).find('pre span span');
     tokens.each(function() {
@@ -3369,7 +3509,7 @@ function yasqe_to_hidden_field(el,keep=false) {
         value+=' ';
       }
     });
-    value += ' ';
+    value += '\n';
   });
   if (keep===false){ yasqe_div.remove(); } else { yasqe_div.hide(); }
   return value

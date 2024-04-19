@@ -542,9 +542,9 @@ def get_query_templates(res_tpl):
 		if 'searchWikidata' in field and field['searchWikidata'] == 'True':
 			field_id = field['id']
 			if 'wikidataConstraint' in field and 'catalogueConstraint' in field:
-				query_dict[field_id] = {'wikidata':field['wikidataConstraint'], 'catalogue':field['catalogueConstraint']}
+				query_dict[field_id] = {'wikidata':field['wikidataConstraint'].replace('\r','').replace('\n',''), 'catalogue':field['catalogueConstraint'].replace('\r','').replace('\n','')}
 			elif 'wikidataConstraint' in field:
-				query_dict[field_id] = field['wikidataConstraint']
+				query_dict[field_id] = field['wikidataConstraint'].replace('\r','').replace('\n','')
 			elif 'catalogueConstraint' in field:
-				query_dict[field_id] = field['catalogueConstraint']
+				query_dict[field_id] = field['catalogueConstraint'].replace('\r','').replace('\n','')
 	return query_dict

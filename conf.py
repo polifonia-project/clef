@@ -27,3 +27,5 @@ pagination = "10"
 github_backup = "False"
 myEndpoint = "http://127.0.0.1:3000/blazegraph/sparql"
 mainLang = "en"
+sparql_wrapper_user_agent = 'polifonia/1.0 (https://github.com/polifonia-project; polifonia@example.org)'
+

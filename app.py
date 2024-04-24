@@ -36,7 +36,9 @@ TEMPLATE_LIST = RESOURCE_TEMPLATES+"template_list.json"
 ASK_CLASS = RESOURCE_TEMPLATES+"ask_class.json"
 SKOS_VOCAB = conf.skos_vocabularies 
 KNOWLEDGE_EXTRACTION = conf.knowledge_extraction
-NER = spacy.load("en_core_web_sm")
+USER_AGENT = conf.sparql_wrapper_user_agent
+NER_EN = spacy.load("en_core_web_sm")
+NER_IT = spacy.load("it_core_news_sm")
 
 # ROUTING
 
@@ -61,7 +63,8 @@ urls = (
 	prefix + '/(sparql)','sparql',
 	prefix + '/savetheweb-(.+)','Savetheweb',
 	prefix + '/nlp','Nlp',
-	prefix + '/sparqlanything', 'Sparqlanything'
+	prefix + '/sparqlanything', 'Sparqlanything',
+	prefix + '/wd', 'Wikidata'
 )
 
 app = web.application(urls, globals())
@@ -1207,13 +1210,15 @@ class Nlp(object):
 		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
 
 		query_string = web.input()
+		print(query_string)
 		try:
 			query_str_decoded = query_string.q.decode('utf-8').strip()
 		except Exception as e:
 			query_str_decoded = query_string.q.strip()
 
 		# parse string with spacy
-		parsed = NER(query_str_decoded)
+        
+		parsed = NER_IT(query_str_decoded) if query_string.lang == 'it' else NER_EN(query_str_decoded)
 		entities = {word.text for word in parsed.ents if word.label_ in ['PERSON','ORG','GPE','LOC']}
 		# prepare json
 		results = []
@@ -1247,6 +1252,28 @@ class Sparqlanything(object):
 
 		# Retrieve all results so that user can verify them
 		print("sparql.anything query: ", query_str_decoded)
+		sparql.setQuery(query_str_decoded)
+		sparql.setReturnFormat(JSON)
+		results = sparql.query().convert()
+		print("results: \n",results, "\n ---------------------- \n")
+		return json.dumps(results)
+	
+class Wikidata(object):
+	def GET(self):
+		web.header('Content-Type', 'application/json')
+		web.header('Access-Control-Allow-Origin', '*')
+		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+
+		query_string = web.input()
+		print(query_string)
+
+		try:
+			query_str_decoded = query_string.query.decode('utf-8').strip()
+		except Exception as e:
+			query_str_decoded = query_string.query.strip()
+		
+		sparql = SPARQLWrapper(WIKIDATA_SPARQL,agent=USER_AGENT)
+		print(sparql._getRequestEncodedParameters())
 		sparql.setQuery(query_str_decoded)
 		sparql.setReturnFormat(JSON)
 		results = sparql.query().convert()

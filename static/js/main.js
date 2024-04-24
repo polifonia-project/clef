@@ -98,7 +98,13 @@ $(document).ready(function() {
   const areas = document.querySelectorAll('#recordForm textarea, #modifyForm textarea');
   var tags = document.createElement('div');
   tags.setAttribute('class','tags-nlp');
-  areas.forEach(element => {  element.after(tags); nlpText(element.id); });
+  areas.forEach(element => {  element.after(tags); });
+
+  // Textbox > URL: suggestion
+  const textboxURL = document.querySelectorAll('#recordForm input.urlField, #modifyForm input.urlField');
+  var suggestionTags = document.createElement('div');
+  suggestionTags.setAttribute('class','tags-url');
+  textboxURL.forEach(element => {  element.after(suggestionTags); });
 
   // Suggest vocabularies links
   $("input[type='text'].searchSkos").each(function() {
@@ -522,6 +528,11 @@ $(document).ready(function() {
       }
     }
   });
+
+  $('textarea').each(function() {
+    $(this).on('click', nlpText($(this).attr('id')))
+  })
+
 });
 
 $(window).on('resize', function() {
@@ -750,6 +761,7 @@ function change_current_language(el,record) {
       var new_value = $(this).val().replace(id,new_id);
       $(this).val(new_value);
     });
+    $('#'+new_id).on('click', nlpText(new_id));
   } 
   if (current_lang.hasClass('main-lang')) {
     var main_lang_id = '#'+id.split('_')[0]+'_mainLang';
@@ -758,6 +770,8 @@ function change_current_language(el,record) {
     }
     $(main_lang_id).val(new_lang);
   }
+
+  
 }
 
 function change_main_lang(el,record) {
@@ -998,8 +1012,7 @@ function callViafAPI(querySubstring, doneCallback){
 function makeSPARQLQuery( endpointUrl, sparqlQuery, doneCallback ) {
 	var settings = {
 		headers: { 
-      Accept: 'application/sparql-results+json',
-      Forwarded: "for="+ip},
+      Accept: 'application/sparql-results+json'},
 		data: { query: sparqlQuery }
 	};
 	return $.ajax( endpointUrl, settings ).then( doneCallback );
@@ -1661,7 +1674,7 @@ function searchWDCatalogueAdvanced(searchterm){
 
     if (value.length>0) {
       $("#searchresult").empty();
-      requestWD = makeSPARQLQuery( wikidataEndpoint, newSparqlQueryWD, function( data ) {
+      requestWD = makeSPARQLQuery( myPublicEndpoint.replace('/sparql','/wd'), newSparqlQueryWD, function( data ) {
         data.results.bindings.forEach(function(obj,idx) {
           let idSplit = obj.item.value.split('/');
           var wdId = idSplit[idSplit.length-1];
@@ -1795,7 +1808,7 @@ function addURL(searchterm, iframe=false) {
       if ($('#'+searchterm).val().length > 0 && regexURL.test($('#'+searchterm).val()) ) {
         // generate iframe if requested 
         if (iframe) {
-          $('#'+searchterm).after("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"-"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
+          $('#'+searchterm).after("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"_"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
           if (!$('#'+searchterm).val().startsWith("https://") && !$('#'+searchterm).val().startsWith("http://")) {
             var url = "https://" + $('#'+searchterm).val();
           } else {
@@ -1804,7 +1817,7 @@ function addURL(searchterm, iframe=false) {
           $('#'+searchterm).after("<iframe allow='autoplay' class='col-md-11 iframePreview' src='"+url+"' crossorigin></iframe>");
         }
         else {
-          $('#'+searchterm).after("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"-"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
+          $('#'+searchterm).after("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"_"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
         }
       }
       else if ($('#'+searchterm).val().length > 0 && !regexURL.test($('#'+searchterm).val()) ) {
@@ -2095,6 +2108,7 @@ function stringEndsWith(string, formatList) {
 
 // NLP
 function nlpText(searchterm) {
+  var lang = searchterm.split('_')[1];
 	$('textarea#'+searchterm).keypress( throttle(function(e) {
 	  	if(e.which == 13) {
 	  		//$('textarea#'+searchterm).parent().parent().append('<div class="tags-nlp col-md-9"></div>');
@@ -2105,7 +2119,7 @@ function nlpText(searchterm) {
       // call CLEF api (spacy)
       $.ajax({
 			    type: 'GET',
-			    url: 'nlp?q=' + encoded,
+			    url: 'nlp?q=' + encoded + '&lang=' + lang,
 			    success: function(listTopics) {
             console.log(listTopics);
             for (var i = 0; i < listTopics.length; i++) {

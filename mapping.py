@@ -42,8 +42,9 @@ def getValuesFromFields(fieldPrefix, recordData, fields=None, field_type=None):
 	result_dict = {'type':'URI'}
 	results = set()
 	for key, value in recordData.items():
-		if key.startswith(fieldPrefix+'_'): # multiple values from text box (wikidata) + URL 
+		if key.startswith(fieldPrefix+'_') and ',' in value: # multiple values from text box (wikidata) + URL 
 			values = value.split(',', 1)
+			print(key,values)
 			results.add(( values[0].strip(), urllib.parse.unquote(values[1]) )) # (id, label)
 		elif key == fieldPrefix and field_type != 'Textarea': # uri from dropdown (single value from controlled vocabulary) + URL
 			if fields:

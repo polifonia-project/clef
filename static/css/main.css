@@ -762,6 +762,18 @@ span[class^='tag Q']:hover {
   display: block;
 }
 
+.tags-url {
+  margin-left: 35px;
+}
+
+.tags-url::before {
+  content: 'press return to add a URL';
+  font-size: 0.7em;
+  color: grey;
+  display: block;
+}
+
+
 input[type='text'],
 input[type='textarea'],
 input[type='date'],

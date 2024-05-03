@@ -567,7 +567,8 @@ class Record(object):
 		return render.record(record_form=f, pageID=name, user=user,
 							alert=block_user, limit=limit,
 							is_git_auth=is_git_auth,invalid=False,
-							project=conf.myProject,template=None,query_templates=None,knowledge_extractor=False)
+							project=conf.myProject,template=None,
+							query_templates=None,knowledge_extractor=False)
 
 	def POST(self, name):
 		""" Submit a new record
@@ -610,7 +611,8 @@ class Record(object):
 					extractor = u.has_extractor(recordData.res_name) 
 					return render.record(record_form=f, pageID=name, user=user, alert=block_user,
 									limit=limit, is_git_auth=is_git_auth,invalid=False,
-									project=conf.myProject,template=recordData.res_name,query_templates=query_templates,knowledge_extractor=extractor)
+									project=conf.myProject,template=recordData.res_name,
+									query_templates=query_templates,knowledge_extractor=extractor)
 				else:
 					raise web.seeother(prefixLocal+'record-'+name)
 
@@ -625,10 +627,12 @@ class Record(object):
 			if recordID:
 				if invalid_input:
 					f = forms.get_form(templateID)
+					query_templates = u.get_query_templates(recordData.res_name)
 					extractor = u.has_extractor(templateID) 
 					return render.record(record_form=f, pageID=name, user=user, alert=block_user,
 									limit=limit, is_git_auth=is_git_auth,invalid=True,
-									project=conf.myProject,template=templateID,skos_vocabs=skos_file,knowledge_extractor=extractor)
+									project=conf.myProject,template=templateID,
+									query_templates=query_templates,knowledge_extractor=extractor)
 				else:
 					u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
 					userID = user.replace('@','-at-').replace('.','-dot-')
@@ -679,17 +683,14 @@ class Modify(object):
 			with open(res_template) as tpl_form:
 				fields = json.load(tpl_form)
 			ids_dropdown = u.get_dropdowns(fields)
-			if not os.path.isfile(SKOS_VOCAB):
-				skos_file = None
-			else:
-				with open(SKOS_VOCAB, 'r') as skos_list:
-					skos_file = json.load(skos_list)
+			
+			query_templates=u.get_query_templates(res_template)
 			extractor = queries.retrieve_extractions(conf.base+name) if u.has_extractor(name, modify=True) else False
 
 			return render.modify(graphdata=data, pageID=recordID, record_form=f,
 							user=session['username'],ids_dropdown=ids_dropdown,
 							is_git_auth=is_git_auth,invalid=False,
-							project=conf.myProject,template=res_template,skos_vocabs=skos_file,knowledge_extractor=extractor)
+							project=conf.myProject,template=res_template,query_templates=query_templates,knowledge_extractor=extractor)
 		else:
 			session['logged_in'] = 'False'
 			raise web.seeother(prefixLocal+'/')
@@ -730,17 +731,14 @@ class Modify(object):
 					fields = json.load(tpl_form)
 				ids_dropdown = u.get_dropdowns(fields)
 
-				if not os.path.isfile(SKOS_VOCAB):
-					skos_file = None
-				else:
-					with open(SKOS_VOCAB, 'r') as skos_list:
-						skos_file = json.load(skos_list)
+				query_templates = u.get_query_templates(templateID)
 				extractor = queries.retrieve_extractions(conf.base+name) if u.has_extractor(name, modify=True) else False
 				
 				return render.modify(graphdata=data, pageID=recordID, record_form=f,
 								user=session['username'],ids_dropdown=ids_dropdown,
 								is_git_auth=is_git_auth,invalid=True,
-								project=conf.myProject,template=res_template,skos_vocabs=skos_file,knowledge_extractor=extractor)
+								project=conf.myProject,template=res_template,
+								query_templates=query_templates,knowledge_extractor=extractor)
 			else:
 				print(recordData)
 				recordID = recordData.recordID
@@ -794,18 +792,15 @@ class Review(object):
 			with open(res_template) as tpl_form:
 				fields = json.load(tpl_form)
 			ids_dropdown = u.get_dropdowns(fields) # TODO CHANGE
-			if not os.path.isfile(SKOS_VOCAB):
-				skos_file = None
-			else:
-				with open(SKOS_VOCAB, 'r') as skos_list:
-					skos_file = json.load(skos_list)
+			
+			query_templates = u.get_query_templates(res_template)
 			extractor = queries.retrieve_extractions(conf.base+name) if u.has_extractor(name, modify=True) else False
 
 			return render.review(graphdata=data, pageID=recordID, record_form=f,
 								graph=graphToRebuild, user=session['username'],
 								ids_dropdown=ids_dropdown,is_git_auth=is_git_auth,
 								invalid=False,project=conf.myProject,template=res_template,
-								skos_vocabs=skos_file,knowledge_extractor=extractor)
+								query_templates=query_templates,knowledge_extractor=extractor)
 		else:
 			session['logged_in'] = 'False'
 			raise web.seeother(prefixLocal+'/')
@@ -840,17 +835,13 @@ class Review(object):
 				with open(templateID) as tpl_form:
 					fields = json.load(tpl_form)
 				ids_dropdown = u.get_dropdowns(fields) # TODO CHANGE
-				if not os.path.isfile(SKOS_VOCAB):
-					skos_file = None
-				else:
-					with open(SKOS_VOCAB, 'r') as skos_list:
-						skos_file = json.load(skos_list)
+				query_templates = u.get_query_templates()
 				extractor = queries.retrieve_extractions(conf.base+name) if u.has_extractor(name, modify=True) else False
 				return render.review(graphdata=data, pageID=recordID, record_form=f,
 									graph=graphToRebuild, user=session['username'],
 									ids_dropdown=ids_dropdown,is_git_auth=is_git_auth,
 									invalid=True,project=conf.myProject,template=templateID,
-									skos_vocabs=skos_file,knowledge_extractor=extractor)
+									query_templates=query_templates,knowledge_extractor=extractor)
 			else:
 				recordData = web.input()
 				recordID = recordData.recordID
@@ -879,17 +870,14 @@ class Review(object):
 				with open(templateID) as tpl_form:
 					fields = json.load(tpl_form)
 				ids_dropdown = u.get_dropdowns(fields)
-				if not os.path.isfile(SKOS_VOCAB):
-					skos_file = None
-				else:
-					with open(SKOS_VOCAB, 'r') as skos_list:
-						skos_file = json.load(skos_list)
+				
+				query_templates = u.get_query_templates()
 				extractor = queries.retrieve_extractions(conf.base+name) if u.has_extractor(name, modify=True) else False
 				return render.review(graphdata=data, pageID=recordID, record_form=f,
 									graph=graphToRebuild, user=session['username'],
 									ids_dropdown=ids_dropdown,is_git_auth=is_git_auth,
 									invalid=True,project=conf.myProject,template=templateID,
-									skos_vocabs=skos_file,knowledge_extractor=extractor)
+									query_templates=query_templates,knowledge_extractor=extractor)
 			else:
 				recordData = web.input()
 				u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)

@@ -115,7 +115,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					lang=conf.mainLang), )
 
 			# Entities, SKOS thesauri, links
-			if field['type'] in ['Skos', 'WebsitePreview'] or (field['type'] == 'Textbox' and field['value'] in ['URL', 'URI']):
+			if field['type'] in ['Skos', 'WebsitePreview'] or (field['type'] == 'Textbox' and field['value'] in ['URL', 'URI', 'Place']):
 				params = params + (form.Textbox(myid,
 					description = description,
 					id=myid,
@@ -130,11 +130,11 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 				params = params + (form.Textbox(myid,
 				description = description,
 				id=myid,
+				placeholder=placeholder,
 				pre = prepend,
 				class_= classes,
 				value=default,
 				mandatory = mandatory) , )
-				
 
 			# Text box
 			if field['type'] == 'Textarea':

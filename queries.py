@@ -202,20 +202,68 @@ def getClass(res_uri):
 
 def getData(graph,res_template):
 	""" get a named graph and rebuild results for modifying the record"""
+
+	def compare_sublists(l, lol):
+		for sublist in lol:
+			temp = [i for i in sublist if i in l]
+			if sorted(temp) == sorted(l):
+				return True
+		return False
+
+	def disambiguate_pattern(properties,fields,k):
+		field_k = next(field for field in fields if field['id'] == k)
+		pattern = ''
+		# disambiguate Textbox > URI and Textbox > Place:
+		if field_k['type'] == 'Textbox':
+			if field_k['value'] == 'URI':
+				if any(field for field in properties if field['type'] == 'Textbox' and field['value'] == 'Place'):
+					pattern = 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. ?'+field['id']+' rdfs:label ?'+field['id']+'_label . FILTER(!REGEX(str(?'+field['id']+'),"sws.geonames.org/"))} .'
+			elif field_k['value'] == 'Place':
+				if any(field for field in properties if field['type'] == 'Textbox' and field['value'] == 'URI'):
+					pattern = 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. ?'+field['id']+' rdfs:label ?'+field['id']+'_label . FILTER(REGEX(str(?'+field['id']+'),"sws.geonames.org/"))} .'
+		if field_k['value'] == 'URL':
+			if field_k['type'] == 'Textbox':
+				if any(field for field in properties if field['type'] == 'Multimedia'):
+					pattern = 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. FILTER (isURI(?'+field['id']+')) FILTER NOT EXISTS {?'+field['id']+' rdfs:label ?'+field['id']+'_label } FILTER NOT EXISTS { ?'+field['id']+' skos:prefLabel ?'+field['id']+'_label } FILTER(!REGEX(str(?'+field['id']+'), "\\\\.(apng|avif|gif|ico|jpg|jpeg|jfif|pjpeg|pjp|png|svg|webp|mp3|wav|ogg|mp4|ogg|webm)$", "i"))} .'
+			elif field_k['type'] == 'Multimedia':
+				if any(field for field in properties if field['type'] == 'Textbox' and field['value'] == 'URL'):
+					pattern = 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. FILTER (isURI(?'+field['id']+')) FILTER NOT EXISTS {?'+field['id']+' rdfs:label ?'+field['id']+'_label } FILTER NOT EXISTS { ?'+field['id']+' skos:prefLabel ?'+field['id']+'_label } FILTER(REGEX(str(?'+field['id']+'), "\\\\.(apng|avif|gif|ico|jpg|jpeg|jfif|pjpeg|pjp|png|svg|webp|mp3|wav|ogg|mp4|ogg|webm)$", "i"))} .'
+		return pattern
+
 	with open(res_template) as config_form:
 		fields = json.load(config_form)
 
+	properties_dict = {}
+	patterns = []
 	res_class = getClass(graph[:-1])
-	patterns = [ 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'.} ' if field['value'] in ['Literal','URL']
-			else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. FILTER (datatype(?'+field['id']+') = xsd:'+field['value'][0].lower() + field['value'][1:]+') } ' if field['value'] in ['Date', 'gYear', 'gYearMonth']
-			else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. ?'+field['id']+' rdfs:label ?'+field['id']+'_label .} .' 
-			for field in fields ]
 
+	# check duplicate properties
+	for field in fields:
+		if field['type'] != 'KnowledgeExtractor':
+			if field['property'] in properties_dict:
+				properties_dict[field['property']].append(field)
+			else:
+				properties_dict[field['property']] = [field]
+
+	# add query pattern
+	for field in fields:
+		if field['type'] != 'KnowledgeExtractor':
+			pattern = ""
+			if len(properties_dict[field['property']]) > 1:
+				pattern = disambiguate_pattern(properties_dict[field['property']],fields,field['id']) 
+			if pattern == "":
+				pattern = 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. FILTER (lang(?'+field['id']+')!="")} ' if field['value'] == 'Literal' \
+					else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. FILTER (isURI(?'+field['id']+')) FILTER NOT EXISTS {?'+field['id']+' rdfs:label ?'+field['id']+'_label } FILTER NOT EXISTS { ?'+field['id']+' skos:prefLabel ?'+field['id']+'_label } } ' if field['value'] == 'URL' \
+					else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. FILTER (datatype(?'+field['id']+') = xsd:'+field['value'][0].lower() + field['value'][1:]+') } ' if field['value'] in ['Date', 'gYear', 'gYearMonth'] \
+					else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. ?'+field['id']+' skos:prefLabel ?'+field['id']+'_label .} .' if 'type' in field and field['type'] == 'Skos' \
+					else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. ?'+field['id']+' rdfs:label ?'+field['id']+'_label } .'
+			patterns.append(pattern)
 	patterns_string = ''.join(patterns)
 
 	queryNGraph = '''
 		PREFIX base: <'''+conf.base+'''>
 		PREFIX schema: <https://schema.org/>
+		PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 		SELECT DISTINCT *
 		WHERE { <'''+graph+'''> rdfs:label ?graph_title ;
 								<http://dbpedia.org/ontology/currentStatus> ?stage
@@ -231,22 +279,16 @@ def getData(graph,res_template):
 	sparql.setReturnFormat(JSON)
 	results = sparql.query().convert()
 
-	def compare_sublists(l, lol):
-		for sublist in lol:
-			temp = [i for i in sublist if i in l]
-			if sorted(temp) == sorted(l):
-				return True
-		return False
-
 	data = defaultdict(list)
 	for result in results["results"]["bindings"]:
 		result.pop('subject',None)
-		label = result.pop('graph_title',None)
+		graph_label = result.pop('graph_title',None)
 		for k,v in result.items():
 			if '_label' not in k and v['type'] == 'literal': # string values
 				value = v['value']
 				if 'xml:lang' in v:
-					value = (v['value'],v['xml:lang'],'mainLang') if v['value']==label['value'] and v['xml:lang']==label['xml:lang'] else (v['value'],v['xml:lang'])
+					value = (v['value'],v['xml:lang'],'mainLang') if v['value']==graph_label['value'] and v['xml:lang']==graph_label['xml:lang'] else (v['value'],v['xml:lang'])
+				
 				if value not in data[k]:
 					data[k].append(value)
 			elif v['type'] == 'uri': # uri values
@@ -380,10 +422,8 @@ def saveHiddenTriples(graph, tpl):
 					}
 			}
 			'''
-		print(queryNGraph)
 		sparql = SPARQLWrapper(conf.myEndpoint)
 		sparql.setQuery(queryNGraph)
 		sparql.setReturnFormat(JSON)
 		results = sparql.query().convert()
-		print(results)
 	return results

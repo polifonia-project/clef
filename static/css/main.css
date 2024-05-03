@@ -732,8 +732,9 @@ nav .wditem, nav .viafitem {
 
 .searchWikidata~.tag,
 .searchGeonames~.tag,
+.searchSkos~.tag,
 textarea~.tags-nlp {
-  margin-left: 35px !important;
+  margin-left: 15px !important;
 }
 
 .tag::after {
@@ -752,7 +753,7 @@ span[class^='tag Q']:hover {
 }
 
 .tags-nlp {
-  margin: 25px;
+  margin: 15px;
 }
 
 .tags-nlp::before {
@@ -760,10 +761,11 @@ span[class^='tag Q']:hover {
   font-size: 0.7em;
   color: grey;
   display: block;
+  margin-left: 20px;
 }
 
 .tags-url {
-  margin-left: 35px;
+  margin-left: 15px;
 }
 
 .tags-url::before {
@@ -771,6 +773,7 @@ span[class^='tag Q']:hover {
   font-size: 0.7em;
   color: grey;
   display: block;
+  margin-left: 20px;
 }
 
 
@@ -1954,7 +1957,7 @@ button#showTemplates {
 }
 
 .multimediaTag .tag{
-  margin-left:35px !important; 
+  margin-left:15px !important; 
   word-wrap:break-word; 
   max-width: calc(100% - 35px);
 }

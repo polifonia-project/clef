@@ -7,8 +7,8 @@ import urllib.parse
 import web
 from web import form, storify
 import rdflib
-from rdflib import URIRef , XSD, Namespace , Literal
-from rdflib.namespace import OWL, DC , DCTERMS, RDF , RDFS
+from rdflib import URIRef , XSD, Namespace , Literal, term
+from rdflib.namespace import OWL, DC , DCTERMS, RDF , RDFS, SKOS
 from rdflib.plugins.sparql import prepareQuery
 from SPARQLWrapper import SPARQLWrapper, JSON
 from pymantic import sparql
@@ -39,23 +39,27 @@ TEMPLATE_LIST = conf.template_list
 def getValuesFromFields(fieldPrefix, recordData, fields=None, field_type=None):
 	""" request form fields by field prefix, check if multiple values are available,
 	returns a set of tuples including ID (for the URI) and label of values """
-	result_dict = {'type':'URI'}
+	result_dict = {'type':field_type} if field_type != None else {'type':'URI'}
 	results = set()
 	for key, value in recordData.items():
-		if key.startswith(fieldPrefix+'_') and ',' in value: # multiple values from text box (wikidata) + URL 
-			values = value.split(',', 1)
-			print(key,values)
-			results.add(( values[0].strip(), urllib.parse.unquote(values[1]) )) # (id, label)
-		elif key == fieldPrefix and field_type != 'Textarea': # uri from dropdown (single value from controlled vocabulary) + URL
-			if fields:
-				field = next(field for field in fields if field["id"] == fieldPrefix)
-				label = field['values'][value] if value and value != 'None' and 'values' in field else None
-				if label:
-					results.add(( value, label ))
-			elif field_type:
-				values = value.split(',')
-				for val in values:
-					results.add(( val.strip(), val.strip() ))
+		if field_type == 'Textarea':
+			# textarea: NLP keywords
+			if key.startswith(fieldPrefix+'_Q') and ',' in value and key.split('_')[1] == value.split(',')[0]:
+				values = value.split(',', 1)
+				results.add(( values[0].strip(), urllib.parse.unquote(values[1]) )) # (id, label)
+		else:
+			if key.startswith(fieldPrefix+'_') and ',' in value: # multiple values from text box (entities) and URL 
+				values = value.split(',', 1)
+				results.add(( values[0].strip(), urllib.parse.unquote(values[1]) )) # (id, label)
+			elif key == fieldPrefix: # uri from dropdown (single value from controlled vocabulary) and URL
+				if fields:
+					field = next(field for field in fields if field["id"] == fieldPrefix)
+					label = field['values'][value] if value and value != 'None' and 'values' in field else None
+					if label:
+						results.add(( value, label ))
+				elif field_type == 'URL':
+					for url in value.split(','):
+						results.add(( url.strip(), url.strip() ))
 	result_dict['results'] = results
 	return result_dict
 
@@ -69,7 +73,7 @@ def getLiteralValuesFromFields(fieldPrefix, recordData):
 			lang = key.rsplit('_')[1]
 			if lang == 'mainLang':
 				result_dict['mainLang'] = value
-			else:
+			elif term._is_valid_langtag(lang):
 				results.add((value,lang))
 	result_dict['results'] = results
 	return result_dict
@@ -150,8 +154,8 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 	for field in fields:
 		if field['type'] not in ['KnowledgeExtractor', 'Subtemplate']:
 			# URI, Textarea (only text at this stage), Literals
-			value = getValuesFromFields(field['id'], recordData, fields) if 'value' in field and field['value'] in ['URI','Place'] \
-					else getValuesFromFields(field['id'], recordData, field_type=field['type']) if 'value' in field and field['value'] == 'URL' \
+			value = getValuesFromFields(field['id'], recordData, fields=fields) if 'value' in field and field['value'] in ['URI','Place'] \
+					else getValuesFromFields(field['id'], recordData, field_type=field['value']) if 'value' in field and field['value'] == 'URL' \
 					else getLiteralValuesFromFields(field['id'], recordData) if 'value' in field and field['value'] == 'Literal' else recordData[field['id']]
 			# TODO disambiguate as URI, value
 			if field["disambiguate"] == 'True': # use the key 'disambiguate' as title of the graph
@@ -181,19 +185,21 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(value)))
 				else:
 					wd.add(( URIRef(base+graph_name), URIRef(field['property']), Literal(value) ))
-			elif 'value' in field and field['value'] == 'URL':
-				for entity in value:
-					if entity[1] != "":
-						to_add = entity[1]
-						if not to_add.startswith("http"):
-							to_add = "http://" + to_add
-						wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(to_add) ))
+			# multiple-values fields
 			elif isinstance(value,dict):
-				if value['type'] == 'URI': #object properties
+				print("Checkpoint:", value, field['id'])
+				if value['type'] == 'URL': #url
+					for URL in value['results']:
+						if URL[1] != "":
+							valueURL = URL[1] if URL[1].startswith("http") else "http://" + URL[1]
+							wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(valueURL) ))
+				elif value['type'] == 'URI': #object properties
+					rdf_property = SKOS.prefLabel if field['type'] == 'Skos' else RDFS.label
+					print(field['type'], rdf_property)
 					for entity in value['results']:
 						entityURI = getRightURIbase(entity[0]) # Wikidata or new entity 
 						wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(entityURI) ))
-						wd.add(( URIRef( entityURI ), RDFS.label, Literal(entity[1].lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
+						wd.add(( URIRef( entityURI ), rdf_property, Literal(entity[1].lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
 				elif value['type'] == 'Literal': #multi-language Literals
 					for literal in value['results']:
 						val, lang = literal
@@ -201,9 +207,9 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 						wd.add(( URIRef(base+graph_name), URIRef(field['property']), Literal(val, lang=lang)))
 			# now get also the entities associated to textareas (record creation)
 			if field['type'] == 'Textarea':
-				value = getValuesFromFields(field['id'], recordData, fields, 'Textarea')
-				for entity in value['results']:
-					entityURI = getRightURIbase(entity[0])+entity[0]
+				nlp_keywords = getValuesFromFields(field['id'], recordData, field_type='Textarea')
+				for entity in nlp_keywords['results']:
+					entityURI = getRightURIbase(entity[0])
 					wd.add(( URIRef(base+graph_name), SCHEMA.keywords, URIRef(entityURI) ))
 					wd.add(( URIRef( entityURI ), RDFS.label, Literal(entity[1].lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
 		# KNOWLEDGE EXTRACTION: import graphs
@@ -296,7 +302,7 @@ def process_new_subrecord(data, userID, stage, knowledge_extraction, sub_tpl, su
 			new_record_data[subtemplate_field['id']] = data[key]
 
 		# Multiple values fields: Literals or URI
-		elif subtemplate_field['value'] == 'Literal' or subtemplate_field['value'] in ['URI','URL']:
+		elif subtemplate_field['value'] == 'Literal' or subtemplate_field['value'] in ['URI','URL','Place']:
 			keys = [input_id for input_id in data.keys() if input_id.startswith(subtemplate_field['id']+"_") and input_id.endswith("_"+subrecord_id)]
 			for key in keys:
 				shortened_key = key.rsplit("_",1)[0]
@@ -309,7 +315,7 @@ def process_new_subrecord(data, userID, stage, knowledge_extraction, sub_tpl, su
 				label_input_field = subfield_id+"_"+main_lang+"_"+subrecord_id
 				label = data[label_input_field] if label_input_field in data else "No label"
 
-	print("\nDATA:\n",new_record_data)
+	print("#### DATA:\n",new_record_data)
 	store_data = storify(new_record_data)
 	grapht_to_clear = None if stage == 'not modified' else base+subrecord_id+"/"
 	inputToRDF(store_data,userID,stage,knowledge_extraction,graphToClear=grapht_to_clear,tpl_form=sub_tpl)

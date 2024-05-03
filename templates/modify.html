@@ -1,9 +1,14 @@
-$def with (graphdata, pageID, record_form, user, ids_dropdown,is_git_auth,invalid, project,template, skos_vocabs, knowledge_extractor)
+$def with (graphdata,pageID,record_form,user,ids_dropdown,is_git_auth,invalid,project,template,query_templates,knowledge_extractor)
 
 $var user = user
 $var is_git_auth = is_git_auth
 $var project = project
 
+$if query_templates!=None:
+	<script type="text/javascript">
+		const query_templates_str = '$query_templates'.replace(/&#39;/g, '"');
+		const query_templates = JSON.parse(query_templates_str);
+	</script>
 <header class="row needDoc">
 	<button id="showRight">&gt; help</button>
 	<script type="text/javascript">
@@ -73,19 +78,9 @@ $var project = project
 												</script>
 
 										$else:
-											<!-- SKOS vocabs -->
-											$if " vocabularyField " in input.attrs["class"]:
-												$:input.render()
-												$ list_vocabs = "//".join(list(skos_vocabs.keys()))
-												$ selectedVocabs = str(skos_vocabs)
-												<script type="text/javascript">
-													var skos_to_string = '$selectedVocabs'.replace(/&#39;/g, '"');
-													var selected_vocabs = "$input.attrs['class']";
-													var list_vocabs = '$list_vocabs'.split("//")
-													var skos_vocabs_json = JSON.parse(skos_to_string)
-												</script>
-											<!-- text box with URI,label; includes subrecords -->
 											$if len(graphdata[id]) > 0 and "multimedia" not in input.attrs["class"] and "websitePreview" not in input.attrs["class"]:
+												<!-- text box with URI,label / SKOS terms /  subrecords -->
+
 												$if type(graphdata[id][0]) is list:
 													<!-- Entities and subrecords -->
 													$:input.render()
@@ -131,14 +126,6 @@ $var project = project
 										$if type(input) == Dropdown:
 											<script type="text/javascript">
 												$$('#$id').prepend($$('<option selected=selected value="None">Select from the list</option>'));
-											</script>
-										$elif "vocabularyField" in input.attrs["class"]:
-											$ list_vocabs = "//".join(list(skos_vocabs.keys()))
-											$ selectedVocabs = str(skos_vocabs)
-											<script type="text/javascript">
-												var skos_to_string = '$selectedVocabs'.replace(/&#39;/g, '"');
-												var list_vocabs = '$list_vocabs'.split("//")
-												var skos_vocabs_json = JSON.parse(skos_to_string)
 											</script>
 								</section>
 						</section>

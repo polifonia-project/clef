@@ -4,10 +4,10 @@ $var is_git_auth = is_git_auth
 $var project = project
 
 $if query_templates!=None:
-					<script type="text/javascript">
-						const query_templates_str = '$query_templates'.replace(/&#39;/g, '"');
-						const query_templates = JSON.parse(query_templates_str);
-					</script>
+	<script type="text/javascript">
+		const query_templates_str = '$query_templates'.replace(/&#39;/g, '"');
+		const query_templates = JSON.parse(query_templates_str);
+	</script>
 $if alert == False:
 	<header class="row needDoc">
 		<button id="showRight"><i class="far fa-lightbulb"></i> help</button>

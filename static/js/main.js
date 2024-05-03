@@ -1,8 +1,8 @@
 
 if (graph.length) {var in_graph = "FROM <"+graph+">"} else {var in_graph = ""}
-const wd_img = ' <img src="https://upload.wikimedia.org/wikipedia/commons/d/d2/Wikidata-logo-without-paddings.svg" style="width:20px ; padding-bottom: 5px; filter: grayscale(100%);"/>'
+const wd_img = ' <img src="https://upload.wikimedia.org/wikipedia/commons/d/d2/Wikidata-logo-without-paddings.svg" style="width:25px ; padding-bottom: 5px; filter: grayscale(100%);"/>'
 const geo_img = '<img src="https://www.geonames.org/img/globe.gif" style="width:20px ; padding-bottom: 5px; filter: grayscale(100%);"/>';
-const viaf_img = '<img src="https://upload.wikimedia.org/wikipedia/commons/1/19/Viaf_icon.png" style="width:20px ; padding-bottom: 5px; filter: grayscale(100%);"/>';
+const viaf_img = '<img src="https://upload.wikimedia.org/wikipedia/commons/0/01/VIAF_icon.svg" style="width:20px ; padding-bottom: 5px; filter: grayscale(100%);"/>';
 const wikidataEndpoint = "https://query.wikidata.org/sparql"
 $(document).ready(function() {
 
@@ -101,10 +101,27 @@ $(document).ready(function() {
   areas.forEach(element => {  element.after(tags); });
 
   // Textbox > URL: suggestion
-  const textboxURL = document.querySelectorAll('#recordForm input.urlField, #modifyForm input.urlField');
-  var suggestionTags = document.createElement('div');
-  suggestionTags.setAttribute('class','tags-url');
-  textboxURL.forEach(element => {  element.after(suggestionTags); });
+  const textboxURL = document.querySelectorAll('#recordForm input.urlField, #modifyForm input.urlField, #recordForm input.multimediaField, #modifyForm input.multimediaField');
+  textboxURL.forEach(element => {
+    var suggestionTags = document.createElement('div');
+    suggestionTags.setAttribute('class','tags-url');
+    const parent = element.parentNode;
+    if (element.className.includes('multimediaField')) {
+      const previousURLS = Array.from(parent.querySelectorAll('.multimediaTag'));
+      previousURLS.forEach(tag => {
+        tag.remove();
+        suggestionTags.appendChild(tag);
+      });
+    } else {
+      console.log(element)
+      const previousURLS = Array.from(parent.querySelectorAll('span.tag, input.hiddenInput'));
+      previousURLS.forEach(tag => {
+        tag.remove();
+        suggestionTags.appendChild(tag);
+      });
+    };
+    element.after(suggestionTags.cloneNode(true));
+  });
 
   // Suggest vocabularies links
   $("input[type='text'].searchSkos").each(function() {
@@ -1123,7 +1140,7 @@ function searchGeonames(searchterm) {
           					        	e.preventDefault();
           					        	var oldID = this.getAttribute('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
           					        	var oldLabel = $(this).text();
-          					        	$('#'+searchterm).after("<span class='tag "+oldID+"' data-input='"+searchterm+"' data-id='"+oldID+"'>"+oldLabel+"</span><input type='hidden' class='hiddenInput "+oldID+"' name='"+searchterm+"-"+oldID+"' value=\" "+oldID+","+encodeURIComponent(oldLabel)+"\"/>");
+          					        	$('#'+searchterm).after("<span class='tag "+oldID+"' data-input='"+searchterm+"' data-id='"+oldID+"'>"+oldLabel+"</span><input type='hidden' class='hiddenInput "+oldID+"' name='"+searchterm+"_"+oldID+"' value=\" "+oldID+","+encodeURIComponent(oldLabel)+"\"/>");
           					        	$("#searchresult").hide();
           					        	$('#'+searchterm).val('');
           					        });
@@ -1143,7 +1160,7 @@ function searchGeonames(searchterm) {
   	      	$('a[data-id="'+ item.geonameId+'"]').each( function() {
   		        $(this).bind('click', function(e) {
   		        	e.preventDefault();
-  		        	$('#'+searchterm).after("<span class='tag "+item.geonameId+"' data-input='"+searchterm+"' data-id='"+item.geonameId+"'>"+item.name+"</span><input type='hidden' class='hiddenInput "+item.geonameId+"' name='"+searchterm+"-"+item.geonameId+"' value=\""+item.geonameId+","+encodeURIComponent(item.name)+"\"/>");
+  		        	$('#'+searchterm).after("<span class='tag "+item.geonameId+"' data-input='"+searchterm+"' data-id='"+item.geonameId+"'>"+item.name+"</span><input type='hidden' class='hiddenInput "+item.geonameId+"' name='"+searchterm+"_"+item.geonameId+"' value=\""+item.geonameId+","+encodeURIComponent(item.name)+"\"/>");
   		        	$("#searchresult").hide();
   		        	$('#'+searchterm).val('');
   		        	//colorForm();
@@ -1817,8 +1834,37 @@ function addURL(searchterm, iframe=false) {
           $('#'+searchterm).after("<iframe allow='autoplay' class='col-md-11 iframePreview' src='"+url+"' crossorigin></iframe>");
         }
         else {
-          $('#'+searchterm).after("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"_"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
+          $('#'+searchterm).next('.tags-url').prepend("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"_"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
         }
+
+        // popover Wayback Machine
+        var tooltip_save = '<span class="savetheweb" \
+          data-toggle="popover" \
+          data-container="body"\
+          data-offset="0,75%">\
+          </span>';
+
+        var tooltip_saved = '<span class="savedtheweb" \
+          data-toggle="popover" \
+          data-container="body"\
+          data-offset="0,75%">\
+          </span>';
+
+        $('#'+searchterm).parent().append(tooltip_save);
+        $('#'+searchterm).parent().append(tooltip_saved);
+        $(".savetheweb").popover({
+          html: true,
+          title : "<h4>Need to save a source for the future?</h4>",
+          content: "<p>If you have a web page that is important to you, \
+          we can save it using the \
+          <a target='_blank' href='https://archive.org/web/'>Wayback Machine</a></p>\
+          <p>Shall we?</p>\
+          <button onclick=saveTheWeb('"+$('#'+searchterm).val()+"') class='btn btn-dark'>yes</button> \
+          <button onclick=destroyPopover() class='btn btn-dark'>Maybe later</button>\
+          <p></p>",
+          placement: "bottom",
+        }).popover('show');
+
       }
       else if ($('#'+searchterm).val().length > 0 && !regexURL.test($('#'+searchterm).val()) ) {
         alert('Insert a valid URL');
@@ -2033,7 +2079,7 @@ function searchSkos(searchterm) {
               $(this).bind('click', function (e) {
                 e.preventDefault();
                 if (!skos_vocabs.includes("oneVocableAccepted") || $('#' + searchterm).nextAll("span").length == 0) {
-                  $('#' + searchterm).after("<span class='tag " + uri + "' data-input='" + searchterm + "' data-id='" + uri + "'>" + label+" - "+vocabulary_noun + "</span><input type='hidden' class='hiddenInput " + uri + "' name='" + searchterm + "-" + uri + "' value=\"" + uri + "," + label + " - " + vocabulary_noun + "\"/>");
+                  $('#' + searchterm).after("<span class='tag " + uri + "' data-input='" + searchterm + "' data-id='" + uri + "'>" + label+" - "+vocabulary_noun + "</span><input type='hidden' class='hiddenInput " + uri + "' name='" + searchterm + "_" + uri + "' value=\"" + uri + "," + label + " - " + vocabulary_noun + "\"/>");
                 }
                 else if (skos_vocabs.includes("oneVocableAccepted") && $('#' + searchterm).nextAll("span").length > 0) {
                   alert("Only one term is accepted!");
@@ -2068,18 +2114,18 @@ function addMultimedia(searchterm) {
       if ($('#'+searchterm).val().length > 0 && regexURL.test($('#'+searchterm).val()) ) {
         // IMAGE
         if ($('#'+searchterm).hasClass("Image") && stringEndsWith($('#'+searchterm).val(), imageFormats)) {
-          $('#'+searchterm).after("<div class='multimediaTag "+newID+"'></div>");
-          $('.multimediaTag.'+newID).prepend("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"-"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
+          $('#'+searchterm).next('.tags-url').prepend("<div class='multimediaTag "+newID+"'></div>");
+          $('.multimediaTag.'+newID).prepend("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"_"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
           $('.multimediaTag.'+newID).prepend("<span class='MMtag file_image' data-id='"+encodeURIComponent($('#'+searchterm).val())+"'><i class='fas fa-eye'></i></span>");
         } // AUDIO
         else if ($('#'+searchterm).hasClass("Audio") && stringEndsWith($('#'+searchterm).val(), audioFormats)) {
-          $('#'+searchterm).after("<div class='multimediaTag "+newID+"'></div>");
-          $('.multimediaTag.'+newID).prepend("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"-"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
+          $('#'+searchterm).next('.tags-url').prepend("<div class='multimediaTag "+newID+"'></div>");
+          $('.multimediaTag.'+newID).prepend("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"_"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
           $('.multimediaTag.'+newID).prepend("<span class='MMtag file_audio' data-id='"+encodeURIComponent($('#'+searchterm).val())+"'><i class='fas fa-eye'></i></span>");
         } // VIDEO
         else if ($('#'+searchterm).hasClass("Video") && stringEndsWith($('#'+searchterm).val(), videoFormats)) {
-          $('#'+searchterm).after("<div class='multimediaTag "+newID+"'></div>");
-          $('.multimediaTag.'+newID).prepend("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"-"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
+          $('#'+searchterm).next('.tags-url').prepend("<div class='multimediaTag "+newID+"'></div>");
+          $('.multimediaTag.'+newID).prepend("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"_"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
           $('.multimediaTag.'+newID).prepend("<span class='MMtag file_video' data-id='"+encodeURIComponent($('#'+searchterm).val())+"'><i class='fas fa-eye'></i></span>");
         } 
         else {
@@ -2109,6 +2155,7 @@ function stringEndsWith(string, formatList) {
 // NLP
 function nlpText(searchterm) {
   var lang = searchterm.split('_')[1];
+  var baseID = searchterm.split('_')[0];
 	$('textarea#'+searchterm).keypress( throttle(function(e) {
 	  	if(e.which == 13) {
 	  		//$('textarea#'+searchterm).parent().parent().append('<div class="tags-nlp col-md-9"></div>');
@@ -2137,7 +2184,7 @@ function nlpText(searchterm) {
       			    function(data) {
                   console.log(data);
       			    	$.each(data.search, function(i, item) {
-      				        $('textarea#'+searchterm).next('.tags-nlp').append('<span class="tag nlp '+item.title+'" data-input="'+searchterm+'" data-id="'+item.title+'">'+item.label+'</span><input type="hidden" class="hiddenInput '+item.title+'" name="'+searchterm+'-'+item.title+'" value="'+item.title+','+encodeURIComponent(item.label)+'"/>');
+      				        $('textarea#'+searchterm).next('.tags-nlp').append('<span class="tag nlp '+item.title+'" data-input="'+baseID+'" data-id="'+item.title+'">'+item.label+'</span><input type="hidden" class="hiddenInput '+item.title+'" name="'+baseID+'_'+item.title+'" value="'+item.title+','+encodeURIComponent(item.label)+'"/>');
       			    	});
       			    });
       			};

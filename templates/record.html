@@ -1,4 +1,4 @@
-$def with(record_form, pageID, user, alert, limit, is_git_auth,invalid,project,template,query_templates,knowledge_extractor)
+$def with(record_form,pageID,user,alert,limit,is_git_auth,invalid,project,template,query_templates,knowledge_extractor)
 $var user = user
 $var is_git_auth = is_git_auth
 $var project = project
@@ -53,18 +53,6 @@ $if alert == False:
 											$$('#$id').prepend($$('<option value="None">Select from the list</option>'));
 										</script>
 							</section>
-							<script>console.log('$knowledge_extractor')</script>
-						$if knowledge_extractor:
-						
-							<section class="row import_form">
-								<section class="col-md-12 col-sm-12 col-lg-12">ENTITIES</section>
-									<ul class="imported_graphs" id="imported_graphs">
-										<li id="add_extractor"><label class='add_graph_button'>Extract Entities  <i class='fas fa-plus-circle' onclick="extraction_form(this), window.scrollTo(0, 0)"></i></label></li>
-									</ul>
-							</section>
-							<script>
-								var extraction_number = 1
-							</script>
 					</section>
 					<section class="homeheading col-md-4 col-sm-4 col-lg-4">
 						<h2>What did you find?</h2>
@@ -142,6 +130,10 @@ $if alert == False:
 		<section class="col-md-3" id="lookup">
 		</section>
 	</section>
+	<link rel="stylesheet" type="text/css" href="./static/css/yasgui.css">
+	<script src='static/js/yasr.bundled.min.js'></script>
+	<script src='static/js/yasqe.bundled.min.js'></script>
+	<script src="static/js/sparql.js"></script>
 	<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 	<!-- <script type="text/javascript">
 		// alert when mouse leave page to save
@@ -169,4 +161,13 @@ $else:
 		<h3>You already proposed $limit new resources today! Please come back tomorrow</h3>
 	</header>
 
-<script type="text/javascript">var ip ='$session["ip_address"]'</script>
+$if knowledge_extractor != set():
+	$ extractors_list = list(knowledge_extractor)
+	<script type="text/javascript">
+		const extractionsObj = {}
+		const extractors = '$extractors_list'.replace(/&#39;/g, '"')
+		const extractorsArray = JSON.parse(extractors)
+		if (extractorsArray.includes('$template')) {
+			generateExtractor('$pageID');
+		}
+	</script>

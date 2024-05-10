@@ -216,7 +216,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					class_= classes,
 					value=default,
 					mandatory = mandatory,
-					subtemplate = resource_class), ) + get_form(field['import_subtemplate'], subtemplate=True)
+					subtemplate = resource_class,
+					subtemplateID = field['import_subtemplate']), ) + get_form(field['import_subtemplate'], subtemplate=True)
 
 	if subtemplate:
 		return params

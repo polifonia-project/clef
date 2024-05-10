@@ -310,7 +310,7 @@ def updateTemplateList(res_name=None,res_type=None,remove=False):
 
 def get_template_from_class(res_type):
 	print("###res_type",res_type)
-	""" Return the tempalte file path given the URI of the OWL class
+	""" Return the template file path given the URI of the OWL class
 
 	Parameters
 	----------
@@ -323,6 +323,22 @@ def get_template_from_class(res_type):
 
 	res_template = [t["template"] for t in data if t["type"] == res_type][0]
 	return res_template
+
+def get_class_from_template(res_tpl):
+	print("###res_template",res_tpl)
+	""" Return the URI of the OWL class given the template path
+
+	Parameters
+	----------
+	res_tpl: str
+		Path associated to the template. Becomes dictionary value
+	"""
+
+	with open(TEMPLATE_LIST,'r') as tpl_file:
+		data = json.load(tpl_file)
+
+	res_type = [t["type"] for t in data if t["template"] == res_tpl][0]
+	return res_type
 
 def update_ask_class(template_path,res_name,remove=False):
 	""" Update the list of existing templates in ask_class.json.
@@ -456,25 +472,28 @@ def update_skos_vocabs(d, skos):
 
 
 # KNOWLEDGE EXTRACTION
-def has_extractor(id, modify=False):
+def has_extractor(res_id, modify=False):
 	# checks whether a template allows some knowledge extraction
 	if modify:
 		with open(conf.knowledge_extraction,'r') as ke_file:
 			data = json.load(ke_file)
-			if id in data:
+			if res_id in data:
 				return True
 			else:
 				return False
 	else:
-		with open(id,'r') as tpl_file:
+		result = set()
+		with open(res_id,'r') as tpl_file:
 			data = json.load(tpl_file)
 		
-		print(data)
 		if data:
 			for field in data:
 				if 'knowledgeExtractor' in field and field['knowledgeExtractor'] == 'True':
-					return True
-		return False
+					result.add(res_id)
+				elif 'import_subtemplate' in field and field['import_subtemplate'] != '':
+					# iterate over sub-templates
+					result.update(has_extractor(field['import_subtemplate'], modify=False))
+		return result
 
 def update_knowledge_extraction(data, KE_file):
 	# stores the knowledge extractions set by the user

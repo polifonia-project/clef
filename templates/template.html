@@ -96,7 +96,7 @@ $ id = templates.get_default_id()
 											<!-- SPARQL CONSTRAINT -->
 											$if field['value'] == 'URI':
 												<section class='row'>
-													<label class='col-md-3'>SPARQL CONSTRAINTS <br><span class='comment'>select a service to show, modify, or add a constraint</span></label>
+													<label class='col-md-3'>SPARQL CONSTRAINTS <br><span class='comment'>select a service to modify or add a constraint (optional)</span></label>
 													<select class='custom-select col-md-8' name='service__$id' onchange='SPARQL_constraint_editor($$(this).parent().prev().find("select"),this,$id)'>
 													<option value='None'>Select a service</option>
 													<option value='WD'>Wikidata</option>
@@ -206,7 +206,6 @@ $ id = templates.get_default_id()
 												<label class='col-md-3' for='subtemplate_name__"+temp_id+"'>TEMPLATE NAME</label>
 												<input type='text' id='subtemplate_name__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_name__"+temp_id+"' disabled>
 											</section>
-											
 											<section class='row'>
 												<label class='col-md-3' for='subtemplate_class__"+temp_id+"'>OWL CLASS</label>
 												<input type='text' id='subtemplate_class__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_class__"+temp_id+"' disabled>
@@ -351,4 +350,3 @@ $ id = templates.get_default_id()
 <script src='static/js/yasqe.bundled.min.js'></script>
 <script src="static/js/sparql.js"></script>
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script type="text/javascript">var ip ='$session["ip_address"]'</script>

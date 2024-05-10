@@ -776,6 +776,10 @@ span[class^='tag Q']:hover {
   margin-left: 20px;
 }
 
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: rgb(100, 23, 180);
+}
 
 input[type='text'],
 input[type='textarea'],
@@ -2009,12 +2013,81 @@ button#showTemplates {
   font-size: 85%;
 }
 
-.import_form {
+.import-form {
   margin-left: 0px !important;
   margin-top: 0.7em;
 }
+
 .imported_graphs {
   margin-top: 0.7em;
+}
+
+.import-form + .block_field {
+  margin-top: 15px;
+  margin-left: 10px;
+}
+
+.import-form + .block_field .btn {
+  max-width: 35%;
+  float: right;
+}
+
+/* new Knowledge Extraction code */
+
+.extraction-form-div {
+  width: 90%;
+  margin-left: 5%;
+  margin-right: 5%;
+}
+
+.extraction-form-div:first-of-type {
+  color: rgb(100, 23, 180);
+  border-bottom: 1px solid rgb(100, 23, 180);
+  margin-top: 0.5em;
+}
+
+.fa-times {
+  position: absolute;
+  right: 50px;
+  margin-top: 12px;
+  color: rgb(100, 23, 180);
+  font-size: 0.9em;
+}
+
+.extraction-form-label:nth-child(2) {
+  margin-left: 3% !important;
+}
+
+.extraction-form-label, .extraction-form-input {
+  width: 48% !important;
+  display: inline-block;
+}
+
+.block_field input[type="text"].extraction-form-input:first-of-type {
+  margin-left: 0px !important;
+}
+
+.block_field input[type="text"].extraction-form-input {
+  margin-left: 3% !important;
+  padding-top: 0.4em;
+}
+
+.add-parameter {
+  display: block;
+  margin-left: 5%;
+  margin-bottom: 1.2em;
+  font-size: 0.8em;
+  color: rgb(100, 23, 180);
+  cursor: pointer;
+}
+
+.extractor-comment {
+  width: 90%;
+  margin-left: 5%;
+  margin-bottom: 0px;
+  padding: 5px;
+  font-size: 0.9em;
+  border-bottom: 1px solid darkgray;
 }
 
 /* subtemplates */
@@ -2162,10 +2235,10 @@ input[subtemplate]+.fa-plus-circle {
 #lang-form {
   display: block;
   position: absolute;
-  background: #eae2f6;
+  background: #ECE0FD;
   width: 400px;
   padding: 20px;
-  border: solid 1px black;
+  border: solid 1px rgb(100, 23, 180);
   border-radius: 5px;
   z-index: 1023;
 }

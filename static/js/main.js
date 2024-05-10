@@ -2,7 +2,7 @@
 if (graph.length) {var in_graph = "FROM <"+graph+">"} else {var in_graph = ""}
 const wd_img = ' <img src="https://upload.wikimedia.org/wikipedia/commons/d/d2/Wikidata-logo-without-paddings.svg" style="width:25px ; padding-bottom: 5px; filter: grayscale(100%);"/>'
 const geo_img = '<img src="https://www.geonames.org/img/globe.gif" style="width:20px ; padding-bottom: 5px; filter: grayscale(100%);"/>';
-const viaf_img = '<img src="https://upload.wikimedia.org/wikipedia/commons/0/01/VIAF_icon.svg" style="width:20px ; padding-bottom: 5px; filter: grayscale(100%);"/>';
+const viaf_img = '<img src="https://upload.wikimedia.org/wikipedia/commons/0/01/VIAF_icon.svg" style="width:15px ; padding-bottom: 5px; filter: grayscale(100%);"/>';
 const wikidataEndpoint = "https://query.wikidata.org/sparql"
 $(document).ready(function() {
 
@@ -2256,114 +2256,108 @@ function replace_existing_subforms() {
 }
 
 // create subrecords
-function create_subrecord(resource_class, field_name, el, subform_id=null ) {
+function create_subrecord(resourceClass, fieldName, el, subformId=null ) {
 
   // prepare a new subrecord id 
-  if (!subform_id) {
+  if (!subformId) {
     var now = new Date().valueOf();
-    subform_id = (now / 1000).toString().replace('.', '-');
+    subformId = (now / 1000).toString().replace('.', '-');
   }
-  var form_id = $('.corners').eq(0).find('form').eq(0).attr('id'); // either 'recordForm' or 'modifyForm'
+  var formId = $('.corners').eq(0).find('form').eq(0).attr('id'); // either 'recordForm' or 'modifyForm'
   replace_existing_subforms();
 
   // prepare the new subrecord form
-  const subrecord_section = $("<section class='subform_section col-md-12 col-sm-4'></section>");
-  const subrecord_form = $("<section class='subform' id='"+subform_id+"-form' data-target='"+subform_id+"'></section>");
-  subrecord_form.append($("<h2 class='articleTitle' style='font-size:3em'>"+field_name+"</h2>"));
+  const subrecordSection = $("<section class='subform_section col-md-12 col-sm-4'></section>");
+  const subrecordForm = $("<section class='subform' id='"+subformId+"-form' data-target='"+subformId+"'></section>");
+  subrecordForm.append($("<h2 class='articleTitle' style='font-size:3em'>"+fieldName+"</h2>"));
 
   // create a clone for each input belonging to the requested (sub-)template
-  $("[class~='("+resource_class+")'][class~='original_subtemplate']").each(function() {
+  $("[class~='("+resourceClass+")'][class~='original_subtemplate']").each(function() {
     // CREATE A CLONE ELEMENT
-    const clone_element = $(this).parent().parent().clone();
-    clone_element.attr("style", "display: block"); // make it visible
-    clone_element.find('input').attr('data-subform',subform_id); // associate the input field with the subrecord id
-    clone_element.find('input').removeClass('original_subtemplate');
+    const cloneElement = $(this).parent().parent().clone();
+    cloneElement.attr("style", "display: block"); // make it visible
+    cloneElement.find('input').attr('data-subform',subformId); // associate the input field with the subrecord id
+    cloneElement.find('input').removeClass('original_subtemplate');
     // associate proper identifiers to input fields belonging to the subrecord form
-    var input_id = clone_element.find('input:not([type="hidden"])').attr('id');
-    console.log(input_id)
-    clone_element.find('input:not([type="hidden"])').attr('id', input_id+"_"+subform_id.toString());
-    clone_element.find('input:not([type="hidden"])').attr('name', input_id+"_"+subform_id.toString());
+    var inputId = cloneElement.find('input:not([type="hidden"])').attr('id');
+    cloneElement.find('input:not([type="hidden"])').attr('id', inputId+"_"+subformId.toString());
+    cloneElement.find('input:not([type="hidden"])').attr('name', inputId+"_"+subformId.toString());
 
     // SET LITERAL INPUT FIELDS
-    if (clone_element.find('[lang]').length>0) {
-      var literal_input = clone_element.find('[lang]');
-      var language_list_section = literal_input.parent().prev();
-      language_list_section.find('a').each(function() {
-        var onclick_attr = $(this).attr('onclick');
+    if (cloneElement.find('[lang]').length>0) {
+      var literalInput = cloneElement.find('[lang]');
+      var languageListSection = literalInput.parent().prev();
+      languageListSection.find('a').each(function() {
+        var onclickAttr = $(this).attr('onclick');
         var regex = /'([^"]*)'/g;
-        var original_id_extended = onclick_attr.match(regex)[0];
-        var original_id = original_id_extended.substring(1, original_id_extended.length-1)
-        $(this).attr('onclick', onclick_attr.replace(original_id, original_id+'_'+subform_id));
+        var originalIdExtended = onclickAttr.match(regex)[0];
+        var originalId = originalIdExtended.substring(1, originalIdExtended.length-1)
+        $(this).attr('onclick', onclickAttr.replace(originalId, originalId+'_'+subformId));
       });
     }
     // add a main-lang hidden input in case of primary key
-    if (clone_element.find('input.disambiguate').next('[type="hidden"]').length > 0) {
-      var primary_key_lang_id = clone_element.find('input.disambiguate').next('[type="hidden"]').attr('id');
-      clone_element.find('input[type="hidden"]').attr('id', primary_key_lang_id+"_"+subform_id.toString());
-      clone_element.find('input[type="hidden"]').attr('name', primary_key_lang_id+"_"+subform_id.toString());
+    if (cloneElement.find('input.disambiguate').next('[type="hidden"]').length > 0) {
+      var primaryKeyLangId = cloneElement.find('input.disambiguate').next('[type="hidden"]').attr('id');
+      cloneElement.find('input[type="hidden"]').attr('id', primaryKeyLangId+"_"+subformId.toString());
+      cloneElement.find('input[type="hidden"]').attr('name', primaryKeyLangId+"_"+subformId.toString());
     }
     
     // SET SUBTEMPLATE FIELDS '+' BUTTON
-    clone_element.find('[subtemplate]').each(function(){
-      var subtemplate_class = $(this).attr('subtemplate');
-      var field_name = $(this).parent().prev().text();
-      var add_subrecord_btn = $(this).next('i');
-      add_subrecord_btn.on('click', function(){
-        create_subrecord(subtemplate_class,field_name,add_subrecord_btn);
+    cloneElement.find('[subtemplate]').each(function(){
+      var subtemplateClass = $(this).attr('subtemplate');
+      var fieldName = $(this).parent().prev().text();
+      var addSubrecordBtn = $(this).next('i');
+      addSubrecordBtn.on('click', function(){
+        create_subrecord(subtemplateClass,fieldName,addSubrecordBtn);
       })
     })
 
-    console.log($('[name="'+input_id+'_'+subform_id+'-subrecords"]'))
-
     // retrieve previously provided values in case they are available (i.e., modify subrecords):
-    let clone_element_values = [];
-    // a) single value 
-    if ($('#'+form_id+' #'+input_id+"_"+subform_id).length >0) {
-      const to_be_modified = $('#'+form_id+' #'+input_id+'_'+subform_id);
-      clone_element.find('input').val(to_be_modified.val());
+    let clonedElementValues = [];
+    // a) single value fields
+    if ($('#'+formId+' #'+inputId+"_"+subformId).length >0) {
+      const toBeModified = $('#'+form_id+' #'+inputId+'_'+subformId);
+      cloneElement.find('input').val(toBeModified.val());
     } 
-    // b) multiple values
-    if ($('#'+form_id+' [name^="'+input_id+'_"][name$="_'+subform_id+'"]:not([name="'+input_id.split('_')[0]+'_'+subform_id+'"])').length >0) {
-      var imported_values = $('#'+form_id+' [name^="'+input_id.split('_')[0]+'_"][name$="_'+subform_id+'"]:not([name="'+input_id.split('_')[0]+'_'+subform_id+'"])');
-      clone_element.find('.label div a').remove();
-      if ($('#'+input_id).hasClass('searchWikidata') || $('#'+input_id).hasClass('searchVocab') || $('#'+input_id).hasClass('searchGeonamaes')) {
-        imported_values.each(function(){
+    // b) multiple values fields
+    if ($('#'+formId+' [name^="'+inputId+'_"][name$="_'+subformId+'"]:not([name="'+inputId.split('_')[0]+'_'+subformId+'"])').length >0) {
+      var importedValues = $('#'+formId+' [name^="'+inputId.split('_')[0]+'_"][name$="_'+subformId+'"]:not([name="'+inputId.split('_')[0]+'_'+subformId+'"])');
+      cloneElement.find('.label div a').remove();
+      if ($('#'+inputId).hasClass('searchWikidata') || $('#'+inputId).hasClass('searchVocab') || $('#'+inputId).hasClass('searchGeonamaes')) {
+        importedValues.each(function(){
             // imported values and URIs
             var value = $(this).val();
             var code = value.split(",")[0];
             var label = decodeURIComponent(value.split(",")[1]);
-            var imported_value_span = $("<span class='tag "+code+"' data-input='"+input_id+'__'+subform_id+"' data-id='"+code+"'>"+label+"</span>");
-            clone_element_values.push(imported_value_span);
-            clone_element_values.push($(this));
+            var importedValueSpan = $("<span class='tag "+code+"' data-input='"+inputId+'__'+subformId+"' data-id='"+code+"'>"+label+"</span>");
+            clonedElementValues.push(importedValueSpan);
+            clonedElementValues.push($(this));
             $(this).remove();
         });
       } else {
-        imported_values.each(function(){
+        importedValues.each(function(){
           // multiple-lang literal values
-          clone_element_values.push($(this));
-          clone_element.find('input').remove();
+          clonedElementValues.push($(this));
+          cloneElement.find('input').remove();
           if($(this).attr('lang') != undefined) {
             let lang = $(this).attr('lang');
-            const new_lang_item = $('<a class="lang-item" title="text language: '+lang.toUpperCase()+'" onclick="show_lang(\''+$(this).attr('id')+'\')">'+lang+'</a>');
-            clone_element.find('div').append(new_lang_item);
+            const newLangItem = $('<a class="lang-item" title="text language: '+lang.toUpperCase()+'" onclick="show_lang(\''+$(this).attr('id')+'\')">'+lang+'</a>');
+            cloneElement.find('div').append(newLangItem);
           } else {
-            let main_lang = $(this).val();
-            clone_element.find('div a[title="text language: '+main_lang.toUpperCase()+'"]').addClass('main-lang');
+            let mainLang = $(this).val();
+            cloneElement.find('div a[title="text language: '+mainLang.toUpperCase()+'"]').addClass('main-lang');
           }       
         });
-        clone_element.find('div a').eq(0).addClass('selected-lang');
-        clone_element_values[0].show();
-        console.log(clone_element_values)
+        cloneElement.find('div a').eq(0).addClass('selected-lang');
+        clonedElementValues[0].show();
       }
     } 
-    // c) subrecords
-    if ($('[name="'+input_id+'_'+subform_id+'-subrecords"]').length>0) {
+    // c) subrecords fields (inner subrecords)
+    if ($('[name="'+inputId+'_'+subformId+'-subrecords"]').length>0) {
       // retrieve subrecords
-      var subrecords = $('[name="'+input_id+'_'+subform_id+'-subrecords"]').val().split(',');
-      console.log(subrecords)
-      var subtemplate_field_id = $(this).attr('name').replace('-subrecords', '');
-      console.log($('#'+subtemplate_field_id).attr('class'))
-      var subrecord_cls = $('#'+subtemplate_field_id).attr('subtemplate')
+      var subrecords = $('[name="'+inputId+'_'+subformId+'-subrecords"]').val().split(',');
+      var subtemplateFieldId = $(this).attr('name').replace('-subrecords', '');
+      var subrecord_cls = $('#'+subtemplateFieldId).attr('subtemplate')
       for (let i=0; i<subrecords.length;i++){
         var code = subrecords[i];
         let label = "";
@@ -2371,47 +2365,49 @@ function create_subrecord(resource_class, field_name, el, subform_id=null ) {
           code = subrecords[i].split(";")[0];
           label = subrecords[i].split(";")[1];
         } else {          
-          var subrecord_label_field = $('.original_subtemplate.disambiguate[class*="('+subrecord_cls+')"]');
-          console.log(subrecord_label_field)
-          if (subrecord_label_field.length > 0) {
-            var main_lang = $('#'+subrecord_label_field.attr('id').split('_')[0] + '_mainLang_' + code).val();
-            console.log('#'+subrecord_label_field.attr('id').split('_')[0] + '_mainLang_' + code)
-            label = $('#'+subrecord_label_field.attr('id').split('_')[0]+'_'+main_lang+'_'+code).val();
-            console.log('#'+subrecord_label_field.attr('id').split('_')[0]+'_'+main_lang+'_'+code)
-            console.log(label)
+          var subrecordLabelField = $('.original_subtemplate.disambiguate[class*="('+subrecordCls+')"]');
+          if (subrecordLabelField.length > 0) {
+            var mainLang = $('#'+subrecordLabelField.attr('id').split('_')[0] + '_mainLang_' + code).val();
+            label = $('#'+subrecordLabelField.attr('id').split('_')[0]+'_'+mainLang+'_'+code).val();
           }
         }
-        var subrecord_value_span = $("<span class='tag-subrecord "+subrecord_cls+"' id='"+code+"-tag'>"+label+"</span>")
-        var modify_button = $('<i class="far fa-edit" onclick="modify_subrecord(`'+code+'`, keep=true)"></i>')
-        var delete_button = $('<i class="far fa-trash-alt" onclick="modify_subrecord(`'+code+'`, keep=false)"></i>')
-        clone_element_values.push(subrecord_value_span, modify_button, delete_button);
+        var subrecordValueSpan = $("<span class='tag-subrecord "+subrecordCls+"' id='"+code+"-tag'>"+label+"</span>")
+        var modifyButton = $('<i class="far fa-edit" onclick="modify_subrecord(`'+code+'`, keep=true)"></i>')
+        var deleteButton = $('<i class="far fa-trash-alt" onclick="modify_subrecord(`'+code+'`, keep=false)"></i>')
+        clonedElementValues.push(subrecordValueSpan, modifyButton, deleteButton);
       }
     
     }
-    clone_element.find('.input_or_select').eq(0).append(clone_element_values);
-    subrecord_form.append(clone_element);
+    cloneElement.find('.input_or_select').eq(0).append(clonedElementValues);
+    subrecordForm.append(cloneElement);
+
   })
 
-  // save or cancel subrecord (buttons)
-  const subrecord_buttons = $("<section class='row subform_buttons buttonsSection'></section>");
-  const save_subrecord_btn = $("<input id='subrecord_save' class='btn btn-dark' style='margin-left:20px' value='Add'>");
-  const cancel_subrecord_btn = $("<input id='subrecord_cancel' class='btn btn-dark' style='margin-left:20px' value='Cancel'>");
+  // add knowledge extractor if required
+  var resourceTemplate = $('[subtemplate="'+resourceClass+'"').eq(0).attr('subtemplateid');
+  if (extractorsArray.includes(resourceTemplate)) {
+    generateExtractor(subformId,subrecordForm);
+  }
 
-  console.log(el)
+  // save or cancel subrecord (buttons)
+  const subrecordButtons = $("<section class='row subform_buttons buttonsSection'></section>");
+  const saveSubrecordButton = $("<input id='subrecord_save' class='btn btn-dark' style='margin-left:20px' value='Add'>");
+  const cancelSubrecordButton = $("<input id='subrecord_cancel' class='btn btn-dark' style='margin-left:20px' value='Cancel'>");
+
   // SAVE SUBRECORD
-  save_subrecord_btn.on('click', function(e) {
+  saveSubrecordButton.on('click', function(e) {
     // generate a tag
-    var is_valid = check_mandatory_fields(this);
-    if (is_valid) {
-      var label_field = subrecord_form.find('.disambiguate').eq(0);
-      var label_main_lang = $('#'+label_field.attr('id').replace(label_field.attr('lang'), 'mainLang')).val();
-      var tag_label = subrecord_form.find('.disambiguate[lang="'+label_main_lang+'"]').val() || (field_name + "-" + subform_id);
+    var isValid = check_mandatory_fields(this);
+    if (isValid) {
+      var labelField = subrecordForm.find('.disambiguate').eq(0);
+      var labelMainLang = $('#'+labelField.attr('id').replace(labelField.attr('lang'), 'mainLang')).val();
+      var tagLabel = subrecordForm.find('.disambiguate[lang="'+labelMainLang+'"]').val() || (fieldName + "-" + subformId);
       
       // store all the input ids to be associated with a subrecord
       // append those inputs to the main record form to pass their values to the back-end application
       let subinputs = [];
-      subrecord_form.find('input:not(.btn)').each(function() {
-        $('#'+form_id).append($(this));
+      subrecordForm.find('input:not(.btn)').each(function() {
+        $('#'+formId).append($(this));
         $(this).hide();
         if ($(this).attr('id') !== undefined) {
           if($(this).attr('lang')!== undefined) {
@@ -2422,20 +2418,20 @@ function create_subrecord(resource_class, field_name, el, subform_id=null ) {
           }
         };
       });
-      el.after("<br/><span id='"+subform_id+"-tag' class='tag-subrecord "+resource_class+"'>" + tag_label + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+subform_id+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+subform_id+"\", keep=false)'></i>");
+      el.after("<br/><span id='"+subformId+"-tag' class='tag-subrecord "+resourceClass+"'>" + tagLabel + "</span><i class='far fa-edit' onclick='modify_subrecord(\""+subformId+"\", keep=true)'></i><i class='far fa-trash-alt' onclick='modify_subrecord(\""+subformId+"\", keep=false)'></i>");
 
       // for each subtemplate field, create an hidden input value including a list of related subrecords
       // this is needed to streamline the creation of records (back-end application)
-      var subrecord_base = $("[subtemplate='"+resource_class+"']").attr('id'); // the 'id' of the 'subtemplate' field (within the main record)
-      var created_subrecords = $('[name="'+subrecord_base+'-subrecords"]');
-      if (created_subrecords.length) {
-          var to_extend_value = created_subrecords.val();
-          if (!created_subrecords.val().split(',').includes(subform_id)) {
-            created_subrecords.val(to_extend_value + "," + subform_id);
+      var subrecordBase = $("[subtemplate='"+resourceClass+"']").attr('id'); // the 'id' of the 'subtemplate' field (within the main record)
+      var createdSubrecords = $('[name="'+subrecord_base+'-subrecords"]');
+      if (createdSubrecords.length) {
+          var toExtendValue = createdSubrecords.val();
+          if (!createdSubrecords.val().split(',').includes(subformId)) {
+            createdSubrecords.val(toExtendValue + "," + subformId);
           }
       } else {
-          const new_sub = $("<input type='hidden' name='"+$("[subtemplate='"+resource_class+"']").attr('id')+"-subrecords' value='"+subform_id+"'>");
-          $('#'+form_id).append(new_sub);
+          const newSubrecord = $("<input type='hidden' name='"+$("[subtemplate='"+resourceClass+"']").attr('id')+"-subrecords' value='"+subformId+"'>");
+          $('#'+form_id).append(newSubrecord);
       }
       // hide_subform
       cancel_subrecord(this);
@@ -2443,15 +2439,15 @@ function create_subrecord(resource_class, field_name, el, subform_id=null ) {
   });
   
   // CANCEL SUBRECORD
-  cancel_subrecord_btn.on('click', function(e) {
+  cancelSubrecordButton.on('click', function(e) {
     // hide_subform
     cancel_subrecord(this);
   });
   
-  subrecord_buttons.append(cancel_subrecord_btn, save_subrecord_btn);
-  subrecord_form.append(subrecord_buttons);
-  subrecord_section.append(subrecord_form);
-  $('.main_content').eq(0).prepend(subrecord_section); 
+  subrecordButtons.append(cancelSubrecordButton, saveSubrecordButton);
+  subrecordForm.append(subrecordButtons);
+  subrecordSection.append(subrecordForm);
+  $('.main_content').eq(0).prepend(subrecordSection); 
 }
 
 // CANCEL SUBRECORD (before adding it to #recordForm)
@@ -3033,12 +3029,11 @@ function add_field(field, res_type, backend_file=null) {
 };
 
 function import_subtemplate(el) {
-
   var requested_template = el.value;
   var requested_name = el.options[el.selectedIndex].text;
-  var name_field = $(el).parent().next().find('input').eq(0);
-  var class_field = $(el).parent().next().next().find('input').eq(0);
-  var edit_field = $(el).parent().next().next().next();
+  var name_field = $(el).parent().next().find('input[type="text"]').eq(0);
+  var class_field = $(el).parent().next().next().find('input[type="text"]').eq(0);
+  var edit_field = $(el).parent().next().next().next('input[type="button"]');
   $(name_field).parent().show();
   $(class_field).parent().show();
   // make fields not modifiable unless creating a new subtemplate
@@ -3124,7 +3119,7 @@ function add_disambiguate(temp_id, el) {
     // YASQE editor for SPARQL query patterns
     if (el.value == 'URI') {
       var field_SPARQL_constraint = $("<section class='row'>\
-        <label class='col-md-3'>SPARQL CONSTRAINTS <br><span class='comment'>select a service to show, modify, or add a constraint</span></label>\
+        <label class='col-md-3'>SPARQL CONSTRAINTS <br><span class='comment'>select a service to modify, or add a constraint (optional)</span></label>\
         <select class='custom-select col-md-8' name='service__"+temp_id+"'>\
           <option value='None'>Select a service</option>\
           <option value='WD'>Wikidata</option>\
@@ -3576,115 +3571,293 @@ function yasqe_to_hidden_field(el,keep=false) {
   return value
 }
 
-////////////////////
-//// EXTRACTION ////
-////////////////////
+//////////////////////////////
+//// KNOWLEDGE EXTRACTION ////
+//////////////////////////////
+
+// generate extraction form_row (during form loading)
+function generateExtractor(resId, subtemplate=null) {
+  // predefined HTML node
+  var extractionRow = '<section class="row import-form">\
+    <section class="col-md-12 col-sm-12 col-lg-12">ENTITIES</section>\
+      <ul class="imported_graphs" id="imported-graphs-'+resId+'">\
+        <li id="add_extractor"><label class="add_graph_button">Extract Entities  <i class="fas fa-plus-circle" onclick="generateExtractionForm(\'imported-graphs-'+resId+'\')"></i></label></li>\
+      </ul>\
+  </section>';
+
+  // add the extraction node to the form
+  if (subtemplate===null) {
+    $('#recordForm .homeheading.col-md-8, #modifyForm .homeheading.col-md-8').append(extractionRow);
+  } else {
+    subtemplate.append(extractionRow)
+  }
+}
+
 
 // extraction form
-function extraction_form(element) {
-  $('.homeheading').eq(0).attr('class', 'homeheading col-md-12 col-lg-12 col-sm-12');
-  $('.homeheading.col-md-4.col-sm-4.col-lg-4').hide();
+function generateExtractionForm(ul) {
+  // update the extraction count within the extractions Object
+  var extractorId = ul.replace('imported-graphs-','');
+  if (extractorId in extractionsObj) {
+
+    // get the number of extractions
+    var extractionCountArray = extractionsObj[extractorId];
+    var extractionCount = extractionCountArray.length;
+    var newExtractionCount = extractionCount + 1;
+
+    // initialiaze a new sub-Object to store information about the novel extraction
+    const newExtractionObj = {};
+    newExtractionObj[newExtractionCount] = {}; 
+
+    // append the sub-Object to the extractions Array
+    extractionsObj[extractorId].push(newExtractionObj);
+
+  } else {
+    // initialize an Array of extractions Objects within the main extractionsObject
+    extractionsObj[extractorId] = [{1: {}}];
+  }
+
   // create a select element containing the options to perform the extraction
   var extractor = $("<section class='block_field col-md-12'>\
     <section class='row'>\
-      <label class='col-md-3'>EXTRACTOR TYPE</label>\
-      <select onchange='add_extractor(this)'class='col-md-8' id='extractor' name='extractor'>\
+      <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>EXTRACTOR TYPE</label>\
+      <select onchange='addExtractor(this,\""+extractorId+"\")'class='custom-select' id='extractor' name='extractor'>\
         <option value='None'>Select</option>\
         <option value='api'>API</option>\
         <option value='sparql'>SPARQL</option>\
         <option value='file'>Static File</option>\
       </select>\
     </section>\
-    <section class='row extractor_1'>\
-      <input id='sparql_back0' class='btn btn-dark extractor_0' style='margin-left:20px' value='Back' onClick='prev_extractor(\"block_field\", \"form_row\", true)'>\
+    <section class='row extractor-0'>\
+      <input id='sparql_back0' class='btn btn-dark extractor-0' style='margin-left:20px' value='Back' onClick='prev_extractor(\"block_field\", \"form_row\", true)'>\
     </section>\
   </section>");
-  $(extractor).insertAfter('.import_form');
-  $('.import_form').hide();
-  $('.form_row').hide();
+  $(extractor).insertAfter('.import-form');
+  $('#'+ul).hide();
 };
 
 
-// create a form based on the selected option (API, SPARQL, static file)
-function add_extractor(element) {
+// create a new form based on the selected option (API, SPARQL, static file)
+function addExtractor(element,extractorId) {
   if ($('.block_field.col-md-12').length > 0) {
     $('.block_field.col-md-12 section').not(":first").remove();
   }
-  var id = extraction_number.toString(); // it will be used to create hidden inputs later
-  extraction_number++; 
-  var selected = $(element).find(":selected").val(); // selected option (API, SPARQL, or static file)
-  console.log(selected);
-  $('.extractor_1').remove(); // remove previously created forms (in case the user changes the selected option)
-  if (selected == 'api') {
-    var form = "<section class='row extractor_1'>\
-    <label class='col-md-3'>API access point<br><span class='comment'>url of the API</span></label>\
-    <input type='text' id='ApiUrl' class='col-md-8' placeholder='e.g.: https://exampleApi.org/search'></input>\
+
+  var extractionNumber = extractionsObj[extractorId].length; // number of attempted extraction
+  var extractionId = extractorId+'-'+extractionNumber.toString(); // it will be used to create hidden inputs later
+  var extractionType = $(element).find(":selected").val(); // selected option (API, SPARQL, or static file)
+
+  $('.block_field .extractor-1, .block_field hr').remove() // remove previously created forms (in case the user changes the selected option)
+  if (extractionType == 'api') {
+    var form = "<hr><section class='row extractor-1'>\
+    <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>API access point<br><span class='comment'>url of the API</span></label>\
+    <input type='text' id='ApiUrl' placeholder='e.g.: https://exampleApi.org/search'></input>\
     </section>\
-    <section class='row extractor_1'>\
-    <label class='col-md-3'>QUERY PARAMETERS<br><span class='comment'>write one value per row in the form key, value</span></label>\
-    <textarea id='ApiQuery' placeholder='query,query-term' class='col-md-8'></textarea>\
+    <section class='row extractor-1'>\
+    <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY PARAMETERS<br><span class='comment'>write one value per row</span></label>\
+    <div class='extraction-form-div'>\
+    <span class='extraction-form-label'>KEY</span>\
+    <span class='extraction-form-label'>VALUE</span>\
+    </div>\
+    <p class='extractor-comment'>No parameters available: add a new one</p>\
+    <div class='extraction-form-div'>\
+    <input type='text' class='extraction-form-input'>\
+    <input type='text' class='extraction-form-input'>\
+    <i class='fas fa-times'></i>\
+    </div>\
+    <span class='add-parameter'>Add new <i class='fas fa-plus'></i></span>\
     </section>\
-    <section class='row extractor_1'>\
-    <label class='col-md-3'>RESULT DICTIONARY<br><span class='comment'>write one value per row in the form key, value (i.e. URI/label,path to the URI/label)</span></label>\
-    <textarea id='ApiResults' placeholder='uri,json_results.results.bindings.uri\nlabel,json_results.results.bindings.label,' class='col-md-8'></textarea>\
+    <section class='row extractor-1'>\
+    <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>RESULT DICTIONARY<br><span class='comment'>write one value per row</span></label>\
+    <div class='extraction-form-div'>\
+    <span class='extraction-form-label'>KEY</span>\
+    <span class='extraction-form-label'>VALUE</span>\
+    </div>\
+    <div class='extraction-form-div'>\
+    <input type='text' class='extraction-form-input' value='Array'>\
+    <input type='text' class='extraction-form-input'>\
+    <i class='fas fa-times'></i>\
+    </div>\
+    <div class='extraction-form-div'>\
+    <input type='text' class='extraction-form-input' value='URI'>\
+    <input type='text' class='extraction-form-input'>\
+    <i class='fas fa-times'></i>\
+    </div>\
+    <div class='extraction-form-div'>\
+    <input type='text' class='extraction-form-input' value='Label'>\
+    <input type='text' class='extraction-form-input'>\
+    <i class='fas fa-times'></i>\
+    </div>\
+    <span class='add-parameter'>Add new <i class='fas fa-plus'></i></span>\
+    </section>\
+    "
+    /* var form = "<hr><section class='row extractor-1'>\
+    <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>API access point<br><span class='comment'>url of the API</span></label>\
+    <input type='text' id='ApiUrl' placeholder='e.g.: https://exampleApi.org/search'></input>\
+    </section>\
+    <section class='row extractor-1'>\
+    <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY PARAMETERS<br><span class='comment'>write one value per row in the form key, value</span></label>\
+    <textarea id='ApiQuery' placeholder='query,query-term'></textarea>\
+    </section>\
+    <section class='row extractor-1'>\
+    <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>RESULT DICTIONARY<br><span class='comment'>write one value per row in the form key, value (i.e. URI/label,path to the URI/label)</span></label>\
+    <textarea id='ApiResults' placeholder='uri,json_results.results.bindings.uri\nlabel,json_results.results.bindings.label,'></textarea>\
+    </section>"; */
+  } else if (extractionType == 'sparql') {
+    var form = "<hr><section class='row extractor-1'>\
+    <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>SPARQL endpoint<br><span class='comment'>url of the endpoint</span></label>\
+    <input type='text' id='SparqlUrl' placeholder='e.g.: https://exampleSparql.org/sparql'></input>\
+    </section>\
+    <section class='row extractor-1'>\
+    <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY<br><span class='comment'>a sparql query to be performed</span></label>\
+    <div id='yasqe' class='col-md-12' data-id='"+extractionId+"'>\
     </section>";
-  } else if (selected == 'sparql') {
-    var form = "<section class='row extractor_1'>\
-    <label class='col-md-3'>SPARQL endpoint<br><span class='comment'>url of the endpoint</span></label>\
-    <input type='text' id='SparqlUrl' class='col-md-8' placeholder='e.g.: https://exampleSparql.org/sparql'></input>\
+  } else if (extractionType == 'file') {
+    var form = "<hr><section class='row extractor-1'>\
+    <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>FILE URL<br><span class='comment'>a URL to an external resource (a .json or .csv file)</span></label>\
+    <input type='text' id='FileUrl' placeholder='http://externalResource.csv'></input>\
     </section>\
-    <section class='row extractor_1'>\
-    <label class='col-md-3'>QUERY<br><span class='comment'>a sparql query to be performed</span></label>\
-    <textarea id='SparqlQuery' placeholder='select distinct ?uri ?label where { ... }' class='col-md-8'></textarea>\
+    <section class='row extractor-1'>\
+    <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY<br><span class='comment'>a sparql query to be performed</span></label>\
+    <div id='yasqe' class='col-md-12' data-id='"+extractionId+"'>\
     </section>";
-  } else if (selected == 'file' || selected == 'Select') {
-    var form = "<section class='row extractor_1'>\
-    <label class='col-md-3'>FILE URL<br><span class='comment'>a URL to an external resource (a .json or .csv file)</span></label>\
-    <input type='text' id='FileUrl' placeholder='http://externalResource.csv' class='col-md-8'></input>\
-    </section>\
-    <section class='row extractor_1'>\
-    <label class='col-md-3'>SPARQL.ANYTHING QUERY<br><span class='comment'>a Sparql.Anything query to retrieve results</span></label>\
-    <textarea id='FileQuery' placeholder='SELECT ?uri ?label WHERE {\n?uri ... \n?label ...}' class='col-md-8'></textarea>\
-    </section>";
+  } else {
+    var form = "";
   }
-  var buttons = "<section class='row extractor_1'>\
-  <input id='"+selected+"_back1' class='btn btn-dark extractor_1' style='margin-left:20px' value='Back' onClick='prev_extractor(\"extractor_1\", \"form_row\", true)'>\
-  <input id='"+selected+"_next1' class='btn btn-dark extractor_1' style='margin-left:20px' value='Next' onClick='next_extractor(this, "+id+", \""+selected+"\")'>\
+
+  // navigation button
+  var buttons = "<section class='row extractor-1'>\
+  <input id='"+extractionType+"-back-1' class='btn btn-dark extractor-1' style='margin-left:20px' value='Back' onClick='prevExtractor(\"extractor-1\", \"form_row\", true,\""+extractionId+"\")'>\
+  <input id='"+extractionType+"-next-1' class='btn btn-dark extractor-1' style='margin-left:20px' value='Next' onClick='nextExtractor(this, \""+extractionId+"\", \""+extractionType+"\")'>\
   </section>"
-  // add the new form to the webpage
+
+  // add the new form to the webpage and show YASQE editor when needed
   $(element).closest('.row').after(form+buttons);
+  if (extractionType == 'sparql' || extractionType == 'file') {
+    var yasqe = YASQE(document.getElementById("yasqe"), {
+      sparql: {
+        showQueryButton: false,
+      }
+    });
+    //yasqe.setValue(value_to_set);
+  }
 
   $('.extraction_documentation').show();
   $('.extraction_documentation section').hide();
-  $('.extraction_documentation_'+selected).show();
+  $('.extraction_documentation_'+extractionType).show();
 }
 
-function prev_extractor(to_hide, to_show, remove=false, id=null) {
-  $('.'+to_hide).hide();
-  $('.'+to_show).show();
-  if (remove) {
-    const button = $('.import_form').eq(0);
-    if (id && $('#query_result_' + id).length>0) {
-      button.find(".imported_graphs").prepend($("<li id='graph-"+id+"'><label>Extraction Graph:  <i class='fas fa-trash' onclick='delete_extractor("+id+")'></i></label><br></li>"));
-      var results = JSON.parse($('#query_result_' + id).val()).results.bindings;
-      for (let idx = 0; idx < results.length; idx++) {
-        for (const key in results[idx]) {
-          console.log(results[idx][key]);
+// parse the extraction parameters and send requests
+function nextExtractor(element, id, type) {
+  // retrieve extractor Id and extraction count
+  var splitId = id.split('-');
+  var extractionCount = parseInt(splitId[2]);
+  var extractorId = splitId[0]+'-'+splitId[1];
 
-          if (results[idx][key].type === "literal" && !results[idx][key].value.startsWith("https://") && !results[idx][key].value.startsWith("http://")) {
-            var label = results[idx][key].value;
-          } else if (results[idx][key].type === "uri" || results[idx][key].value.startsWith("https://") || results[idx][key].value.startsWith("http://")) {
-            var uri = results[idx][key].value;
+  // retrieve YASQE query (type=='file'/'sparql')
+  let query = "";
+  var yasqeQueryRows = $('[data-id="'+id+'"]').find('.CodeMirror-code>div');
+  yasqeQueryRows.each(function() {
+    var tokens = $(this).find('pre span span');
+    tokens.each(function() {
+      query += $(this).hasClass('cm-ws') ? ' ' : $(this).text();
+    });
+    query += '\n';
+  });
+  
+  console.log(query)
+
+  // collect all the query information and store it into an Object
+  const objectItem = {};
+  if (type == "api") {
+    objectItem["type"] = "api";
+    objectItem["url"] = $('#ApiUrl').val();
+    objectItem["query"] = $('#ApiQuery').val().replace(/"/g, '\\"');
+    objectItem["results"] = $('#ApiResults').val();
+  } else if (type == "sparql") {
+    objectItem["type"] = "sparql";
+    objectItem["url"] = $('#SparqlUrl').val();
+    objectItem["query"] = query;
+  } else if (type == "file") {
+    objectItem["type"] = "file";
+    objectItem["url"] = $('#FileUrl').val();
+    objectItem["query"] = query;
+  }
+
+  /* Object.entries(objectItem).forEach(([key, value]) => {
+    $('#recordForm, #modifyForm').prepend("<input type='hidden' name='"+id+key+"' value='"+value+"'/>");
+  }); */
+
+  if (type == "api") {
+    // API QUERY:
+    // set query parameters and send the request
+    var jsonQuery = string_to_json(objectItem["query"]);
+    $.getJSON(objectItem["url"], jsonQuery,
+	    function(data) {
+        // show the query results in a table
+        var bindings = showExtractionResult(data,type,id,objectItem);
+
+        // store the results within the temporary Object and display the table
+        const jsonOutput = {'results': {'bindings': bindings}};
+        objectItem["output"] = jsonOutput;
+
+      }).error(function(jqXHR, textStatus, errorThrown) {
+         alert(("error: " + jqXHR.responseText))
+      })
+  } else if (type == "file") {
+    // FILE QUERY:
+    // modify the query to include the necessary clauses
+    
+    var bindings = callSparqlanything(objectItem["query"],id,type,objectItem["url"]);
+    objectItem["output"] = bindings;
+  } else if (type == "sparql") {
+    // SPARQL QUERY
+    // modify the query to include the necessary clauses
+    var bindings = callSparqlanything(objectItem["query"],id,type,objectItem["url"])
+    objectItem["output"] = bindings;
+  }
+
+  // add the extraction information, including the results, to the Extractions Object
+  var newExtractionObj = {}
+  newExtractionObj[extractionCount] = objectItem;
+  extractionsObj[extractorId][extractionCount-1] = newExtractionObj;
+}
+
+// go back to the previous Extraction page to modify query parameters / hide the Extraction form
+function prevExtractor(toHide, toShow, remove=false, id=null) {
+  $('.'+toHide).hide();
+  $('.'+toShow).show();
+  if (remove) {
+
+    // find the Extractions List and access the results dict inside the Extractions Object
+    const extractionListId = id.split('-').slice(0, 2).join('-');
+    const extractionNumber = parseInt(id.split('-')[2]);
+    if ('output' in extractionsObj[extractionListId][extractionNumber-1][extractionNumber]) {
+      var results = extractionsObj[extractionListId][extractionNumber-1][extractionNumber].output.results.bindings;
+
+      // if results exist, create a new list item to collect each retrieved URI,label pair in the form of a tag (containing an hidden input)
+      if (results.length>0) {
+        $('#imported-graphs-'+extractionListId).prepend($("<li id='graph-"+id+"'><label>Extraction Graph:  <i class='fas fa-trash' onclick='delete_extractor("+id+")'></i></label><br></li>"));
+        
+        for (let idx = 0; idx < results.length; idx++) {
+          for (const key in results[idx]) {
+            console.log(results[idx][key]);
+
+            if (results[idx][key].type === "literal" && !results[idx][key].value.startsWith("https://") && !results[idx][key].value.startsWith("http://")) {
+              var label = results[idx][key].value;
+            } else if (results[idx][key].type === "uri" || results[idx][key].value.startsWith("https://") || results[idx][key].value.startsWith("http://")) {
+              var uri = results[idx][key].value;
+            }
           }
+          $('#imported-graphs-'+extractionListId).find("#graph-" + id).append("<span class='tag' data-id='" + uri + "'>" + label + "</span><input type='hidden' name='keyword_"+id+"_"+label+"' value='"+encodeURIComponent(uri)+"'/>");
         }
-        button.find("#graph-" + id).append("<span class='tag' data-id='" + uri + "'>" + label + "</span><input type='hidden' name='keyword_"+id+"_"+label+"' value='"+encodeURIComponent(uri)+"'/>");
       }
     }
-    $('.block_field.col-md-12').replaceWith(button);
-    button.show();
-    $('.homeheading').eq(0).attr('class', 'homeheading col-md-8 col-lg-8 col-sm-8');
-    $('.homeheading.col-md-4.col-sm-4.col-lg-4').show();
+
+    // hide the Extraction documentation and the Extraction form, then show the list of Extractions
     $('.extraction_documentation').hide();
+    $('#imported-graphs-'+extractionListId).parent().next('.block_field').hide();
+    $('#imported-graphs-'+extractionListId).show();
   }  
 }
 
@@ -3701,94 +3874,6 @@ function delete_extractor(id) {
   $('#graph-'+id).remove();
 }
 
-function extractor_pagination(results) {
-  var length = results.length;
-  var remainder = length%25;
-  if (remainder > 0) {
-    var total = Math.floor(length/25) + 1;
-  } else {
-    var total = Math.floor(length/25);
-  }
-  if (length > 25) {
-    var hide_results = $('.extractor_2').find('tr').slice(25, length);
-    hide_results.addClass('hidden-result');
-  }
-  var page_section = $('<section class="pagination row justify-content-md-center justify-content-lg-center extractor_2"></section>')
-  for (let n=0; n<total;n++) {
-    var page_n = n + 1
-    var button=$('<input id="page_'+page_n+'" class="btn btn-dark extractor_2" value="'+page_n+'" onClick="change_results_page(\''+page_n+'\', \''+length+'\')">');
-    page_section.append(button)
-  }
-  $('.block_field').append(page_section);
-}
-
-function change_results_page(page_n, length) {
-  var starting_result = 25 * (parseInt(page_n)-1);
-  console.log(page_n, starting_result)
-
-  $('.extractor_2').find('tr').addClass('hidden-result');
-  if (length >= starting_result+25) {
-    var show_results = $('.extractor_2').find('tr').slice(starting_result, starting_result+25);
-  } else {
-    var show_results = $('.extractor_2').find('tr').slice(starting_result, length);
-  }
-  show_results.removeClass('hidden-result');
-  $('.extractor_2').find('th').parent().removeClass('hidden-result');
-  window.scrollTo(0, 0);
-}
-
-function call_sparqlanything(encoded, id, element_id, type) {
-  console.log(encoded)
-  $.ajax({
-    type: 'GET',
-    url: '/sparqlanything?q=' + encoded,
-    success: function(result_json) {
-      console.log(result_json);
-      $(element_id).prepend("<input type='hidden' name='"+id+"-RESULTS' value='"+JSON.stringify(result_json)+"' id='query_result_"+id+"'>");
-      var labels = result_json.head.vars;
-      var result_sec = $("<section class='extractor_2'></section");
-      var result_table = $('<table border="1"></table>');
-
-      var tr = $('<tr></tr>');
-      for (var i = 0; i < labels.length; i++) {
-        var th = $('<th>' + labels[i] + '</th>');
-        tr.append(th);
-      }
-      result_table.append(tr);
-
-      for (let res_idx=0; res_idx<result_json.results.bindings.length; res_idx++){
-        var result = result_json.results.bindings[res_idx];
-        console.log(result)
-        var result_tr = $('<tr></tr>');
-        for (let i=0; i<labels.length; i++){
-          var label = labels[i];
-          if (result[label].value.startsWith("https://") || result[label].value.startsWith("http://")) {
-            var item = "<a href='"+result[label].value+"' target='_blank'>"+result[label].value+"</a>";
-          } else {
-            var item = result[label].value;
-          }
-          var td = $('<td>' + item + '</td>')
-          result_tr.append(td);
-        }
-        result_table.append(result_tr)
-      }
-      result_sec.append(result_table);
-      $('.extractor_1').hide();
-      $('.block_field').append(result_sec);
-      if (result_json.results.bindings.length > 25) {extractor_pagination(result_json.results.bindings)};
-      var buttons = "<section class='row "+type+"_form extractor_2'>\
-        <input id='"+type+"_back2' class='btn btn-dark extractor_2' style='margin-left:20px' value='Back' onClick='prev_extractor(\"extractor_2\", \"extractor_1\")'>\
-        <input id='"+type+"_next2' class='btn btn-dark extractor_2' style='margin-left:20px' value='Import' onClick='prev_extractor(\"extractor_2\", \"form_row\", true,\""+ id+"\")'>\
-      </section>";
-      $('.block_field').append(buttons);
-      
-    },
-    error: function() {
-      alert(("error: check your parameters"))
-    }
-  });
-}
-
 function string_to_json(input_string) {
   const rows = input_string.split('\n');
   const json_output = {};
@@ -3803,99 +3888,146 @@ function string_to_json(input_string) {
   return json_output
 }
 
-function next_extractor(element, id, type) {
-  if ($('#recordForm').length >0) {
-    var element_id = '#recordForm';
-  } else {
-    var element_id = '#modifyForm';
-  }
+function showExtractionResult(jsonData,type,id,objectItem=null) {
+  console.log(jsonData)
+  // base module
+  let bindings = [];
+  const resultSection = $("<section class='extractor-2'></section");
+  const resultTable = $('<table border="1"></table>');
 
-  const object_item = {};
-  if (type == "api") {
-    object_item["-TYPE"] = "api";
-    object_item["-URL"] = $('#ApiUrl').val();
-    object_item["-QUERY"] = $('#ApiQuery').val().replace(/"/g, '\\"');
-    object_item["-RESULTS"] = $('#ApiResults').val();
-  } else if (type == "sparql") {
-    object_item["-TYPE"] = "sparql";
-    object_item["-URL"] = $('#SparqlUrl').val();
-    object_item["-QUERY"] = $('#SparqlQuery').val();
-  } else if (type == "file") {
-    object_item["-TYPE"] = "file";
-    object_item["-URL"] = $('#FileUrl').val();
-    object_item["-QUERY"] = $('#FileQuery').val();
-  }
-  console.log(object_item, type)
-  Object.entries(object_item).forEach(([key, value]) => {
-    $(element_id).prepend("<input type='hidden' name='"+id+key+"' value='"+value+"'/>");
-  });
+  // store the results as a JSON object following the SPARQL response structure
+  if (type==='api') {
+    resultTable.append("<tr><th>LABEL</th><th>URI</th></tr>");
 
-  if (type == "api") {
-    var json_query = string_to_json(object_item["-QUERY"]);
-    $.getJSON(object_item["-URL"], json_query,
-	    function(data) {
+    // set the results paths
+    var jsonResults = string_to_json(objectItem["results"]);
+    var mainPath = jsonResults.array.split(".");
+    let resultsArray = jsonData;
+    mainPath.forEach(key => {
+      resultsArray = resultsArray[key];
+    });
+    
+    resultsArray.forEach(function(res) {
+      // extract a label for each term
+      let labelPath = jsonResults.label.split(".");
+      let label = res;
+      labelPath.forEach(key => {
+        label = label[key];
+      });
+      // extract the URI value for each term
+      let uriPath = jsonResults.uri.split(".");
+      let uri = res;
+      uriPath.forEach(key => {
+        uri = uri[key];
+      });
+      
+      // create a new table row, append it to the table, and store each term information
+      var resultTableRow = $('<tr><td>' + label + '</td><td>' + uri + '</td></tr>');
+      resultTable.append(resultTableRow);
+      bindings.push({"uri": {'value':uri, 'type':'uri'}, 'label': {'value':label, 'type':'literal'}});
+    });
+  } else if (type==='sparql' || type==='file') {
 
-        var json_results = string_to_json(object_item["-RESULTS"])
-        var main_path = json_results.array.split(".");
-        let results_array = data;
-        main_path.forEach(key => {
-          results_array = results_array[key];
-        });
-        
-        var result_sec = $("<section class='extractor_2'></section");
-        var result_table = $('<table border="1"><tr><th>LABEL</th><th>URI</th></tr></table>');
-        const bindings = [];
-        results_array.forEach(function(res) {
-          // extract a label for each term
-          let label_path = json_results.label.split(".");
-          let label = res;
-          label_path.forEach(key => {
-            label = label[key];
-          });
-          // extract the URI value for each term
-          let uri_path = json_results.uri.split(".");
-          let uri = res;
-          uri_path.forEach(key => {
-            uri = uri[key];
-          });
-          
-          // create a variable to store all the relevant information about each term
-          var result_tr = $('<tr><td>' + label + '</td><td>' + uri + '</td></tr>');
-          result_table.append(result_tr)
-
-          bindings.push({"uri": {'value':uri, 'type':'uri'}, 'label': {'value':label, 'type':'literal'}})
-        });
-        const json_output = {'results': {'bindings': bindings}};
-        result_sec.append(result_table);
-
-
-        $('.extractor_1').hide();
-        $('.block_field').append(result_sec);
-        var handling_list = "<section class='row extractor_2'>\
-        <input id='api_back2' class='btn btn-dark extractor_2' style='margin-left:20px' value='Back' onClick='prev_extractor(\"extractor_2\", \"extractor_1\")'>\
-        <input id='api_next2' class='btn btn-dark extractor_2' style='margin-left:20px' value='Import' onClick='prev_extractor(\"extractor_2\", \"form_row\", true,\""+ id+"\")'>\
-        </section>";
-        $('.block_field').append(handling_list);
-      }).error(function(jqXHR, textStatus, errorThrown) {
-         alert(("error: " + jqXHR.responseText))
-      })
-
-  } else if (type == "file") {
-
-    if (object_item["-QUERY"].includes("<x-sparql-anything:"+object_item["-URL"]+">") && object_item["-QUERY"].includes("SERVICE")) {
-      call_sparqlanything(encodeURIComponent(object_item["-QUERY"]), id, element_id, type);
-    } else {
-      call_sparqlanything(encodeURIComponent(object_item["-QUERY"].replace("{", "{ SERVICE <x-sparql-anything:"+object_item["-URL"]+"> {").replace("}", "}}")), id, element_id, type);
+    var labels = jsonData.head.vars
+    var tr = $('<tr></tr>');
+    for (var i = 0; i < labels.length; i++) {
+      var th = $('<th>' + labels[i] + '</th>');
+      tr.append(th);
     }
-  } else if (type == "sparql") {
-    if (object_item["-QUERY"].includes("SERVICE")) {
-      call_sparqlanything(encodeURIComponent(object_item["-QUERY"]), id, element_id, type);
-    } else {
-      call_sparqlanything(encodeURIComponent(object_item["-QUERY"].replace("{", "{ SERVICE <"+object_item["-URL"]+"> {").replace("}", "}}")), id, element_id, type);
+    resultTable.append(tr);
+
+    bindings = jsonData.results.bindings
+    for (let idx=0; idx<bindings.length; idx++){
+      var result = bindings[idx];
+      var resultTableRow = $('<tr></tr>');
+      for (let i=0; i<labels.length; i++){
+        var label = labels[i];
+        if (result[label].value.startsWith("https://") || result[label].value.startsWith("http://")) {
+          var item = "<a href='"+result[label].value+"' target='_blank'>"+result[label].value+"</a>";
+        } else {
+          var item = result[label].value;
+        }
+        var td = $('<td>' + item + '</td>')
+        resultTableRow.append(td);
+      }
+      resultTable.append(resultTableRow)
     }
   }
+  resultSection.append(resultTable);
+
+  // manage navigation buttons and results pagination
+  var buttonList = "<section class='row extractor-2'>\
+    <input id='api-back2' class='btn btn-dark extractor-2' style='margin-left:20px' value='Back' onClick='prevExtractor(\"extractor-2\", \"extractor-1\")'>\
+    <input id='api-next2' class='btn btn-dark extractor-2' style='margin-left:20px' value='Import' onClick='prevExtractor(\"extractor-2\", \"form_row\", true,\""+ id+"\")'>\
+  </section>";
+  $('.extractor-1').hide();
+  $('.block_field').append(resultSection);
+  $('.block_field').append(buttonList);
+  if (bindings.length > 25) {extractorPagination(bindings)};
+
+  return bindings
 }
 
+// call back-end API to perform SPARQL.Anything queries
+function callSparqlanything(q, id, type, endpoint) {
+  // modify the query to make it ready for SPARQL.Anything
+  var encoded;
+  if (type === 'file') {
+    encoded = encodeURIComponent(q.includes("<x-sparql-anything:"+endpoint+">") ? q : q.replace("{", "{ SERVICE <x-sparql-anything:"+endpoint+"> {").replace("}", "}}"));
+  } else if (type === 'sparql') {
+    encoded = q.includes("SERVICE") ? encodeURIComponent(q) : encodeURIComponent(q.replace("{", "{ SERVICE <" + endpoint + "> {").replace("}", "}}"));
+  };
+
+  // send the query to the back-end API and parse the results
+  $.ajax({
+    type: 'GET',
+    url: '/sparqlanything?q=' + encoded,
+    success: function(resultsJsonObject) {
+      // show results inside a table
+      var bindings = showExtractionResult(resultsJsonObject,type,id);
+      return bindings;
+    },
+    error: function() {
+      alert(("error: check your parameters"))
+    }
+  });
+}
+
+function extractorPagination(results) {
+  var length = results.length;
+  var remainder = length%25;
+  if (remainder > 0) {
+    var total = Math.floor(length/25) + 1;
+  } else {
+    var total = Math.floor(length/25);
+  }
+  if (length > 25) {
+    var hide_results = $('.extractor-2').find('tr').slice(25, length);
+    hide_results.addClass('hidden-result');
+  }
+  var page_section = $('<section class="pagination row justify-content-md-center justify-content-lg-center extractor-2"></section>')
+  for (let n=0; n<total;n++) {
+    var page_n = n + 1
+    var button=$('<input id="page_'+page_n+'" class="btn btn-dark extractor-2" value="'+page_n+'" onClick="changeResultsPage(\''+page_n+'\', \''+length+'\')">');
+    page_section.append(button)
+  }
+  $('.block_field').append(page_section);
+}
+
+function changeResultsPage(page_n, length) {
+  var starting_result = 25 * (parseInt(page_n)-1);
+  console.log(page_n, starting_result)
+
+  $('.extractor-2').find('tr').addClass('hidden-result');
+  if (length >= starting_result+25) {
+    var show_results = $('.extractor-2').find('tr').slice(starting_result, starting_result+25);
+  } else {
+    var show_results = $('.extractor-2').find('tr').slice(starting_result, length);
+  }
+  show_results.removeClass('hidden-result');
+  $('.extractor-2').find('th').parent().removeClass('hidden-result');
+  window.scrollTo(0, 0);
+}
 
 // TODO: bring it to the right position within this file
 function check_mandatory_fields(subrecord_btn=false){

@@ -568,7 +568,7 @@ class Record(object):
 							alert=block_user, limit=limit,
 							is_git_auth=is_git_auth,invalid=False,
 							project=conf.myProject,template=None,
-							query_templates=None,knowledge_extractor=False)
+							query_templates=None,knowledge_extractor=set())
 
 	def POST(self, name):
 		""" Submit a new record
@@ -579,7 +579,6 @@ class Record(object):
 			the record ID (a timestamp)
 		"""
 
-		web.header("X-Forwarded-For", session['ip_address'])
 		web.header("Content-Type","text/html; charset=utf-8")
 		web.header('Access-Control-Allow-Origin', '*')
 		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
@@ -597,18 +596,17 @@ class Record(object):
 			u.log_output('SUBMIT INVALID FORM', session['logged_in'], session['username'],name)
 			return render.record(record_form=f, pageID=name, user=user, alert=block_user,
 								limit=limit, is_git_auth=is_git_auth,invalid=True,
-								project=conf.myProject,template=None,query_templates=None,knowledge_extractor=False)
+								project=conf.myProject,template=None,
+								query_templates=None,knowledge_extractor=set())
 		else:
 			recordData = web.input()
-			print("inputData", recordData)
-			
 
 			# load the template selected by the user
 			if 'res_name' in recordData:
 				if recordData.res_name != 'None':
 					f = forms.get_form(recordData.res_name)
 					query_templates = u.get_query_templates(recordData.res_name)
-					extractor = u.has_extractor(recordData.res_name) 
+					extractor = u.has_extractor(recordData.res_name)
 					return render.record(record_form=f, pageID=name, user=user, alert=block_user,
 									limit=limit, is_git_auth=is_git_auth,invalid=False,
 									project=conf.myProject,template=recordData.res_name,
@@ -690,7 +688,8 @@ class Modify(object):
 			return render.modify(graphdata=data, pageID=recordID, record_form=f,
 							user=session['username'],ids_dropdown=ids_dropdown,
 							is_git_auth=is_git_auth,invalid=False,
-							project=conf.myProject,template=res_template,query_templates=query_templates,knowledge_extractor=extractor)
+							project=conf.myProject,template=res_template,
+							query_templates=query_templates,knowledge_extractor=extractor)
 		else:
 			session['logged_in'] = 'False'
 			raise web.seeother(prefixLocal+'/')

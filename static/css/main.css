@@ -2052,8 +2052,8 @@ button#showTemplates {
   margin-top: 12px;
   color: rgb(100, 23, 180);
   font-size: 0.9em;
+  cursor: pointer;
 }
-
 .extraction-form-label:nth-child(2) {
   margin-left: 3% !important;
 }

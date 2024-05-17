@@ -35,10 +35,11 @@ RESOURCE_TEMPLATES = 'resource_templates/'
 TEMPLATE_LIST = RESOURCE_TEMPLATES+"template_list.json"
 ASK_CLASS = RESOURCE_TEMPLATES+"ask_class.json"
 SKOS_VOCAB = conf.skos_vocabularies 
-KNOWLEDGE_EXTRACTION = conf.knowledge_extraction
 USER_AGENT = conf.sparql_wrapper_user_agent
 NER_EN = spacy.load("en_core_web_sm")
 NER_IT = spacy.load("it_core_news_sm")
+#KNOWLEDGE_EXTRACTION = conf.knowledge_extraction
+
 
 # ROUTING
 
@@ -632,9 +633,9 @@ class Record(object):
 									project=conf.myProject,template=templateID,
 									query_templates=query_templates,knowledge_extractor=extractor)
 				else:
-					u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
+					#u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
 					userID = user.replace('@','-at-').replace('.','-dot-')
-					file_path = mapping.inputToRDF(recordData, userID, 'not modified', KNOWLEDGE_EXTRACTION, tpl_form=templateID)
+					file_path = mapping.inputToRDF(recordData, userID, 'not modified', tpl_form=templateID)
 					if conf.github_backup == "True":
 						try:
 							github_sync.push(file_path,"main", session['gituser'], session['username'], session['bearer_token'])
@@ -683,7 +684,8 @@ class Modify(object):
 			ids_dropdown = u.get_dropdowns(fields)
 			
 			query_templates=u.get_query_templates(res_template)
-			extractor = queries.retrieve_extractions(conf.base+name) if u.has_extractor(name, modify=True) else False
+			knowledge_extractors = u.has_extractor(res_template, name)
+			extractor = queries.retrieve_extractions(knowledge_extractors)
 
 			return render.modify(graphdata=data, pageID=recordID, record_form=f,
 							user=session['username'],ids_dropdown=ids_dropdown,
@@ -739,12 +741,11 @@ class Modify(object):
 								project=conf.myProject,template=res_template,
 								query_templates=query_templates,knowledge_extractor=extractor)
 			else:
-				print(recordData)
 				recordID = recordData.recordID
-				u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
+				#u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
 				userID = session['username'].replace('@','-at-').replace('.','-dot-')
 				graphToClear = conf.base+name+'/'
-				file_path = mapping.inputToRDF(recordData, userID, 'modified', knowledge_extraction=KNOWLEDGE_EXTRACTION, graphToClear=graphToClear,tpl_form=templateID)
+				file_path = mapping.inputToRDF(recordData, userID, 'modified', graphToClear=graphToClear,tpl_form=templateID)
 				if conf.github_backup == "True":
 					try:
 						github_sync.push(file_path,"main", session['gituser'],
@@ -844,10 +845,10 @@ class Review(object):
 			else:
 				recordData = web.input()
 				recordID = recordData.recordID
-				u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
+				#u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
 				userID = session['username'].replace('@','-at-').replace('.','-dot-')
 				graphToClear = conf.base+name+'/'
-				file_path = mapping.inputToRDF(recordData, userID, 'modified',KNOWLEDGE_EXTRACTION,graphToClear,templateID)
+				file_path = mapping.inputToRDF(recordData, userID, 'modified',graphToClear,templateID)
 				if conf.github_backup == "True":
 					try:
 						github_sync.push(file_path,"main", session['gituser'],
@@ -879,10 +880,10 @@ class Review(object):
 									query_templates=query_templates,knowledge_extractor=extractor)
 			else:
 				recordData = web.input()
-				u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
+				#u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
 				userID = session['username'].replace('@','-at-').replace('.','-dot-')
 				graphToClear = conf.base+name+'/'
-				file_path= mapping.inputToRDF(recordData, userID, 'published',KNOWLEDGE_EXTRACTION,graphToClear,templateID)
+				file_path= mapping.inputToRDF(recordData, userID, 'published',graphToClear,templateID)
 				if conf.github_backup == "True":
 					try:
 						github_sync.push(file_path,"main", session['gituser'],

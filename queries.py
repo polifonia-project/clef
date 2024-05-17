@@ -381,25 +381,67 @@ def clearGraph(graph):
 			sparql.method = 'POST'
 			sparql.query()
 
-def retrieve_extractions(res_uri):
-	q = """PREFIX schema: <https://schema.org/> SELECT DISTINCT ?extraction WHERE {<"""+res_uri+"""/> schema:keywords ?extraction}"""
+
+def get_subrecords(rdf_property,record_name):
+	"""Return a list of sub-Records given the super-Record id and their linking property
+	
+	Parameters
+	----------
+	rdf_property: str
+		a string representing the uri of the property linking the super-Record to the sub-Record
+	graph_name: str
+		a string representing the id of the super-Record Graph
+	"""
+	q = """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
+		SELECT DISTINCT ?subrecord WHERE { GRAPH <"""+conf.base+record_name+'/'+"""> {
+			<"""+conf.base+record_name+"""> <"""+rdf_property+"""> ?subrecord .
+		}} """
 	results = hello_blazegraph(q)
-	res_extraction = []
-	for result in results["results"]["bindings"]:
-		res_extraction.append(result["extraction"]["value"])
+	print(q,results)
+	subrecords_list = [subrecord['subrecord']['value'] for subrecord in results['results']['bindings']]
+	return subrecords_list
+
+
+def retrieve_extractions(res_uri_list):
+	"""Return a dictionary of Extractions given a list of Named Graphs
+	
+	Parameters
+	----------
+	res_uri_list: list
+		a list of uri (Named Graphs) which may contain Knowledge Extractions
+	"""
+	patterns = []
+	for uri in res_uri_list:
+		query_var_id = uri.rsplit('/',2)[1].replace('-','_')
+		new_pattern = """<"""+uri+"""> schema:keywords ?extraction_graph_"""+query_var_id+"""."""+\
+			""" ?extraction_graph_"""+query_var_id+""" prov:wasGeneratedBy ?extraction_entity_"""+query_var_id+\
+			""" . ?extraction_entity_"""+query_var_id+""" prov:used ?extraction_link_"""+query_var_id+""" . """
+		patterns.append(new_pattern)
+	query_pattern = "".join(patterns)
+
+	q = """PREFIX schema: <https://schema.org/> PREFIX prov: <http://www.w3.org/ns/prov#> SELECT DISTINCT * WHERE {""" +query_pattern+ """}"""
+	results = hello_blazegraph(q)
+
 	res_dict = {}
-	for extraction in res_extraction:
-		id = extraction.split("-")[-1].replace("/", "")
+	for result in results["results"]["bindings"]:
+		graph, link = "", ""
+		for k,v in result.items():
+			if k.startswith('extraction_graph_'):
+				graph = v['value']
+			elif k.startswith('extraction_link_'):
+				link = v['value']
+		res_dict[graph] = {
+			'link': link
+		}
+	
+	for extraction in list(res_dict.keys()):
 		retrieve_graph = """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 			SELECT DISTINCT ?uri ?label WHERE {GRAPH <"""+extraction+""">
 			{	?uri rdfs:label ?label .  }}"""
 		graph_results = hello_blazegraph(retrieve_graph)["results"]["bindings"]
-		res_dict[id] = [{"uri": urllib.parse.unquote(res["uri"]["value"]), "label": res["label"]["value"]} for res in graph_results]
-	if len(res_dict) > 0:
-		with open(conf.knowledge_extraction, 'r') as ke_file:
-			ke_dict = json.load(ke_file)
-		next_id = max(ke_dict[res_uri.split("/")[-1]], key=lambda x: int(x["internalID"]))
-		res_dict['next_id'] = int(next_id['internalID']) + 1
+		res_dict[extraction]['results'] = [{"uri": urllib.parse.unquote(res["uri"]["value"]), "label": res["label"]["value"]} for res in graph_results]
+	print("#### Extractions dictionary: ", res_dict)
+	
 	return res_dict
 
 def saveHiddenTriples(graph, tpl):

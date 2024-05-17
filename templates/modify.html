@@ -129,26 +129,6 @@ $if query_templates!=None:
 											</script>
 								</section>
 						</section>
-					$if knowledge_extractor != False:
-						<section class="row import_form">
-							<section class="col-md-12 col-sm-12 col-lg-12">KEYWORDS</section>
-							<ul class="imported_graphs" id="imported_graphs">
-									$for extraction in knowledge_extractor:
-										$if extraction == "next_id":
-											<script>
-												var extraction_number = $knowledge_extractor[extraction];
-											</script>
-										$else:
-											<li id="graph-$extraction">
-												<label>Extraction Graph: <i class='fas fa-trash' onclick='delete_extractor("$extraction")'></i></label><br>
-												$for extracted_keyword in knowledge_extractor[extraction]:
-													<span class="tag" data-id="$extracted_keyword['uri']">$extracted_keyword['label']</span>
-													$ keyword_id = "keyword_" + extraction + "_" + extracted_keyword['label']
-													<input type="hidden" name="$keyword_id" value="$extracted_keyword['uri']">
-											</li>
-								<li id="add_extractor"><label class="add_graph_button">Extract keywords  <i class="fas fa-plus-circle" onclick="extraction_form(this), window.scrollTo(0, 0)"></i></label></li>
-							</ul>
-						</section>
 				</section>
 				<section class="homeheading col-md-4 col-sm-4 col-lg-4">
 					<h2>Remember to save!</h2>
@@ -235,3 +215,9 @@ $if query_templates!=None:
 
 </section>
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+$if knowledge_extractor != {}:
+	<script>
+		const extractors = '$knowledge_extractor'.replace(/&#39;/g, '"')
+		const extractorsObj = JSON.parse(extractors)
+	</script>

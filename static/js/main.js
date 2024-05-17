@@ -1,8 +1,8 @@
 
-if (graph.length) {var in_graph = "FROM <"+graph+">"} else {var in_graph = ""}
-const wd_img = ' <img src="https://upload.wikimedia.org/wikipedia/commons/d/d2/Wikidata-logo-without-paddings.svg" style="width:25px ; padding-bottom: 5px; filter: grayscale(100%);"/>'
-const geo_img = '<img src="https://www.geonames.org/img/globe.gif" style="width:20px ; padding-bottom: 5px; filter: grayscale(100%);"/>';
-const viaf_img = '<img src="https://upload.wikimedia.org/wikipedia/commons/0/01/VIAF_icon.svg" style="width:15px ; padding-bottom: 5px; filter: grayscale(100%);"/>';
+if (graph.length) {var inGraph = "FROM <"+graph+">"} else {var inGraph = ""}
+const wdImg = ' <img src="https://upload.wikimedia.org/wikipedia/commons/d/d2/Wikidata-logo-without-paddings.svg" style="width:25px ; padding-bottom: 5px; filter: grayscale(100%);"/>'
+const geoImg = '<img src="https://www.geonames.org/img/globe.gif" style="width:20px ; padding-bottom: 5px; filter: grayscale(100%);"/>';
+const viafImg = '<img src="https://upload.wikimedia.org/wikipedia/commons/0/01/VIAF_icon.svg" style="width:15px ; padding-bottom: 5px; filter: grayscale(100%);"/>';
 const wikidataEndpoint = "https://query.wikidata.org/sparql"
 $(document).ready(function() {
 
@@ -30,7 +30,7 @@ $(document).ready(function() {
         setTimeout(function() { document.getElementById('recordForm').submit();}, 500);
       } else {
         // when creating and saving the record
-        var check_mandatory = check_mandatory_fields()
+        var check_mandatory = checkMandatoryFields()
         if (check_mandatory) {
           Swal.fire({ title: 'Saved!'});
           if ($('#recordForm').length) {
@@ -284,12 +284,12 @@ $(document).ready(function() {
   // hide lookup when creating a record
   $("#lookup").hide();
 	// append WD icon to input fields
-	$('.searchWikidata').parent().prev().append(wd_img);
-  $('.searchGeonames').parent().prev().append(geo_img);
-  $('.searchWikidata').parent().prev().append(viaf_img);
-  $('.wikiEntity').append(wd_img);
-  $('.geoEntity').append(geo_img);
-  $('.viafEntity').append(viaf_img); 
+	$('.searchWikidata').parent().prev().append(wdImg);
+  $('.searchGeonames').parent().prev().append(geoImg);
+  $('.searchWikidata').parent().prev().append(viafImg);
+  $('.wikiEntity').append(wdImg);
+  $('.geoEntity').append(geoImg);
+  $('.viafEntity').append(viafImg); 
 	// hide placeholder if filled
 	//colorForm();
 
@@ -881,18 +881,18 @@ function visualize_subrecord(el) {
               var cls = $(this).attr('class');
               var new_cls = cls.replace("col-md-5", "col-md-12")
               $(this).attr('class', new_cls);
-              $(this).find('.wikiEntity').append(wd_img);
-              $(this).find('.geoEntity').append(geo_img);
-              $(this).find('.viafEntity').append(viaf_img);
+              $(this).find('.wikiEntity').append(wdImg);
+              $(this).find('.geoEntity').append(geoImg);
+              $(this).find('.viafEntity').append(viafImg);
               $(this).find('[xml\\:lang]').each(function() {
                 visualize_subrecord_literals($(this));
               })
             })
             calledValue.append($('<div class="hidden-subrecord"></div>').append(calledRecordData));
           } else {
-            calledRecordData.find('.wikiEntity').append(wd_img);
-            calledRecordData.find('.geoEntity').append(geo_img);
-            calledRecordData.find('.viafEntity').append(viaf_img);
+            calledRecordData.find('.wikiEntity').append(wdImg);
+            calledRecordData.find('.geoEntity').append(geoImg);
+            calledRecordData.find('.viafEntity').append(viafImg);
             calledRecordData.find('[xml\\:lang]').each(function() {
               visualize_subrecord_literals($(this));
             })
@@ -1108,7 +1108,7 @@ function searchGeonames(searchterm) {
       			  }
       		  }, 3000);
 
-      			var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o ?desc "+in_graph+" where { ?s rdfs:label ?o . OPTIONAL { ?s rdfs:comment ?desc} . ?o bds:search '"+q+"*' .}"
+      			var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o ?desc "+inGraph+" where { ?s rdfs:label ?o . OPTIONAL { ?s rdfs:comment ?desc} . ?o bds:search '"+q+"*' .}"
       			var encoded = encodeURIComponent(query)
       			$.ajax({
       				    type: 'GET',
@@ -1194,7 +1194,7 @@ function searchCatalogue(searchterm) {
   $('#'+searchterm).keyup(function(e) {
     $("#searchresultmenu").show();
     var q = $('#'+searchterm).val();
-    var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o "+in_graph+" where { ?o bds:search '"+q+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o ; a ?class .}"
+    var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o "+inGraph+" where { ?o bds:search '"+q+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o ; a ?class .}"
     var encoded = encodeURIComponent(query)
     if (q == '') { $("#searchresultmenu").hide();}
     $.ajax({
@@ -1401,7 +1401,7 @@ function searchCatalogueByClass(searchterm) {
 // a function to look through the catalogue while querying Wikidata and VIAF
 function searchCatalogueIntermediate(q) {
   return new Promise(function(resolve, reject) {
-    var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o "+in_graph+" where { ?o bds:search '"+q+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o ; a ?class .}"
+    var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o "+inGraph+" where { ?o bds:search '"+q+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o ; a ?class .}"
     var encoded = encodeURIComponent(query);
     $.ajax({
       type: 'GET',
@@ -1473,7 +1473,7 @@ function searchWD(searchterm) {
                 // to avoid repetitions of the same element: $("#searchresult").find("[data-id="+item.viafid+"]").length === 0
                 $.each(viafData.result, function (i, item) {
                   if ($("#searchresult").find("[data-id="+item.viafid+"]").length === 0 && $("#searchresult > .viafitem").length <5) {
-                    $("#searchresult").append("<div class='viafitem'><a class='blue' target='_blank' href='http://www.viaf.org/viaf/" + item.viafid + "'>" + viaf_img + "</a> <a class='blue' data-id='" + item.viafid + "'>" + item.term + "</a> " + "</div>"); // no item.DESCRIPTION!
+                    $("#searchresult").append("<div class='viafitem'><a class='blue' target='_blank' href='http://www.viaf.org/viaf/" + item.viafid + "'>" + viafImg + "</a> <a class='blue' data-id='" + item.viafid + "'>" + item.term + "</a> " + "</div>"); // no item.DESCRIPTION!
         
                     // add tag if the user chooses an item from viaf
                     $('a[data-id="' + item.viafid + '"]').each(function () {
@@ -1503,7 +1503,7 @@ function searchWD(searchterm) {
           } else {
             // fill the dropdown with WD results
             $.each(data.search, function (i, item) {
-              $("#searchresult").append("<div class='wditem'><a class='blue' target='_blank' href='http://www.wikidata.org/entity/" + item.title + "'>" + wd_img + "</a> <a class='blue' data-id='" + item.title + "'>" + item.label + "</a> - " + item.description + "</div>");
+              $("#searchresult").append("<div class='wditem'><a class='blue' target='_blank' href='http://www.wikidata.org/entity/" + item.title + "'>" + wdImg + "</a> <a class='blue' data-id='" + item.title + "'>" + item.label + "</a> - " + item.description + "</div>");
 
               // add tag if the user chooses an item from wd
               $('a[data-id="' + item.title + '"]').each(function () {
@@ -1595,7 +1595,7 @@ function searchWDAdvanced(searchterm) {
         data.results.bindings.forEach(function(obj,idx) {
           let idSplit = obj.item.value.split('/');
           var wdId = idSplit[idSplit.length-1];
-          var newItemDiv = $('<div class="wditem"><a class="blue" target="_blank" href="'+obj.item.value+'">'+wd_img+'</a> <a class="blue" data-id="'+wdId+'">'+obj.itemLabel.value+'</a> - '+obj.itemDescription.value+'</div>');
+          var newItemDiv = $('<div class="wditem"><a class="blue" target="_blank" href="'+obj.item.value+'">'+wdImg+'</a> <a class="blue" data-id="'+wdId+'">'+obj.itemLabel.value+'</a> - '+obj.itemDescription.value+'</div>');
           newItemDiv.find('[data-id]').bind('click', function(e) {
             e.preventDefault();
             var oldID = $(this).attr('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
@@ -1616,7 +1616,7 @@ function searchWDAdvanced(searchterm) {
               // to avoid repetitions of the same element: $("#searchresult").find("[data-id="+item.viafid+"]").length === 0
               $.each(viafData.result, function (i, item) {
                 if ($("#searchresult").find("[data-id="+item.viafid+"]").length === 0 && $("#searchresult > .viafitem").length <5) {
-                  $("#searchresult").append("<div class='viafitem'><a class='blue' target='_blank' href='http://www.viaf.org/viaf/" + item.viafid + "'>" + viaf_img + "</a> <a class='blue' data-id='" + item.viafid + "'>" + item.term + "</a> " + "</div>"); // no item.DESCRIPTION!
+                  $("#searchresult").append("<div class='viafitem'><a class='blue' target='_blank' href='http://www.viaf.org/viaf/" + item.viafid + "'>" + viafImg + "</a> <a class='blue' data-id='" + item.viafid + "'>" + item.term + "</a> " + "</div>"); // no item.DESCRIPTION!
       
                   // add tag if the user chooses an item from viaf
                   $('a[data-id="' + item.viafid + '"]').each(function () {
@@ -1695,7 +1695,7 @@ function searchWDCatalogueAdvanced(searchterm){
         data.results.bindings.forEach(function(obj,idx) {
           let idSplit = obj.item.value.split('/');
           var wdId = idSplit[idSplit.length-1];
-          var newItemDiv = $('<div class="wditem"><a class="blue" target="_blank" href="'+obj.item.value+'">'+wd_img+'</a> <a class="blue" data-id="'+wdId+'">'+obj.itemLabel.value+'</a> - '+obj.itemDescription.value+'</div>');
+          var newItemDiv = $('<div class="wditem"><a class="blue" target="_blank" href="'+obj.item.value+'">'+wdImg+'</a> <a class="blue" data-id="'+wdId+'">'+obj.itemLabel.value+'</a> - '+obj.itemDescription.value+'</div>');
           newItemDiv.find('[data-id]').bind('click', function(e) {
             e.preventDefault();
             var oldID = $(this).attr('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
@@ -1713,7 +1713,7 @@ function searchWDCatalogueAdvanced(searchterm){
               // to avoid repetitions of the same element: $("#searchresult").find("[data-id="+item.viafid+"]").length === 0
               $.each(viafData.result, function (i, item) {
                 if ($("#searchresult").find("[data-id="+item.viafid+"]").length === 0 && $("#searchresult > .viafitem").length <5) {
-                  $("#searchresult").append("<div class='viafitem'><a class='blue' target='_blank' href='http://www.viaf.org/viaf/" + item.viafid + "'>" + viaf_img + "</a> <a class='blue' data-id='" + item.viafid + "'>" + item.term + "</a> " + "</div>"); // no item.DESCRIPTION!
+                  $("#searchresult").append("<div class='viafitem'><a class='blue' target='_blank' href='http://www.viaf.org/viaf/" + item.viafid + "'>" + viafImg + "</a> <a class='blue' data-id='" + item.viafid + "'>" + item.term + "</a> " + "</div>"); // no item.DESCRIPTION!
       
                   // add tag if the user chooses an item from viaf
                   $('a[data-id="' + item.viafid + '"]').each(function () {
@@ -2208,7 +2208,7 @@ function checkPriorRecords(elem) {
     if (classes.match(regex)) {
       var res_class = ' a <'+classes.match(regex)[1]+'> ; ';
     } else {var res_class = ''};
-    var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o "+in_graph+" where { ?s "+res_class+" rdfs:label ?o . ?o bds:search '"+q+"' .} LIMIT 5"
+    var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o "+inGraph+" where { ?s "+res_class+" rdfs:label ?o . ?o bds:search '"+q+"' .} LIMIT 5"
     var encoded = encodeURIComponent(query);
 
     $.ajax({
@@ -2316,7 +2316,7 @@ function create_subrecord(resourceClass, fieldName, el, subformId=null ) {
     let clonedElementValues = [];
     // a) single value fields
     if ($('#'+formId+' #'+inputId+"_"+subformId).length >0) {
-      const toBeModified = $('#'+form_id+' #'+inputId+'_'+subformId);
+      const toBeModified = $('#'+formId+' #'+inputId+'_'+subformId);
       cloneElement.find('input').val(toBeModified.val());
     } 
     // b) multiple values fields
@@ -2397,7 +2397,7 @@ function create_subrecord(resourceClass, fieldName, el, subformId=null ) {
   // SAVE SUBRECORD
   saveSubrecordButton.on('click', function(e) {
     // generate a tag
-    var isValid = check_mandatory_fields(this);
+    var isValid = checkMandatoryFields(this);
     if (isValid) {
       var labelField = subrecordForm.find('.disambiguate').eq(0);
       var labelMainLang = $('#'+labelField.attr('id').replace(labelField.attr('lang'), 'mainLang')).val();
@@ -2423,7 +2423,7 @@ function create_subrecord(resourceClass, fieldName, el, subformId=null ) {
       // for each subtemplate field, create an hidden input value including a list of related subrecords
       // this is needed to streamline the creation of records (back-end application)
       var subrecordBase = $("[subtemplate='"+resourceClass+"']").attr('id'); // the 'id' of the 'subtemplate' field (within the main record)
-      var createdSubrecords = $('[name="'+subrecord_base+'-subrecords"]');
+      var createdSubrecords = $('[name="'+subrecordBase+'-subrecords"]');
       if (createdSubrecords.length) {
           var toExtendValue = createdSubrecords.val();
           if (!createdSubrecords.val().split(',').includes(subformId)) {
@@ -2431,7 +2431,7 @@ function create_subrecord(resourceClass, fieldName, el, subformId=null ) {
           }
       } else {
           const newSubrecord = $("<input type='hidden' name='"+$("[subtemplate='"+resourceClass+"']").attr('id')+"-subrecords' value='"+subformId+"'>");
-          $('#'+form_id).append(newSubrecord);
+          $('#'+formId).append(newSubrecord);
       }
       // hide_subform
       cancel_subrecord(this);
@@ -2604,9 +2604,9 @@ function searchResources(event) {
   var limit_query = event.data.limit_query;
 
   if (offset_query == "0") {
-    var query = "select distinct ?o ?label "+in_graph+" where { ?o ?p <"+uri+"> ; rdfs:label ?label . } ORDER BY ?o LIMIT "+limit_query+" "
+    var query = "select distinct ?o ?label "+inGraph+" where { ?o ?p <"+uri+"> ; rdfs:label ?label . } ORDER BY ?o LIMIT "+limit_query+" "
   } else {
-    var query = "select distinct ?o ?label "+in_graph+" where { ?o ?p <"+uri+"> ; rdfs:label ?label . } ORDER BY ?o OFFSET "+offset_query+" LIMIT "+limit_query+" "
+    var query = "select distinct ?o ?label "+inGraph+" where { ?o ?p <"+uri+"> ; rdfs:label ?label . } ORDER BY ?o OFFSET "+offset_query+" LIMIT "+limit_query+" "
   }
   var encoded = encodeURIComponent(query)
   $.ajax({
@@ -2660,9 +2660,9 @@ function getPropertyValue(elemID, prop, typeProp, typeField, elemClass='') {
   if (elemClass.length) {var class_restriction = "?s a <"+elemClass+"> . "} else {var class_restriction = ''};
   // TODO extend for vocabulary terms
   if ((typeProp == 'URI' || typeProp == 'Place' || typeProp == 'URL') && (typeField == 'Textbox' || typeField == 'Dropdown'|| typeField == 'Checkbox' || typeField == 'Vocab') ) {
-    var query = "select distinct ?o ?oLabel (COUNT(?s) AS ?count) "+in_graph+" where { GRAPH ?g { ?s <"+prop+"> ?o. "+class_restriction+" ?o rdfs:label ?oLabel . } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } GROUP BY ?o ?oLabel ORDER BY DESC(?count) lcase(?oLabel)";
+    var query = "select distinct ?o ?oLabel (COUNT(?s) AS ?count) "+inGraph+" where { GRAPH ?g { ?s <"+prop+"> ?o. "+class_restriction+" ?o rdfs:label ?oLabel . } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } GROUP BY ?o ?oLabel ORDER BY DESC(?count) lcase(?oLabel)";
   } else if ((typeProp=='Date' || typeProp=='gYear' || typeProp=='gYearMonth') && typeField == 'Date')  {
-    var query = "select distinct ?o (COUNT(?s) AS ?count) "+in_graph+" where { GRAPH ?g { ?s <"+prop+"> ?o. "+class_restriction+" } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } GROUP BY ?o ORDER BY DESC(?count) lcase(?o)";
+    var query = "select distinct ?o (COUNT(?s) AS ?count) "+inGraph+" where { GRAPH ?g { ?s <"+prop+"> ?o. "+class_restriction+" } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } GROUP BY ?o ORDER BY DESC(?count) lcase(?o)";
   } else {var query = "none"};
 
   const len = 10;
@@ -2734,10 +2734,10 @@ function getRecordsByPropValue(el, resElem, elemClass='', typeProp=false) {
   console.log(prop);
   if (typeProp == 'false') {
     var val = $(el).data("value");
-    var query = "select distinct ?s ?sLabel "+in_graph+" where { GRAPH ?g { ?s <"+prop+"> <"+val+">; rdfs:label ?sLabel . "+class_restriction+" } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } ORDER BY ?sLabel"
+    var query = "select distinct ?s ?sLabel "+inGraph+" where { GRAPH ?g { ?s <"+prop+"> <"+val+">; rdfs:label ?sLabel . "+class_restriction+" } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } ORDER BY ?sLabel"
   } else {
     var val = '"'+$(el).data("value")+ '"^^xsd:'+typeProp.charAt(0).toLowerCase() + typeProp.slice(1);
-    var query = "select distinct ?s ?sLabel "+in_graph+" where { GRAPH ?g { ?s <"+prop+"> "+val+"; rdfs:label ?sLabel . "+class_restriction+" } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } ORDER BY ?sLabel"
+    var query = "select distinct ?s ?sLabel "+inGraph+" where { GRAPH ?g { ?s <"+prop+"> "+val+"; rdfs:label ?sLabel . "+class_restriction+" } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } ORDER BY ?sLabel"
   }
   console.log(query);
   var encoded = encodeURIComponent(query);
@@ -3649,48 +3649,34 @@ function addExtractor(element,extractorId) {
 
   $('.block_field .extractor-1, .block_field hr').remove() // remove previously created forms (in case the user changes the selected option)
   if (extractionType == 'api') {
-    var form = "<hr><section class='row extractor-1'>\
+    var form = $("<hr><section class='row extractor-1'>\
     <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>API access point<br><span class='comment'>url of the API</span></label>\
     <input type='text' id='ApiUrl' placeholder='e.g.: https://exampleApi.org/search'></input>\
     </section>\
     <section class='row extractor-1'>\
-    <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY PARAMETERS<br><span class='comment'>write one value per row</span></label>\
-    <div class='extraction-form-div'>\
-    <span class='extraction-form-label'>KEY</span>\
-    <span class='extraction-form-label'>VALUE</span>\
-    </div>\
-    <p class='extractor-comment'>No parameters available: add a new one</p>\
-    <div class='extraction-form-div'>\
-    <input type='text' class='extraction-form-input'>\
-    <input type='text' class='extraction-form-input'>\
-    <i class='fas fa-times'></i>\
-    </div>\
-    <span class='add-parameter'>Add new <i class='fas fa-plus'></i></span>\
+      <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY PARAMETERS<br><span class='comment'>write one value per row</span></label>\
+      <div class='extraction-form-div'>\
+        <span class='extraction-form-label'>KEY</span><span class='extraction-form-label'>VALUE</span>\
+      </div>\
+      <p class='extractor-comment'>No parameters available: add a new one</p><span class='add-parameter'>Add new <i class='fas fa-plus'></i></span>\
     </section>\
     <section class='row extractor-1'>\
-    <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>RESULT DICTIONARY<br><span class='comment'>write one value per row</span></label>\
-    <div class='extraction-form-div'>\
-    <span class='extraction-form-label'>KEY</span>\
-    <span class='extraction-form-label'>VALUE</span>\
-    </div>\
-    <div class='extraction-form-div'>\
-    <input type='text' class='extraction-form-input' value='Array'>\
-    <input type='text' class='extraction-form-input'>\
-    <i class='fas fa-times'></i>\
-    </div>\
-    <div class='extraction-form-div'>\
-    <input type='text' class='extraction-form-input' value='URI'>\
-    <input type='text' class='extraction-form-input'>\
-    <i class='fas fa-times'></i>\
-    </div>\
-    <div class='extraction-form-div'>\
-    <input type='text' class='extraction-form-input' value='Label'>\
-    <input type='text' class='extraction-form-input'>\
-    <i class='fas fa-times'></i>\
-    </div>\
-    <span class='add-parameter'>Add new <i class='fas fa-plus'></i></span>\
+      <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>RESULT DICTIONARY<br><span class='comment'>write one value per row</span></label>\
+      <div class='extraction-form-div'>\
+        <span class='extraction-form-label'>KEY</span><span class='extraction-form-label'>VALUE</span>\
+      </div>\
+      <div class='extraction-form-div api-results-parameter'>\
+        <input type='text' class='extraction-form-input' value='Array'><input type='text' class='extraction-form-input'><i class='fas fa-times' onclick='removeExtractionParameter(this)'></i>\
+      </div>\
+      <div class='extraction-form-div api-results-parameter'>\
+        <input type='text' class='extraction-form-input' value='URI'><input type='text' class='extraction-form-input'><i class='fas fa-times' onclick='removeExtractionParameter(this)'></i>\
+      </div>\
+      <div class='extraction-form-div api-results-parameter'>\
+        <input type='text' class='extraction-form-input' value='Label'><input type='text' class='extraction-form-input'><i class='fas fa-times' onclick='removeExtractionParameter(this)'></i>\
+      </div>\
+      <span class='add-parameter'>Add new <i class='fas fa-plus'></i></span>\
     </section>\
-    "
+    ")
     /* var form = "<hr><section class='row extractor-1'>\
     <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>API access point<br><span class='comment'>url of the API</span></label>\
     <input type='text' id='ApiUrl' placeholder='e.g.: https://exampleApi.org/search'></input>\
@@ -3704,35 +3690,40 @@ function addExtractor(element,extractorId) {
     <textarea id='ApiResults' placeholder='uri,json_results.results.bindings.uri\nlabel,json_results.results.bindings.label,'></textarea>\
     </section>"; */
   } else if (extractionType == 'sparql') {
-    var form = "<hr><section class='row extractor-1'>\
+    var form = $("<hr><section class='row extractor-1'>\
     <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>SPARQL endpoint<br><span class='comment'>url of the endpoint</span></label>\
     <input type='text' id='SparqlUrl' placeholder='e.g.: https://exampleSparql.org/sparql'></input>\
     </section>\
     <section class='row extractor-1'>\
     <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY<br><span class='comment'>a sparql query to be performed</span></label>\
     <div id='yasqe' class='col-md-12' data-id='"+extractionId+"'>\
-    </section>";
+    </section>");
   } else if (extractionType == 'file') {
-    var form = "<hr><section class='row extractor-1'>\
+    var form = $("<hr><section class='row extractor-1'>\
     <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>FILE URL<br><span class='comment'>a URL to an external resource (a .json or .csv file)</span></label>\
     <input type='text' id='FileUrl' placeholder='http://externalResource.csv'></input>\
     </section>\
     <section class='row extractor-1'>\
     <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY<br><span class='comment'>a sparql query to be performed</span></label>\
     <div id='yasqe' class='col-md-12' data-id='"+extractionId+"'>\
-    </section>";
+    </section>");
   } else {
     var form = "";
   }
 
   // navigation button
-  var buttons = "<section class='row extractor-1'>\
-  <input id='"+extractionType+"-back-1' class='btn btn-dark extractor-1' style='margin-left:20px' value='Back' onClick='prevExtractor(\"extractor-1\", \"form_row\", true,\""+extractionId+"\")'>\
-  <input id='"+extractionType+"-next-1' class='btn btn-dark extractor-1' style='margin-left:20px' value='Next' onClick='nextExtractor(this, \""+extractionId+"\", \""+extractionType+"\")'>\
-  </section>"
-
+  var buttons = $("<section class='row extractor-1'>\
+    <input id='"+extractionType+"-back-1' class='btn btn-dark extractor-1' style='margin-left:20px' value='Back' onClick='prevExtractor(\"extractor-1\", \"form_row\", true,\""+extractionId+"\")'>\
+    <input id='"+extractionType+"-next-1' class='btn btn-dark extractor-1' style='margin-left:20px' value='Next' onClick='nextExtractor(this, \""+extractionId+"\", \""+extractionType+"\")'>\
+  </section>");
+  
+  // add event listener to form buttons
+  form.find('.add-parameter').on('click', function() {
+    generateExtractionParameter(this);
+  });
+  
   // add the new form to the webpage and show YASQE editor when needed
-  $(element).closest('.row').after(form+buttons);
+  $(element).closest('.row').after(buttons).after(form);
   if (extractionType == 'sparql' || extractionType == 'file') {
     var yasqe = YASQE(document.getElementById("yasqe"), {
       sparql: {
@@ -3745,6 +3736,61 @@ function addExtractor(element,extractorId) {
   $('.extraction_documentation').show();
   $('.extraction_documentation section').hide();
   $('.extraction_documentation_'+extractionType).show();
+}
+
+// generate a couple of input fields to add a query parameter
+function generateExtractionParameter(element, label=null) {
+  // hide the comment "no paramaters available"
+  if ($(element).prev('.extractor-comment').length>0) {
+    $(element).prev('.extractor-comment').hide();
+  }
+  // add a new couple (key,value) of input fields 
+  var newParameterDiv = $("<div class='extraction-form-div api-query-parameter'>\
+    <input type='text' class='extraction-form-input'>\
+    <input type='text' class='extraction-form-input'>\
+    <i class='fas fa-times' onclick='removeExtractionParameter(this)'></i>\
+  </div>");
+  $(element).before(newParameterDiv);
+}
+
+// remove a couple of input fields from query parameters
+function removeExtractionParameter(element) {
+  var parentDiv = $(element).parent().parent();
+  $(element).parent().remove();
+  if (parentDiv.find('.extraction-form-input').length === 0) {
+    parentDiv.find('.extractor-comment').show();
+  }
+}
+
+// get parameters for API query
+function getExtractionParameters(type,element) {
+  var extractionForm = $(element).parent().parent();
+  var extractionQueryParameters = extractionForm.find('.api-'+type+'-parameter');
+  var parametersObj = new Object();
+  var hasEmptyParameter = false;
+
+  extractionQueryParameters.each(function() {
+    console.log($(this).find('input').eq(0));
+
+    var parameterKey = $(this).find('input').eq(0).val();
+    var parameterValue = $(this).find('input').eq(1).val();
+
+    if (parameterKey !== '' && parameterValue !== '') {
+      if (type=='results') {
+        parameterKey = parameterKey.toLowerCase();
+      }
+      parametersObj[parameterKey] = parameterValue;
+    } else {
+      hasEmptyParameter = true;
+      return false
+    }
+  });
+
+  if (hasEmptyParameter) {
+    return false;
+  } else {
+    return parametersObj; 
+  }
 }
 
 // parse the extraction parameters and send requests
@@ -3765,15 +3811,22 @@ function nextExtractor(element, id, type) {
     query += '\n';
   });
   
-  console.log(query)
-
   // collect all the query information and store it into an Object
   const objectItem = {};
   if (type == "api") {
     objectItem["type"] = "api";
     objectItem["url"] = $('#ApiUrl').val();
-    objectItem["query"] = $('#ApiQuery').val().replace(/"/g, '\\"');
-    objectItem["results"] = $('#ApiResults').val();
+    var queryParameters = getExtractionParameters('query',element);
+    var resultsParameters = getExtractionParameters('results',element);
+
+    if (queryParameters !== false && resultsParameters !== false) {
+      objectItem["query"] = queryParameters
+      objectItem["results"] = resultsParameters
+    } else {
+      alert("Please, check your parameters before proceeding");
+      return null
+    }
+    console.log(objectItem);
   } else if (type == "sparql") {
     objectItem["type"] = "sparql";
     objectItem["url"] = $('#SparqlUrl').val();
@@ -3784,15 +3837,9 @@ function nextExtractor(element, id, type) {
     objectItem["query"] = query;
   }
 
-  /* Object.entries(objectItem).forEach(([key, value]) => {
-    $('#recordForm, #modifyForm').prepend("<input type='hidden' name='"+id+key+"' value='"+value+"'/>");
-  }); */
-
   if (type == "api") {
     // API QUERY:
-    // set query parameters and send the request
-    var jsonQuery = string_to_json(objectItem["query"]);
-    $.getJSON(objectItem["url"], jsonQuery,
+    $.getJSON(objectItem["url"], objectItem["query"],
 	    function(data) {
         // show the query results in a table
         var bindings = showExtractionResult(data,type,id,objectItem);
@@ -3821,6 +3868,11 @@ function nextExtractor(element, id, type) {
   var newExtractionObj = {}
   newExtractionObj[extractionCount] = objectItem;
   extractionsObj[extractorId][extractionCount-1] = newExtractionObj;
+
+  // scroll top
+  $('html, body').animate({
+    scrollTop: $(element).parent().parent().offset().top
+  }, 800);
 }
 
 // go back to the previous Extraction page to modify query parameters / hide the Extraction form
@@ -3874,20 +3926,6 @@ function delete_extractor(id) {
   $('#graph-'+id).remove();
 }
 
-function string_to_json(input_string) {
-  const rows = input_string.split('\n');
-  const json_output = {};
-  
-  for (const row of rows) {
-    const [key, val] = row.split(',');
-    const k = key.trim();
-    const v = val.trim();
-    json_output[k] = v;
-  }
-  
-  return json_output
-}
-
 function showExtractionResult(jsonData,type,id,objectItem=null) {
   console.log(jsonData)
   // base module
@@ -3900,7 +3938,7 @@ function showExtractionResult(jsonData,type,id,objectItem=null) {
     resultTable.append("<tr><th>LABEL</th><th>URI</th></tr>");
 
     // set the results paths
-    var jsonResults = string_to_json(objectItem["results"]);
+    var jsonResults = objectItem["results"];
     var mainPath = jsonResults.array.split(".");
     let resultsArray = jsonData;
     mainPath.forEach(key => {
@@ -4030,20 +4068,30 @@ function changeResultsPage(page_n, length) {
 }
 
 // TODO: bring it to the right position within this file
-function check_mandatory_fields(subrecord_btn=false){
-  var is_valid = true;
+function checkMandatoryFields(subrecordButton=false){
+  var isValid = true;
   
-  if (subrecord_btn) { var fields = $(subrecord_btn).parent().parent().find('[mandatory="True"]'); } else { var fields = $('[mandatory="True"]:not(.original_subtemplate)'); }
+  if (subrecordButton) { var fields = $(subrecordButton).parent().parent().find('[mandatory="True"]'); } else { var fields = $('[mandatory="True"]:not(.original_subtemplate)'); }
   fields.each(function() {
     if ($(this).val() === '' && !$('[data-input="'+$(this).attr('id')+'"]').length) {
       console.log($(this));
       /* in principle, the header could be changed through the back-end application. 
       However, this would cause the loss of all inserted values. */
-      if (subrecord_btn) { alert("Check Mandatory Fields!")}
+      if (subrecordButton) { alert("Check Mandatory Fields!")}
       else { $('header').find('h3').eq(0).text("The form is not valid, please check mandatory fields") }
       window.scrollTo(0, 0);
-      is_valid = false;
+      isValid = false;
     }
   })
-  return is_valid;
+
+  if (typeof extractionsObj !== 'undefined' && $('#extractions-dict').length === 0) {
+    var objToString = encodeURIComponent(JSON.stringify(extractionsObj)); 
+    $('#recordForm, #modifyForm').append('<input id="extractions-dict" name="extractions-dict" type="hidden" value="'+objToString+'">');
+  } else if (typeof extractionsObj !== 'undefined' && $('#extractions-dict').length > 0) {
+    var objToString = encodeURIComponent(JSON.stringify(extractionsObj)); 
+    $('#recordForm, #modifyForm').find('#extractions-dict').attr('value',objToString);
+  }
+
+  return isValid;
+
 }

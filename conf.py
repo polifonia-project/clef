@@ -9,7 +9,6 @@ resource_templates = "resource_templates/"
 template_list = "resource_templates/template_list.json"
 ask_form = "resource_templates/ask_class.json"
 skos_vocabularies = "skos_vocabs.json"
-knowledge_extraction = "knowledge_extraction.json"
 limit_requests = "150"
 base = "https://w3id.org/clef/"
 myProject = "CLEF"
@@ -28,4 +27,4 @@ github_backup = "False"
 myEndpoint = "http://127.0.0.1:3000/blazegraph/sparql"
 mainLang = "en"
 sparql_wrapper_user_agent = 'polifonia/1.0 (https://github.com/polifonia-project; polifonia@example.org)'
-
+# knowledge_extraction = "knowledge_extraction.json"

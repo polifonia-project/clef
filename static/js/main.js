@@ -3578,12 +3578,12 @@ function yasqe_to_hidden_field(el,keep=false) {
 // generate extraction form_row (during form loading)
 function generateExtractor(resId, subtemplate=null) {
   // predefined HTML node
-  var extractionRow = '<section class="row import-form">\
+  var extractionRow = $('<section class="row import-form">\
     <section class="col-md-12 col-sm-12 col-lg-12">ENTITIES</section>\
       <ul class="imported_graphs" id="imported-graphs-'+resId+'">\
         <li id="add_extractor"><label class="add_graph_button">Extract Entities  <i class="fas fa-plus-circle" onclick="generateExtractionForm(\'imported-graphs-'+resId+'\')"></i></label></li>\
       </ul>\
-  </section>';
+  </section>');
 
   // add the extraction node to the form
   if (subtemplate===null) {
@@ -3591,37 +3591,81 @@ function generateExtractor(resId, subtemplate=null) {
   } else {
     subtemplate.append(extractionRow)
   }
+
+  // retrieve previously generated extraction graphs
+  if (resId in extractionsObj) {
+    console.log(extractionsObj[resId])
+    for (let i=0; i<extractionsObj[resId].length; i++) {
+      var extractionId = Object.keys(extractionsObj[resId][i])[0];
+      var extractionResults = extractionsObj[resId][i][extractionId].output;
+      if (extractionResults.length > 0) {
+        var extractionGraph = generateExtractionTagList(resId, extractionResults, resId+'-'+extractionId);
+        extractionRow.find('.imported_graphs').append(extractionGraph);
+      }
+    }
+  }
 }
 
+// generate tags from previously extracted URI-label pairs
+function generateExtractionTagList(recordId,results,id) {
+  // delete previously retrieved entities if any
+  $("#graph-"+id).remove();
+
+  // if new results exist, create a new list item to collect each retrieved URI,label pair in the form of a tag (containing an hidden input)
+  $('#imported-graphs-'+recordId).prepend($("<li id='graph-"+id+"'><label>Extraction Graph:  <i class='fas fa-trash' onclick='deleteExtractor(`"+id+"`)'></i>   <i class='fas fa-edit' onclick='modifyExtractor(`"+recordId+"`,`"+id+"`)'></i></label><br></li>"));
+        
+  for (let idx = 0; idx < results.length; idx++) {
+    for (const key in results[idx]) {
+      console.log(results[idx][key]);
+
+      if (results[idx][key].type === "literal" && !results[idx][key].value.startsWith("https://") && !results[idx][key].value.startsWith("http://")) {
+        var label = results[idx][key].value;
+      } else if (results[idx][key].type === "uri" || results[idx][key].value.startsWith("https://") || results[idx][key].value.startsWith("http://")) {
+        var uri = results[idx][key].value;
+      }
+    }
+    $('#imported-graphs-'+recordId).find("#graph-" + id).append("<span class='tag' data-id='" + uri + "'>" + label + "</span><input type='hidden' name='keyword_"+id+"_"+label+"' value='"+encodeURIComponent(uri)+"'/>");
+  }
+}
 
 // extraction form
-function generateExtractionForm(ul) {
+function generateExtractionForm(ul,modifyId=null) {
   // update the extraction count within the extractions Object
   var extractorId = ul.replace('imported-graphs-','');
-  if (extractorId in extractionsObj) {
+  let extractionInternalId;
 
-    // get the number of extractions
-    var extractionCountArray = extractionsObj[extractorId];
-    var extractionCount = extractionCountArray.length;
-    var newExtractionCount = extractionCount + 1;
+  if (modifyId === null) {
+    // generate new internal Id (sequential numbering) for the extraction
+    if (extractorId in extractionsObj) {
 
-    // initialiaze a new sub-Object to store information about the novel extraction
-    const newExtractionObj = {};
-    newExtractionObj[newExtractionCount] = {}; 
+      // get the number of extractions
+      var extractionArray = extractionsObj[extractorId];
+      var extractionLength = extractionArray.length;
+      var lastExtractionInternalId = Object.keys(extractionArray[extractionLength-1])[0];
+      extractionInternalId = parseInt(lastExtractionInternalId) + 1;
 
-    // append the sub-Object to the extractions Array
-    extractionsObj[extractorId].push(newExtractionObj);
+      // initialiaze a new sub-Object to store information about the novel extraction
+      const newExtractionObj = {};
+      newExtractionObj[extractionInternalId] = {}; 
 
+      // append the sub-Object to the extractions Array
+      extractionsObj[extractorId].push(newExtractionObj);
+
+    } else {
+      // initialize an Array of extractions Objects within the main extractionsObject
+      extractionInternalId = 1;
+      extractionsObj[extractorId] = [{extractionInternalId: {}}];
+    }
   } else {
-    // initialize an Array of extractions Objects within the main extractionsObject
-    extractionsObj[extractorId] = [{1: {}}];
+    // reuse the existing internal id when modifying an extraction
+    extractionInternalId = modifyId
   }
 
   // create a select element containing the options to perform the extraction
   var extractor = $("<section class='block_field col-md-12'>\
     <section class='row'>\
       <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>EXTRACTOR TYPE</label>\
-      <select onchange='addExtractor(this,\""+extractorId+"\")'class='custom-select' id='extractor' name='extractor'>\
+      <select onchange='addExtractor(this,\""+extractorId+"\",\""+extractionInternalId+"\")'class='custom-select' id='extractor' name='extractor'>\
         <option value='None'>Select</option>\
         <option value='api'>API</option>\
         <option value='sparql'>SPARQL</option>\
@@ -3629,7 +3673,7 @@ function generateExtractionForm(ul) {
       </select>\
     </section>\
     <section class='row extractor-0'>\
-      <input id='sparql_back0' class='btn btn-dark extractor-0' style='margin-left:20px' value='Back' onClick='prev_extractor(\"block_field\", \"form_row\", true)'>\
+      <input id='sparql_back0' class='btn btn-dark extractor-0' style='margin-left:20px' value='Back' onClick='prevExtractor(\"block_field\", \"form_row\", true)'>\
     </section>\
   </section>");
   $(extractor).insertAfter('.import-form');
@@ -3638,13 +3682,11 @@ function generateExtractionForm(ul) {
 
 
 // create a new form based on the selected option (API, SPARQL, static file)
-function addExtractor(element,extractorId) {
+function addExtractor(element,extractorId,extractionInternalId) {
   if ($('.block_field.col-md-12').length > 0) {
     $('.block_field.col-md-12 section').not(":first").remove();
   }
-
-  var extractionNumber = extractionsObj[extractorId].length; // number of attempted extraction
-  var extractionId = extractorId+'-'+extractionNumber.toString(); // it will be used to create hidden inputs later
+  var extractionId = extractorId+'-'+extractionInternalId.toString(); // it will be used to create hidden inputs later
   var extractionType = $(element).find(":selected").val(); // selected option (API, SPARQL, or static file)
 
   $('.block_field .extractor-1, .block_field hr').remove() // remove previously created forms (in case the user changes the selected option)
@@ -3666,29 +3708,16 @@ function addExtractor(element,extractorId) {
         <span class='extraction-form-label'>KEY</span><span class='extraction-form-label'>VALUE</span>\
       </div>\
       <div class='extraction-form-div api-results-parameter'>\
-        <input type='text' class='extraction-form-input' value='Array'><input type='text' class='extraction-form-input'><i class='fas fa-times' onclick='removeExtractionParameter(this)'></i>\
+        <input type='text' class='extraction-form-input' value='Array'><input type='text' class='extraction-form-input'>\
       </div>\
       <div class='extraction-form-div api-results-parameter'>\
-        <input type='text' class='extraction-form-input' value='URI'><input type='text' class='extraction-form-input'><i class='fas fa-times' onclick='removeExtractionParameter(this)'></i>\
+        <input type='text' class='extraction-form-input' value='URI'><input type='text' class='extraction-form-input'>\
       </div>\
       <div class='extraction-form-div api-results-parameter'>\
-        <input type='text' class='extraction-form-input' value='Label'><input type='text' class='extraction-form-input'><i class='fas fa-times' onclick='removeExtractionParameter(this)'></i>\
+        <input type='text' class='extraction-form-input' value='Label'><input type='text' class='extraction-form-input'>\
       </div>\
-      <span class='add-parameter'>Add new <i class='fas fa-plus'></i></span>\
     </section>\
     ")
-    /* var form = "<hr><section class='row extractor-1'>\
-    <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>API access point<br><span class='comment'>url of the API</span></label>\
-    <input type='text' id='ApiUrl' placeholder='e.g.: https://exampleApi.org/search'></input>\
-    </section>\
-    <section class='row extractor-1'>\
-    <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY PARAMETERS<br><span class='comment'>write one value per row in the form key, value</span></label>\
-    <textarea id='ApiQuery' placeholder='query,query-term'></textarea>\
-    </section>\
-    <section class='row extractor-1'>\
-    <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>RESULT DICTIONARY<br><span class='comment'>write one value per row in the form key, value (i.e. URI/label,path to the URI/label)</span></label>\
-    <textarea id='ApiResults' placeholder='uri,json_results.results.bindings.uri\nlabel,json_results.results.bindings.label,'></textarea>\
-    </section>"; */
   } else if (extractionType == 'sparql') {
     var form = $("<hr><section class='row extractor-1'>\
     <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>SPARQL endpoint<br><span class='comment'>url of the endpoint</span></label>\
@@ -3843,25 +3872,13 @@ function nextExtractor(element, id, type) {
 	    function(data) {
         // show the query results in a table
         var bindings = showExtractionResult(data,type,id,objectItem);
-
-        // store the results within the temporary Object and display the table
-        const jsonOutput = {'results': {'bindings': bindings}};
-        objectItem["output"] = jsonOutput;
-
+        objectItem["output"] = bindings;
       }).error(function(jqXHR, textStatus, errorThrown) {
-         alert(("error: " + jqXHR.responseText))
+         alert(("error: check your parameters"))
       })
-  } else if (type == "file") {
-    // FILE QUERY:
-    // modify the query to include the necessary clauses
-    
-    var bindings = callSparqlanything(objectItem["query"],id,type,objectItem["url"]);
-    objectItem["output"] = bindings;
-  } else if (type == "sparql") {
-    // SPARQL QUERY
-    // modify the query to include the necessary clauses
-    var bindings = callSparqlanything(objectItem["query"],id,type,objectItem["url"])
-    objectItem["output"] = bindings;
+  } else if (type == "file" || type == 'sparql') {
+    // FILE QUERY and SPARQL QUERY:
+    objecItem = callSparqlanything(objectItem,id,type);
   }
 
   // add the extraction information, including the results, to the Extractions Object
@@ -3871,7 +3888,7 @@ function nextExtractor(element, id, type) {
 
   // scroll top
   $('html, body').animate({
-    scrollTop: $(element).parent().parent().offset().top
+    scrollTop: $(element).parent().parent().offset().top - 100
   }, 800);
 }
 
@@ -3885,24 +3902,12 @@ function prevExtractor(toHide, toShow, remove=false, id=null) {
     const extractionListId = id.split('-').slice(0, 2).join('-');
     const extractionNumber = parseInt(id.split('-')[2]);
     if ('output' in extractionsObj[extractionListId][extractionNumber-1][extractionNumber]) {
-      var results = extractionsObj[extractionListId][extractionNumber-1][extractionNumber].output.results.bindings;
+      var results = extractionsObj[extractionListId][extractionNumber-1][extractionNumber].output;
 
       // if results exist, create a new list item to collect each retrieved URI,label pair in the form of a tag (containing an hidden input)
       if (results.length>0) {
-        $('#imported-graphs-'+extractionListId).prepend($("<li id='graph-"+id+"'><label>Extraction Graph:  <i class='fas fa-trash' onclick='delete_extractor("+id+")'></i></label><br></li>"));
-        
-        for (let idx = 0; idx < results.length; idx++) {
-          for (const key in results[idx]) {
-            console.log(results[idx][key]);
-
-            if (results[idx][key].type === "literal" && !results[idx][key].value.startsWith("https://") && !results[idx][key].value.startsWith("http://")) {
-              var label = results[idx][key].value;
-            } else if (results[idx][key].type === "uri" || results[idx][key].value.startsWith("https://") || results[idx][key].value.startsWith("http://")) {
-              var uri = results[idx][key].value;
-            }
-          }
-          $('#imported-graphs-'+extractionListId).find("#graph-" + id).append("<span class='tag' data-id='" + uri + "'>" + label + "</span><input type='hidden' name='keyword_"+id+"_"+label+"' value='"+encodeURIComponent(uri)+"'/>");
-        }
+        generateExtractionTagList(extractionListId,results,id);
+        console.log(results)
       }
     }
 
@@ -3912,18 +3917,63 @@ function prevExtractor(toHide, toShow, remove=false, id=null) {
     $('#imported-graphs-'+extractionListId).show();
   }  
 }
-
-function delete_extractor(id) {
-  if ($('#recordForm').length >0) {
-    var element_id = '#recordForm';
-  } else {
-    var element_id = '#modifyForm';
-  }
-  var hidden_input = $(element_id).find('[type="hidden"][name*="'+id+'-"]');
-  hidden_input.each(function(index, item) {
-      $(item).remove();
-  })
+// remove all the information related to the deleted extraction graph
+function deleteExtractor(id) {
+  // remove key entities (hidden input fields) from DOM
+  var hiddenInput = $("#recordForm, #modifyForm").find('[type="hidden"][name*="'+id+'-"]');
+  hiddenInput.remove();
   $('#graph-'+id).remove();
+
+  // remove the extraction information from the extractions' Object
+  var splitId = id.split("-");
+  var recordId = splitId[0]+"-"+splitId[1]
+  var extractionNum = splitId[2]
+  extractionsObj[recordId] = extractionsObj[recordId].filter(obj => !obj.hasOwnProperty(parseInt(extractionNum)));
+}
+
+function modifyExtractor(record,id) {
+  // look for the extraction information within the extractions Object
+  var extractionNumber = parseInt(id.replace(record,'').replace('-',''));
+  var extractions = extractionsObj[record];
+  const extraction = extractions.find(obj => obj.hasOwnProperty(extractionNumber));
+  const extractionParameters = extraction ? extraction[extractionNumber] : undefined;
+  const extractorType = extractionParameters.type
+  
+  // generate the form for the extraction
+  generateExtractionForm("imported-graphs-"+record,extractionNumber);
+  var extractor = $('#extractor');
+  extractor.val(extractorType);
+  addExtractor(extractor,record,extractionNumber);
+
+  // fill the extraction form with previously provided values
+  if (extractorType == 'api') {
+    const url = extractionParameters.url;
+    const query = extractionParameters.query;
+    const results = extractionParameters.results;
+
+    // set the URL
+    $('#ApiUrl').val(url);
+    // set the query 
+    for (const [key, value] of Object.entries(query)) {
+      const addButton = $('.add-parameter');
+      generateExtractionParameter(addButton);
+      const newParameterDiv = addButton.prev('.api-query-parameter').find('input');
+      newParameterDiv.eq(0).val(key);
+      newParameterDiv.eq(1).val(value);
+    }
+    // set the results' keys
+    $('.api-results-parameter input[value]').each(function() {
+      console.log($(this))
+      $(this).next().val(results[$(this).val().toLowerCase()]);
+    })
+    
+  } else if (extractorType == 'sparql') {
+    const url = extractionParameters.url;
+    const query = extractionParameters.query;
+  } else if (extractorType == 'file') {
+    const url = extractionParameters.url;
+    const query = extractionParameters.query;
+  }
 }
 
 function showExtractionResult(jsonData,type,id,objectItem=null) {
@@ -4007,7 +4057,10 @@ function showExtractionResult(jsonData,type,id,objectItem=null) {
 }
 
 // call back-end API to perform SPARQL.Anything queries
-function callSparqlanything(q, id, type, endpoint) {
+function callSparqlanything(objecItem, id, type) {
+  var q = objecItem.query;
+  var endpoint = objecItem.url;
+
   // modify the query to make it ready for SPARQL.Anything
   var encoded;
   if (type === 'file') {
@@ -4023,7 +4076,8 @@ function callSparqlanything(q, id, type, endpoint) {
     success: function(resultsJsonObject) {
       // show results inside a table
       var bindings = showExtractionResult(resultsJsonObject,type,id);
-      return bindings;
+      objecItem['output'] = resultsJsonObject.results.bindings
+      return objecItem;
     },
     error: function() {
       alert(("error: check your parameters"))

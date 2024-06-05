@@ -53,6 +53,16 @@ $if alert == False:
 											$$('#$id').prepend($$('<option value="None">Select from the list</option>'));
 										</script>
 							</section>
+						$if knowledge_extractor != set():
+							$ extractors_list = list(knowledge_extractor)
+							<script type="text/javascript">
+								const extractionsObj = {}
+								const extractors = '$extractors_list'.replace(/&#39;/g, '"')
+								const extractorsArray = JSON.parse(extractors)
+								if (extractorsArray.includes('$template')) {
+									generateExtractor('$pageID');
+								}
+							</script>
 					</section>
 					<section class="homeheading col-md-4 col-sm-4 col-lg-4">
 						<h2>What did you find?</h2>
@@ -160,14 +170,3 @@ $else:
 	<header class="row needDoc">
 		<h3>You already proposed $limit new resources today! Please come back tomorrow</h3>
 	</header>
-
-$if knowledge_extractor != set():
-	$ extractors_list = list(knowledge_extractor)
-	<script type="text/javascript">
-		const extractionsObj = {}
-		const extractors = '$extractors_list'.replace(/&#39;/g, '"')
-		const extractorsArray = JSON.parse(extractors)
-		if (extractorsArray.includes('$template')) {
-			generateExtractor('$pageID');
-		}
-	</script>

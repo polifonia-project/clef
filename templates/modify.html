@@ -1,4 +1,4 @@
-$def with (graphdata,pageID,record_form,user,ids_dropdown,is_git_auth,invalid,project,template,query_templates,knowledge_extractor)
+$def with (graphdata,pageID,record_form,user,ids_dropdown,is_git_auth,invalid,project,template,query_templates,knowledge_extractor,extractions)
 
 $var user = user
 $var is_git_auth = is_git_auth
@@ -129,6 +129,20 @@ $if query_templates!=None:
 											</script>
 								</section>
 						</section>
+					$if knowledge_extractor != set():
+						$ extractors_list = list(knowledge_extractor)
+						$ extractions_object = extractions
+						<script type="text/javascript">
+							console.log('$extractions_object')
+							var extractionsString = `$extractions_object`.replace(/\n/g, " ").replace(/&quot;/g, "'").replace(/&#39;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+							console.log(extractionsString)
+							const extractionsObj = JSON.parse(extractionsString)
+							const extractors = '$extractors_list'.replace(/&#39;/g, '"')
+							const extractorsArray = JSON.parse(extractors)
+							if (extractorsArray.includes('$template')) {
+								generateExtractor('$pageID');
+							}
+						</script>
 				</section>
 				<section class="homeheading col-md-4 col-sm-4 col-lg-4">
 					<h2>Remember to save!</h2>
@@ -215,9 +229,8 @@ $if query_templates!=None:
 
 </section>
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-$if knowledge_extractor != {}:
-	<script>
-		const extractors = '$knowledge_extractor'.replace(/&#39;/g, '"')
-		const extractorsObj = JSON.parse(extractors)
-	</script>
+<link rel="stylesheet" type="text/css" href="./static/css/yasgui.css">
+	<script src='static/js/yasr.bundled.min.js'></script>
+	<script src='static/js/yasqe.bundled.min.js'></script>
+	<script src="static/js/sparql.js"></script>
+	<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>

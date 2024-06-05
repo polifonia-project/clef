@@ -684,14 +684,16 @@ class Modify(object):
 			ids_dropdown = u.get_dropdowns(fields)
 			
 			query_templates=u.get_query_templates(res_template)
-			knowledge_extractors = u.has_extractor(res_template, name)
-			extractor = queries.retrieve_extractions(knowledge_extractors)
+			extractor = u.has_extractor(res_template)
+			previous_extractors = u.has_extractor(res_template, name)
+			extractions_data = queries.retrieve_extractions(previous_extractors)
 
 			return render.modify(graphdata=data, pageID=recordID, record_form=f,
 							user=session['username'],ids_dropdown=ids_dropdown,
 							is_git_auth=is_git_auth,invalid=False,
 							project=conf.myProject,template=res_template,
-							query_templates=query_templates,knowledge_extractor=extractor)
+							query_templates=query_templates,knowledge_extractor=extractor,
+							extractions=extractions_data)
 		else:
 			session['logged_in'] = 'False'
 			raise web.seeother(prefixLocal+'/')
@@ -733,13 +735,16 @@ class Modify(object):
 				ids_dropdown = u.get_dropdowns(fields)
 
 				query_templates = u.get_query_templates(templateID)
-				extractor = queries.retrieve_extractions(conf.base+name) if u.has_extractor(name, modify=True) else False
+				extractor = u.has_extractor(res_template)
+				previous_extractors = u.has_extractor(res_template, name)
+				extractions_data = queries.retrieve_extractions(previous_extractors)
 				
 				return render.modify(graphdata=data, pageID=recordID, record_form=f,
 								user=session['username'],ids_dropdown=ids_dropdown,
 								is_git_auth=is_git_auth,invalid=True,
 								project=conf.myProject,template=res_template,
-								query_templates=query_templates,knowledge_extractor=extractor)
+								query_templates=query_templates,knowledge_extractor=extractor,
+								extractions=extractions_data)
 			else:
 				recordID = recordData.recordID
 				#u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
@@ -794,13 +799,16 @@ class Review(object):
 			ids_dropdown = u.get_dropdowns(fields) # TODO CHANGE
 			
 			query_templates = u.get_query_templates(res_template)
-			extractor = queries.retrieve_extractions(conf.base+name) if u.has_extractor(name, modify=True) else False
+			extractor = u.has_extractor(res_template)
+			previous_extractors = u.has_extractor(res_template, name)
+			extractions_data = queries.retrieve_extractions(previous_extractors)
 
 			return render.review(graphdata=data, pageID=recordID, record_form=f,
 								graph=graphToRebuild, user=session['username'],
 								ids_dropdown=ids_dropdown,is_git_auth=is_git_auth,
 								invalid=False,project=conf.myProject,template=res_template,
-								query_templates=query_templates,knowledge_extractor=extractor)
+								query_templates=query_templates,knowledge_extractor=extractor,
+								extractions=extractions_data)
 		else:
 			session['logged_in'] = 'False'
 			raise web.seeother(prefixLocal+'/')
@@ -828,6 +836,8 @@ class Review(object):
 			if not f.validates():
 				graphToRebuild = conf.base+name+'/'
 				recordID = name
+				res_class = queries.getClass(conf.base+name)
+				res_template = u.get_template_from_class(res_class)
 				data = queries.getData(graphToRebuild,templateID)
 				session['ip_address'] = str(web.ctx['ip'])
 				u.log_output('INVALID REVIEW RECORD', session['logged_in'], session['username'], recordID )
@@ -835,13 +845,18 @@ class Review(object):
 				with open(templateID) as tpl_form:
 					fields = json.load(tpl_form)
 				ids_dropdown = u.get_dropdowns(fields) # TODO CHANGE
+				
 				query_templates = u.get_query_templates()
-				extractor = queries.retrieve_extractions(conf.base+name) if u.has_extractor(name, modify=True) else False
+				extractor = u.has_extractor(res_template)
+				previous_extractors = u.has_extractor(res_template, name)
+				extractions_data = queries.retrieve_extractions(previous_extractors)
+
 				return render.review(graphdata=data, pageID=recordID, record_form=f,
 									graph=graphToRebuild, user=session['username'],
 									ids_dropdown=ids_dropdown,is_git_auth=is_git_auth,
 									invalid=True,project=conf.myProject,template=templateID,
-									query_templates=query_templates,knowledge_extractor=extractor)
+									query_templates=query_templates,knowledge_extractor=extractor,
+									extractions=extractions_data)
 			else:
 				recordData = web.input()
 				recordID = recordData.recordID
@@ -863,6 +878,8 @@ class Review(object):
 			if not f.validates():
 				graphToRebuild = conf.base+name+'/'
 				recordID = name
+				res_class = queries.getClass(conf.base+name)
+				res_template = u.get_template_from_class(res_class)
 				data = queries.getData(graphToRebuild,templateID)
 				session['ip_address'] = str(web.ctx['ip'])
 				u.log_output('INVALID REVIEW RECORD', session['logged_in'], session['username'], recordID )
@@ -872,12 +889,16 @@ class Review(object):
 				ids_dropdown = u.get_dropdowns(fields)
 				
 				query_templates = u.get_query_templates()
-				extractor = queries.retrieve_extractions(conf.base+name) if u.has_extractor(name, modify=True) else False
+				extractor = u.has_extractor(res_template)
+				previous_extractors = u.has_extractor(res_template, name)
+				extractions_data = queries.retrieve_extractions(previous_extractors)
+
 				return render.review(graphdata=data, pageID=recordID, record_form=f,
 									graph=graphToRebuild, user=session['username'],
 									ids_dropdown=ids_dropdown,is_git_auth=is_git_auth,
 									invalid=True,project=conf.myProject,template=templateID,
-									query_templates=query_templates,knowledge_extractor=extractor)
+									query_templates=query_templates,knowledge_extractor=extractor,
+									extractions=extractions_data)
 			else:
 				recordData = web.input()
 				#u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
@@ -1239,11 +1260,9 @@ class Sparqlanything(object):
 		"""+query_str_decoded.replace("&lt;", "<").replace("&gt;", ">")
 
 		# Retrieve all results so that user can verify them
-		print("sparql.anything query: ", query_str_decoded)
 		sparql.setQuery(query_str_decoded)
 		sparql.setReturnFormat(JSON)
 		results = sparql.query().convert()
-		print("results: \n",results, "\n ---------------------- \n")
 		return json.dumps(results)
 	
 class Wikidata(object):
@@ -1253,7 +1272,6 @@ class Wikidata(object):
 		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
 
 		query_string = web.input()
-		print(query_string)
 
 		try:
 			query_str_decoded = query_string.query.decode('utf-8').strip()
@@ -1261,11 +1279,9 @@ class Wikidata(object):
 			query_str_decoded = query_string.query.strip()
 		
 		sparql = SPARQLWrapper(WIKIDATA_SPARQL,agent=USER_AGENT)
-		print(sparql._getRequestEncodedParameters())
 		sparql.setQuery(query_str_decoded)
 		sparql.setReturnFormat(JSON)
 		results = sparql.query().convert()
-		print("results: \n",results, "\n ---------------------- \n")
 		return json.dumps(results)
 
 if __name__ == "__main__":

@@ -519,7 +519,7 @@ def has_extractor(res_template, record_name=None):
 					result.add(res_template)
 				elif 'import_subtemplate' in field and field['import_subtemplate'] != '':
 					# iterate over sub-templates
-					result.update(has_extractor(field['import_subtemplate'], modify=False))
+					result.update(has_extractor(field['import_subtemplate'], record_name=None))
 		return result
 
 def update_knowledge_extraction(data, KE_file):

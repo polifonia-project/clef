@@ -1,4 +1,4 @@
-$def with (graphdata, pageID, record_form, graph, user,ids_dropdown,is_git_auth,invalid,project,template,query_templates,knowledge_extractor)
+$def with (graphdata, pageID, record_form, graph, user,ids_dropdown,is_git_auth,invalid,project,template,query_templates,knowledge_extractor,extractions)
 $var user = user
 $var is_git_auth = is_git_auth
 $var project = project
@@ -133,27 +133,20 @@ $if query_templates!=None:
 											</script>
 								</section>
 						</section>
-					$if knowledge_extractor != False:
-						<section class="row import_form">
-							<section class="col-md-12 col-sm-12 col-lg-12">KEYWORDS</section>
-							<ul class="imported_graphs" id="imported_graphs">
-									$for extraction in knowledge_extractor:
-										$if extraction == "next_id":
-											<script>
-												var extraction_number = $knowledge_extractor[extraction];
-											</script>
-										$else:
-											<li id="graph-$extraction">
-												<label>Extraction Graph: <i class='fas fa-trash' onclick='delete_extractor("$extraction")'></i></label><br>
-												$for extracted_keyword in knowledge_extractor[extraction]:
-													<span class="tag" data-id="$extracted_keyword['uri']">$extracted_keyword['label']</span>
-													$ keyword_id = "keyword_" + extraction + "_" + extracted_keyword['label']
-													<input type="hidden" name="$keyword_id" value="$extracted_keyword['uri']">
-											</li>
-								<li id="add_extractor"><label class="add_graph_button">Extract keywords  <i class="fas fa-plus-circle" onclick="extraction_form(this), window.scrollTo(0, 0)"></i></label></li>
-							</ul>
-
-						</section>
+					$if knowledge_extractor != set():
+						$ extractors_list = list(knowledge_extractor)
+						$ extractions_object = extractions
+						<script type="text/javascript">
+							console.log('$extractions_object')
+							var extractionsString = `$extractions_object`.replace(/\n/g, " ").replace(/&quot;/g, "'").replace(/&#39;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+							console.log(extractionsString)
+							const extractionsObj = JSON.parse(extractionsString)
+							const extractors = '$extractors_list'.replace(/&#39;/g, '"')
+							const extractorsArray = JSON.parse(extractors)
+							if (extractorsArray.includes('$template')) {
+								generateExtractor('$pageID');
+							}
+						</script>
 				</section>
 				<section class="homeheading col-md-4 col-sm-4 col-lg-4">
 					<h2>Ready to publish?</h2>

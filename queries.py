@@ -8,6 +8,7 @@ from rdflib.plugins.sparql import prepareQuery
 from pymantic import sparql
 import utils as u
 import urllib.parse
+import re
 
 u.reload_config()
 
@@ -410,36 +411,88 @@ def retrieve_extractions(res_uri_list):
 	res_uri_list: list
 		a list of uri (Named Graphs) which may contain Knowledge Extractions
 	"""
-	patterns = []
-	for uri in res_uri_list:
-		query_var_id = uri.rsplit('/',2)[1].replace('-','_')
-		new_pattern = """<"""+uri+"""> schema:keywords ?extraction_graph_"""+query_var_id+"""."""+\
-			""" ?extraction_graph_"""+query_var_id+""" prov:wasGeneratedBy ?extraction_entity_"""+query_var_id+\
-			""" . ?extraction_entity_"""+query_var_id+""" prov:used ?extraction_link_"""+query_var_id+""" . """
-		patterns.append(new_pattern)
-	query_pattern = "".join(patterns)
-
-	q = """PREFIX schema: <https://schema.org/> PREFIX prov: <http://www.w3.org/ns/prov#> SELECT DISTINCT * WHERE {""" +query_pattern+ """}"""
-	results = hello_blazegraph(q)
-
 	res_dict = {}
-	for result in results["results"]["bindings"]:
-		graph, link = "", ""
-		for k,v in result.items():
-			if k.startswith('extraction_graph_'):
-				graph = v['value']
-			elif k.startswith('extraction_link_'):
-				link = v['value']
-		res_dict[graph] = {
-			'link': link
-		}
-	
-	for extraction in list(res_dict.keys()):
-		retrieve_graph = """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-			SELECT DISTINCT ?uri ?label WHERE {GRAPH <"""+extraction+""">
-			{	?uri rdfs:label ?label .  }}"""
-		graph_results = hello_blazegraph(retrieve_graph)["results"]["bindings"]
-		res_dict[extraction]['results'] = [{"uri": urllib.parse.unquote(res["uri"]["value"]), "label": res["label"]["value"]} for res in graph_results]
+
+
+	# Retrieve the extraction graphs (URI) for each Record/Subrecord
+	for uri in res_uri_list:
+		uri_id = uri.replace(conf.base,'')[:-1]
+		query_var_id = uri.rsplit('/',2)[1].replace('-','_')
+		query_pattern = """<"""+uri+"""> schema:keywords ?extraction_graph_"""+query_var_id+"""."""+\
+			""" ?extraction_graph_"""+query_var_id+""" prov:wasGeneratedBy ?extraction_entity_"""+query_var_id+\
+			""" . ?extraction_entity_"""+query_var_id+""" prov:used ?extraction_link_"""+query_var_id+\
+			""" . OPTIONAL { ?extraction_entity_"""+query_var_id+""" rdfs:comment ?extraction_comment_"""+query_var_id+"""}"""
+
+		q = """PREFIX schema: <https://schema.org/> PREFIX prov: <http://www.w3.org/ns/prov#> SELECT DISTINCT * WHERE {""" +query_pattern+ """}"""
+		print("\n ---------- \n query: \n", q, "\n ---------- \n")
+		results = hello_blazegraph(q)
+
+		res_dict[uri_id] = []
+		pattern = re.compile(r'<x-sparql-anything:(.*?)>')
+
+		for result in results["results"]["bindings"]:
+			# retrieve the extraction metadata
+			metadata = {
+				'graph': '',
+				'link': '',
+				'comment': ''
+        	}
+
+			for k, v in result.items():
+				if k.startswith('extraction_graph_'):
+					metadata['graph'] = v['value']
+				elif k.startswith('extraction_link_'):
+					metadata['link'] = urllib.parse.unquote(v['value'])
+				elif k.startswith('extraction_comment'):
+					metadata['comment'] = v['value']
+
+        	# Store the metadata to allow their re-use
+			graph = metadata['graph']
+			link = metadata['link']
+			comment = metadata['comment']
+
+			res_dict[uri_id].append({graph: {}})
+
+			# Api metadata
+			if comment:
+				res_dict[uri_id][-1][graph]['results'] = json.loads(comment.replace("'",'"'))
+				res_dict[uri_id][-1][graph]['type'] = 'api'
+				url, parameters = link.rsplit('?', 1)
+				query = {p.split("=")[0]: p.split("=")[1] for p in parameters.split("&")}
+				res_dict[uri_id][-1][graph]['url'] = url
+				res_dict[uri_id][-1][graph]['query'] = query
+			
+			# File metadata
+			elif link.startswith(conf.sparqlAnythingEndpoint):
+				res_dict[uri_id][-1][graph]['type'] = 'file'
+				query = link.split("?query=")[1]
+				url_match = pattern.search(query)
+				if url_match:
+					url = url_match.group(1)
+				else:
+					url = ''
+				res_dict[uri_id][-1][graph]['url'] = url
+				res_dict[uri_id][-1][graph]['query'] = query
+
+			# Sparql metadata
+			else:
+				res_dict[uri_id][-1][graph]['type'] = 'sparql'
+				print("LINK,", link)
+				url, query = link.split("?query=")
+				res_dict[uri_id][-1][graph]['url'] = url
+				res_dict[uri_id][-1][graph]['query'] = query
+		
+		# Retrieve the keywords populating each extraction graph
+		for n in range(len(res_dict[uri_id])):
+			graph_uri = list(res_dict[uri_id][n].keys())[0]
+			idx = graph_uri.split('/extraction-')[-1][:-1]
+			retrieve_graph = """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+				SELECT DISTINCT ?uri ?label WHERE {GRAPH <"""+graph_uri+""">
+				{	?uri rdfs:label ?label .  }}"""
+			graph_results = hello_blazegraph(retrieve_graph)["results"]["bindings"]
+			res_dict[uri_id][n][graph_uri]['output'] = [{"uri": {"value": urllib.parse.unquote(res["uri"]["value"]), "type":res["uri"]["type"]}, "label": {"value": res["label"]["value"], "type":res["label"]["type"]}} for res in graph_results]
+			res_dict[uri_id][n][idx] = res_dict[uri_id][n].pop(graph_uri)
+
 	print("#### Extractions dictionary: ", res_dict)
 	
 	return res_dict

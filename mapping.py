@@ -82,9 +82,10 @@ def getRightURIbase(value):
 	return WD+value if value.startswith('Q') else GEO+value if value.isdecimal() else VIAF+value[4:] if value.startswith("viaf") else ''+value if value.startswith("http") else base+value.lstrip().rstrip()
 
 
-def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=None,tpl_form=None):
+def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 	""" transform input data into RDF, upload data to the triplestore, dump data locally """
-	print("RECORD:", recordData)
+	print("RECORD DATA:", recordData)
+
 	# MAPPING FORM / PROPERTIES
 	if tpl_form:
 		with open(tpl_form) as config_form:
@@ -106,7 +107,6 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 	wd = rdflib.Graph(identifier=URIRef(base+graph_name+'/'))
 
 	# PROVENANCE: creator, contributor, publication stage
-
 	if stage == 'not modified':
 		wd.add(( URIRef(base+graph_name+'/'), PROV.wasAttributedTo, URIRef(base+userID) ))
 		wd.add(( URIRef(base+userID), RDFS.label , Literal(userID.replace('-dot-','.').replace('-at-', '@') ) ))
@@ -122,7 +122,6 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 
 		# retrieve hidden triples (to be saved) and re-introduce them in the modified named graph
 		to_be_saved = queries.saveHiddenTriples(graphToClear, tpl_form)
-		print(type(to_be_saved))
 		if to_be_saved['results']['bindings'] != [{}]:
 			for binding in to_be_saved['results']['bindings']:
 				subject = URIRef(binding['subject']['value'])
@@ -212,25 +211,64 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 					entityURI = getRightURIbase(entity[0])
 					wd.add(( URIRef(base+graph_name), SCHEMA.keywords, URIRef(entityURI) ))
 					wd.add(( URIRef( entityURI ), RDFS.label, Literal(entity[1].lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
-		# KNOWLEDGE EXTRACTION: import graphs
-		elif field['type']=="KnowledgeExtractor":
-			with open(knowledge_extraction) as extraction_file:
-				extraction = json.load(extraction_file)
-			imported_graphs = extraction[recordID] if recordID in extraction else []
-			# SPARQL import
-			for graph in imported_graphs:
-				if any(key.startswith("keyword_"+graph['internalID']+"_") for key in recordData):
-					extraction_graph_name = graph_name + "/extraction-" + str(graph['internalID'])
+		# KNOWLEDGE EXTRACTION
+		elif field['type']=="KnowledgeExtractor" and "extractions-dict" in recordData:
+			# process extraction parameters
+			extractions_dict = json.loads(urllib.parse.unquote(recordData["extractions-dict"]))
+			extractions_array = extractions_dict[recordID] if recordID in extractions_dict else []
+
+			for extraction in extractions_array:
+				extraction_num = next(iter(extraction.keys()))
+				extraction_type = extraction[extraction_num]['type']
+				extraction_url = extraction[extraction_num]['url']
+				extraction_access_keys = False
+				if extraction_type == 'api':
+					if 'query' in extraction[extraction_num]:
+						encoded_query = ''
+						add_symbol = '?'
+						for parameter_key,parameter_value in extraction[extraction_num]['query'].items():
+							encoded_query += add_symbol + parameter_key + '=' + parameter_value
+							add_symbol = '&'
+						extraction_url+=encoded_query
+					if 'results' in extraction[extraction_num]:
+						extraction_access_keys = extraction[extraction_num]['results']
+				elif extraction_type == 'sparql':
+					query = extraction[extraction_num]['query'].replace("'","\"")
+					print(query)
+					encoded_query = urllib.parse.quote(query)
+					extraction_url+="?query="+encoded_query
+				elif extraction_type == 'file':
+					query = extraction[extraction_num]['query']
+					query = query.replace("{", "{{ SERVICE <x-sparql-anything:"+extraction_url+"> {{").replace("}", "}}") if "<x-sparql-anything:" not in query else query
+					query = query.replace("'","\"")
+					encoded_query = urllib.parse.quote(query)
+					extraction_url = conf.sparqlAnythingEndpoint+"?query="+encoded_query
+
+				
+				# process extracted keywords
+				extracted_keywords = [item for item in recordData if item.startswith("keyword_"+recordID+"-"+extraction_num)]
+				if len(extracted_keywords) > 0:
+					# link the extraction graph to main Record graph
+					extraction_graph_name = graph_name + "/extraction-" + extraction_num
 					wd.add(( URIRef(base+graph_name+'/'), SCHEMA.keywords, URIRef(base+extraction_graph_name+'/') ))
+
+					# store the extraction metadata
 					wd_extraction = rdflib.Graph(identifier=URIRef(base+extraction_graph_name+'/'))
 					wd_extraction.add(( URIRef(base+extraction_graph_name+'/'), PROV.wasAttributedTo, URIRef(base+userID) ))
 					wd_extraction.add(( URIRef(base+extraction_graph_name+'/'), PROV.generatedAtTime, Literal(datetime.datetime.now(),datatype=XSD.dateTime)  ))
-					for label in recordData:
-						start = "keyword_"+graph['internalID']+"_"
-						if label.startswith(start):
-							wd_extraction.add(( URIRef(urllib.parse.unquote(recordData[label])), RDFS.label,  Literal(label.replace(start, ""))))
-					wd_extraction.serialize(destination='records/'+recordID+"-extraction-"+str(graph['internalID'])+'.ttl', format='ttl', encoding='utf-8')
-					server.update('load <file:///'+dir_path+'/records/'+recordID+"-extraction-"+str(graph['internalID'])+'.ttl> into graph <'+base+extraction_graph_name+'/>')
+					wd_extraction.add(( URIRef(base+extraction_graph_name+'/'), PROV.wasGeneratedBy, URIRef(base+extraction_graph_name)))
+					wd_extraction.add(( URIRef(base+extraction_graph_name), PROV.used, URIRef(extraction_url)))
+					if extraction_access_keys:
+						wd_extraction.add(( URIRef(base+extraction_graph_name), RDFS.comment, Literal(extraction_access_keys)))
+					
+					# store the extraction output
+					for keyword in extracted_keywords:
+						label = keyword.replace("keyword_"+recordID+"-"+extraction_num+"_","")
+						wd_extraction.add(( URIRef(urllib.parse.unquote(recordData[keyword])), RDFS.label,  Literal(label)))
+					
+					# save the extraction graph
+					wd_extraction.serialize(destination='records/'+recordID+"-extraction-"+extraction_num+'.ttl', format='ttl', encoding='utf-8')
+					server.update('load <file:///'+dir_path+'/records/'+recordID+"-extraction-"+extraction_num+'.ttl> into graph <'+base+extraction_graph_name+'/>')
 		# SUBTEMPLATE
 		elif field['type']=="Subtemplate" and field['id'] in recordData:
 			print(recordData[field['id']])
@@ -244,7 +282,7 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 						# process a new subrecord, send its data to the triplestore, and link it to the main record
 						subrecord_id = subrecord
 						subrecord_template = field['import_subtemplate']
-						processed_subrecord = process_new_subrecord(recordData,userID,stage,knowledge_extraction,subrecord_template,subrecord)
+						processed_subrecord = process_new_subrecord(recordData,userID,stage,subrecord_template,subrecord)
 						subrecord_id, retrieved_label = processed_subrecord
 					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+subrecord_id) ))
 					wd.add(( URIRef(base+subrecord_id), RDFS.label, Literal(retrieved_label, datatype="http://www.w3.org/2001/XMLSchema#string")))
@@ -272,7 +310,7 @@ def inputToRDF(recordData, userID, stage, knowledge_extraction, graphToClear=Non
 
 	return 'records/'+recordID+'.ttl'
 	
-def process_new_subrecord(data, userID, stage, knowledge_extraction, sub_tpl, subrecord_id):
+def process_new_subrecord(data, userID, stage, sub_tpl, subrecord_id):
 	# prepare a new dict to store data of subrecord-x
 	new_record_data = {'recordID': subrecord_id,}
 
@@ -293,7 +331,7 @@ def process_new_subrecord(data, userID, stage, knowledge_extraction, sub_tpl, su
 					if ";" in inner_subrecord:
 						processed_subrecord = inner_subrecord.split(";",1)
 					else:
-						processed_subrecord = process_new_subrecord(data,userID,stage,knowledge_extraction,inner_subtemplate,inner_subrecord)
+						processed_subrecord = process_new_subrecord(data,userID,stage,inner_subtemplate,inner_subrecord)
 					new_record_data[subfield_id][0].append(processed_subrecord) # store the id,label pair inside the subrecord dict
 
 		# Date
@@ -301,8 +339,17 @@ def process_new_subrecord(data, userID, stage, knowledge_extraction, sub_tpl, su
 			key = subtemplate_field['id']+"_"+subrecord_id
 			new_record_data[subtemplate_field['id']] = data[key]
 
+		# Knowledge Extraction
+		elif subtemplate_field['type'] == 'KnowledgeExtractor' and 'extractions-dict' in data:
+			new_record_data['extractions-dict'] = data['extractions-dict']
+			for keyword_key,keyword_value in data.items():
+				print("FFF", subrecord_id)
+				if keyword_key.startswith('keyword_'+subrecord_id):
+					print("QQQQ",keyword_key,keyword_value)
+					new_record_data[keyword_key]=keyword_value
+
 		# Multiple values fields: Literals or URI
-		elif subtemplate_field['value'] == 'Literal' or subtemplate_field['value'] in ['URI','URL','Place']:
+		elif 'value' in subtemplate_field and (subtemplate_field['value'] == 'Literal' or subtemplate_field['value'] in ['URI','URL','Place']):
 			keys = [input_id for input_id in data.keys() if input_id.startswith(subtemplate_field['id']+"_") and input_id.endswith("_"+subrecord_id)]
 			for key in keys:
 				shortened_key = key.rsplit("_",1)[0]
@@ -315,10 +362,13 @@ def process_new_subrecord(data, userID, stage, knowledge_extraction, sub_tpl, su
 				label_input_field = subfield_id+"_"+main_lang+"_"+subrecord_id
 				label = data[label_input_field] if label_input_field in data else "No label"
 
+		
+
+
 	print("#### DATA:\n",new_record_data)
 	store_data = storify(new_record_data)
 	grapht_to_clear = None if stage == 'not modified' else base+subrecord_id+"/"
-	inputToRDF(store_data,userID,stage,knowledge_extraction,graphToClear=grapht_to_clear,tpl_form=sub_tpl)
+	inputToRDF(store_data,userID,stage,graphToClear=grapht_to_clear,tpl_form=sub_tpl)
 	result = [subrecord_id,label]
 	return result
 

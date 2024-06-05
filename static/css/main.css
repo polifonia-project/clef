@@ -2132,8 +2132,9 @@ input[subtemplate]+.fa-plus-circle {
   right: 45px; position: absolute; top: 20px;
 }
 
-.form_row .fa-edit, .form_row .fa-trash-alt {
-  color: rgba(100,23,180,1); cursor: pointer;
+.form_row .fa-edit, .import-form .fa-edit, .form_row .fa-trash-alt {
+  color: rgba(100,23,180,1); 
+  cursor: pointer;
 }
 
 /* Subrecords visualisation */

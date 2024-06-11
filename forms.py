@@ -51,7 +51,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 		tpl_list = json.load(tpl_file)
 
 	res_class = [t["type"] for t in tpl_list if t["template"] == json_form]
-	res_class = res_class[0] if len(res_class) > 0 else "none"
+	res_class = ";  ".join(res_class[0]) if len(res_class) > 0 else "none"
 
 	for field in fields:
 		if 'hidden' in field and field['hidden'] == 'False': # do not include hidden fields
@@ -61,7 +61,6 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 			pre_a = '<span class="tip" data-toggle="tooltip" data-placement="bottom" title="'
 			pre_b = '"><i class="fas fa-info-circle"></i></span>'
 			prepend = pre_a+html.escape(field['prepend'])+pre_b if 'prepend' in field and len(field['prepend']) > 0 else ''
-			disabled = 'disabled' if 'disabled' in field and field['disabled'] == "True" else ''
 			classes = field['class'] if 'class' in field and len(field['class']) > 0 else ''
 			if 'skos' in field:
 				for vocabulary in field['skos']:
@@ -77,7 +76,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 			classes = classes+' vocabularyField' if field['type'] == 'Skos' else classes
 			classes = classes+' oneVocableAccepted' if 'vocables' in field and field['vocables'] == 'oneVocable' else classes
 			classes = classes+' websitePreview' if field['type'] == 'WebsitePreview' else classes
-			classes = classes+' ('+res_class+') '+disabled
+			classes = classes+' disabled' if 'disabled' in field and field['disabled'] == "True" else classes
 			classes = classes+ ' ' + field['cardinality'] if 'cardinality' in field else classes
 			autocomplete = field['cache_autocomplete'] if 'cache_autocomplete' in field and len(field['cache_autocomplete']) > 0 else ''
 			mandatory = field['mandatory'] if 'mandatory' in field and field['mandatory'] == 'True' else 'False'
@@ -100,8 +99,9 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					pre = prepend,
 					class_= classes,
 					value=default,
-					mandatory = mandatory,
-					lang=conf.mainLang) , )
+					lang=conf.mainLang,
+					data_mandatory = mandatory,
+					data_class=res_class) , )
 				else:
 					params = params + (form.Textbox(myid,
 					type='text',
@@ -111,8 +111,9 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					pre = prepend,
 					class_= classes,
 					value=default,
-					mandatory = mandatory,
-					lang=conf.mainLang), )
+					lang=conf.mainLang,
+					data_mandatory = mandatory,
+					data_class=res_class), )
 
 			# Entities, SKOS thesauri, links
 			if field['type'] in ['Skos', 'WebsitePreview'] or (field['type'] == 'Textbox' and field['value'] in ['URL', 'URI', 'Place']):
@@ -123,7 +124,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					pre = prepend,
 					class_= classes,
 					value=default,
-					mandatory = mandatory), )
+					data_mandatory = mandatory,
+					data_class=res_class), )
 				
 			# Multimedia Link
 			if field['type'] == 'Multimedia':
@@ -134,7 +136,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 				pre = prepend,
 				class_= classes,
 				value=default,
-				mandatory = mandatory) , )
+				data_mandatory = mandatory,
+				data_class=res_class) , )
 
 			# Text box
 			if field['type'] == 'Textarea':
@@ -145,8 +148,9 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 				pre = prepend,
 				class_= classes,
 				value=default,
-				mandatory = mandatory,
-				lang=conf.mainLang), )
+				lang=conf.mainLang,
+				data_mandatory = mandatory,
+				data_class=res_class), )
 
 			if field['type'] == 'Date':
 				if field['calendar'] == 'Month':
@@ -155,14 +159,16 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					id=myid,
 					pre = prepend,
 					class_= classes,
-					mandatory=mandatory), )
+					data_mandatory = mandatory,
+					data_class=res_class), )
 				elif field['calendar'] == 'Day':
 					params = params + (form.Date(myid,
 					description = description,
 					id=myid,
 					pre = prepend,
 					class_= classes,
-					mandatory=mandatory), )
+					data_mandatory = mandatory,
+					data_class=res_class), )
 				elif field['calendar'] == 'Year':
 					params = params + (form.Textbox(myid,
 					description = description,
@@ -170,7 +176,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					pre = prepend,
 					class_= classes,
 					value=default,
-					mandatory=mandatory), )
+					data_mandatory = mandatory,
+					data_class=res_class), )
 
 			if field['type'] == 'Dropdown':
 				params = params + (form.Dropdown(myid,
@@ -180,7 +187,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 				id=myid,
 				pre = prepend,
 				class_= classes,
-				mandatory = mandatory), )
+				data_mandatory = mandatory,
+				data_class=res_class), )
 
 			if field['type'] == 'Checkbox':
 				prepend_title = '<section class="checkbox_group_label label col-12">'+description+'</section>'
@@ -192,7 +200,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 				pre = prepend_title+prepend,
 				class_= classes+' checkbox_group',
 				checked=False,
-				mandatory = mandatory), )
+				data_mandatory = mandatory,
+				data_class=res_class), )
 
 				for value in dropdown_values[1:]:
 					i += 1
@@ -203,7 +212,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					pre = '',
 					class_= classes+' checkbox_group following_checkbox',
 					checked=False,
-					mandatory = mandatory), )
+					data_mandatory = mandatory,
+					data_class=res_class), )
 
 			# Subtemplate
 			if field['type'] == 'Subtemplate':
@@ -215,9 +225,10 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					pre = prepend,
 					class_= classes,
 					value=default,
-					mandatory = mandatory,
-					subtemplate = resource_class,
-					subtemplateID = field['import_subtemplate']), ) + get_form(field['import_subtemplate'], subtemplate=True)
+					data_mandatory = mandatory,
+					data_class=res_class,
+					data_subtemplate = resource_class,
+					data_subtemplateID = field['import_subtemplate']), ) + get_form(field['import_subtemplate'], subtemplate=True)
 
 	if subtemplate:
 		return params

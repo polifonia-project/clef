@@ -142,7 +142,8 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 	wd.add(( URIRef(base+graph_name+'/'), URIRef('http://dbpedia.org/ontology/currentStatus'), Literal(stage, datatype="http://www.w3.org/2001/XMLSchema#string")  ))
 
 	# GET VALUES FROM FIELDS, MAP THEIR TYPE, TRANSFORM TO RDF
-	wd.add(( URIRef(base+graph_name), RDF.type, URIRef(resource_class) )) # type of catalogued resource
+	for res_class in resource_class:
+		wd.add(( URIRef(base+graph_name), RDF.type, URIRef(res_class) )) # type of catalogued resource
 
 	# if the user did not specify any disambiguate field
 	is_any_disambiguate = ["yes" for field in fields if field['disambiguate'] == 'True']
@@ -218,27 +219,26 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 			extractions_array = extractions_dict[recordID] if recordID in extractions_dict else []
 
 			for extraction in extractions_array:
-				extraction_num = next(iter(extraction.keys()))
-				extraction_type = extraction[extraction_num]['type']
-				extraction_url = extraction[extraction_num]['url']
+				extraction_num = str(extraction['internalId'])
+				extraction_type = extraction['metadata']['type']
+				extraction_url = extraction['metadata']['url']
 				extraction_access_keys = False
 				if extraction_type == 'api':
-					if 'query' in extraction[extraction_num]:
+					if 'query' in extraction['metadata']:
 						encoded_query = ''
 						add_symbol = '?'
-						for parameter_key,parameter_value in extraction[extraction_num]['query'].items():
+						for parameter_key,parameter_value in extraction['metadata']['query'].items():
 							encoded_query += add_symbol + parameter_key + '=' + parameter_value
 							add_symbol = '&'
 						extraction_url+=encoded_query
-					if 'results' in extraction[extraction_num]:
-						extraction_access_keys = extraction[extraction_num]['results']
+					if 'results' in extraction['metadata']:
+						extraction_access_keys = extraction['metadata']['results']
 				elif extraction_type == 'sparql':
-					query = extraction[extraction_num]['query'].replace("'","\"")
-					print(query)
+					query = extraction['metadata']['query'].replace("'","\"")
 					encoded_query = urllib.parse.quote(query)
 					extraction_url+="?query="+encoded_query
 				elif extraction_type == 'file':
-					query = extraction[extraction_num]['query']
+					query = extraction['metadata']['query']
 					query = query.replace("{", "{{ SERVICE <x-sparql-anything:"+extraction_url+"> {{").replace("}", "}}") if "<x-sparql-anything:" not in query else query
 					query = query.replace("'","\"")
 					encoded_query = urllib.parse.quote(query)

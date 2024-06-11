@@ -119,6 +119,19 @@ button:hover {
   margin-top: 15px;
 }
 
+.modal-bg {
+  z-index: 1021;
+  display: block;
+  width: 100%;
+  left: 0%;
+  position: fixed;
+  top:0%;
+  height: 100%;
+  background-color: rgba(0, 0, 0);
+  opacity: 0;
+  animation: fadeIn 1s forwards;
+}
+
 /* button in backend*/
 .menu_btn {
   border: none !important;
@@ -538,12 +551,14 @@ article p {
 }
 
 .delete,
-.delete_template {
+.delete_template,
+.discard {
   background: rgba(255, 0, 0, 1) !important;
 }
 
 .delete:hover,
-.delete_template:hover {
+.delete_template:hover,
+.discard:hover {
   background-color: rgba(255, 10, 10, 1) !important;
 }
 
@@ -648,7 +663,6 @@ th {
   text-transform: uppercase;
   margin-top: 0.5em;
   margin-bottom: 5%;
-
 }
 
 .buttonsSection {
@@ -782,7 +796,6 @@ input[type='radio'] {
 }
 
 input[type='text'],
-input[type='textarea'],
 input[type='date'],
 input[type='month'],
 textarea {
@@ -796,7 +809,6 @@ textarea {
 }
 
 input[type='text']:focus,
-input[type='textarea']:focus,
 input[type='date']:focus,
 input[type='month']:focus,
 textarea:focus {
@@ -806,6 +818,22 @@ textarea:focus {
   transition-duration: 0.4s;
   padding-left: 0.6em !important;
 }
+
+input[type='text'].error-input, 
+textarea.error-input {
+  animation: border-error 0.5s linear forwards;
+}
+
+@-webkit-keyframes border-error {
+  from { border-bottom: solid 2px rgba(100, 23, 180, 1); }
+  to { border-bottom: solid 2px rgb(200, 22, 22); }
+}
+
+@keyframes border-error {
+  from { border-bottom: solid 2px rgba(100, 23, 180, 1); }
+  to { border-bottom: solid 2px rgb(200, 22, 22); }
+}
+
 
 input[value="Save"],
 input[value="Start review process"] {
@@ -837,6 +865,21 @@ input.following_checkbox {
 }
 .checkbox_group_label+span {
   padding-right: 20px;
+}
+
+.error-message {
+  padding: 0px 10px ;
+  display: block;
+  color: rgb(200, 0, 0);
+  background-color: rgba(253, 168, 168, 0.7);
+  height: 0px;
+  animation: upToDown 0.3s ease-in forwards;
+  font-size: 14px;
+}
+
+i.fa-exclamation-triangle {
+  color: rgb(200, 0, 0);
+  padding-right: 5px;
 }
 
 i.fa-info-circle {
@@ -1576,13 +1619,91 @@ section.dropdown-menu.gradient_dropbox.show input[type='text'] {
   opacity: 70%;
 }
 
-#selectTemplateClass .btn-dark {
-  margin-top: 15% !important;
+#selectTemplateClassModal {
+  display: none;
 }
 
-#selectTemplateClassButton {
+#selectTemplateClassModal.open-modal {
+  display: block;
+  position: fixed;
+  background-color: #F5F6FA !important;
+  z-index: 1022;
+  width: 600px;
+  height: 550px;
+  top: 50%;
+  left: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  overflow-y: auto !important; 
+  position: fixed;
+  max-height: 90vh; /* Altezza massima relativa all'altezza della finestra */
+  overflow-y: auto; /* Abilita lo scroll verticale */
+}
+
+#selectTemplateClassModal > form > section:first-of-type {
+  width: 100%;
+  padding: 15px 10px 10px 18px;
+  border-bottom: 3px solid rgba(100, 23, 180, 1);
+  color: rgba(100, 23, 180, 1);
+  font-size: 22px;
+  background-color: #dbdce3;
+}
+
+#selectTemplateClassModal .modal-input {
+  width: 86%;
+  margin-left: 7%;
+  background-color: inherit;
+}
+
+#selectTemplateClassModal .modal-input .label {
+  display: inline-block;
+  margin-bottom: 5px;
+  font-size: 16px;
+}
+
+#selectTemplateClassModal .modal-input .comment {
+  font-size: 14px;
+}
+
+#selectTemplateClassModal .modal-input input {
+  margin-top: 10px;
+}
+
+#selectTemplateClassModal .modal-input:is(:nth-of-type(2), :nth-of-type(3)) { 
+  margin-top: 40px;
+}
+
+#selectTemplateClassModal .fa-times {
+  position: absolute;
+  right: 20px;
+  margin-top: 6px;
+  color: rgb(100, 23, 180);
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+#selectTemplateClass button {
   border: none;
   outline: none;
+  display: inline-block;
+  margin: 10px 10px 0px 0px !important;
+  left: 60%;
+  position: relative;
+}
+
+#uri-container {
+  height: 100px;
+  max-height: 100px;
+  overflow-y: auto;
+  border-bottom: 1pt #acacac solid;
+}
+
+#uri-container::before {
+  content: 'press return to add a URI';
+  font-size: 0.7em;
+  color: grey;
+  display: block;
+  margin-left: 20px;
 }
 
 button#showTemplates {
@@ -2018,8 +2139,32 @@ button#showTemplates {
   margin-top: 0.7em;
 }
 
+.add-graph-button {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  color: rgba(100, 23, 180, 0.7);
+}
+
+.add-graph-button:hover {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  color: rgba(100, 23, 180, 0.9);
+  cursor: pointer;
+}
+
 .imported_graphs {
   margin-top: 0.7em;
+  list-style-type: none;
+  color: #333333bd;
+  padding-left: 20px;
+}
+
+.imported_graphs label {
+  padding-left: 5px;
+}
+
+.imported_graphs li:not(:last-of-type) {
+  margin-bottom: 20px;
 }
 
 .import-form + .block_field {
@@ -2046,7 +2191,7 @@ button#showTemplates {
   margin-top: 0.5em;
 }
 
-.fa-times {
+.extraction-form-div .fa-times {
   position: absolute;
   right: 50px;
   margin-top: 12px;
@@ -2326,3 +2471,17 @@ input[subtemplate]+.fa-plus-circle {
 .link_btn, .btn {white-space: nowrap;}
 .add_fields .link_btn {display: inline-block; margin-bottom: 8px}
 
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.8;
+  }
+}
+
+@keyframes upToDown {
+  from {height: 0px; padding-top:0px}
+  to {height: 32px; padding-top:5px}
+}

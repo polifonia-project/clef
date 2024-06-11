@@ -29,16 +29,17 @@ def hello_blazegraph(q):
 
 def getRecords(res_class=None):
 	""" get all the records created by users to list them in the backend welcome page """
-	class_restriction = "" if res_class is None else "?s a <"+res_class+"> ."
+	filter_class_exists = "\n".join([f"FILTER EXISTS {{ ?s a <{cls}> }}" for cls in res_class]) if res_class != None else ""
+	filter_class_not_exists = f"FILTER (NOT EXISTS {{ ?s a ?other_class FILTER (?other_class NOT IN ({', '.join([f'<{cls}>' for cls in res_class])})) }})" if res_class != None else ""
 
 	queryRecords = """
 		PREFIX prov: <http://www.w3.org/ns/prov#>
 		PREFIX base: <"""+conf.base+""">
-		SELECT DISTINCT ?g ?title ?userLabel ?modifierLabel ?date ?stage ?class
+		SELECT DISTINCT ?g ?title ?userLabel ?modifierLabel ?date ?stage (GROUP_CONCAT(DISTINCT ?class; SEPARATOR=";  ") AS ?classes)
 		WHERE
 		{ GRAPH ?g {
 			?s ?p ?o . ?s a ?class .
-			""" +class_restriction+ """
+			""" +filter_class_exists+filter_class_not_exists+ """
 			OPTIONAL { ?g rdfs:label ?title; prov:wasAttributedTo ?user; prov:generatedAtTime ?date ; <http://dbpedia.org/ontology/currentStatus> ?stage. ?user rdfs:label ?userLabel .
 				OPTIONAL {?g prov:wasInfluencedBy ?modifier. ?modifier rdfs:label ?modifierLabel .} }
 			OPTIONAL {?g rdfs:label ?title; prov:generatedAtTime ?date ; <http://dbpedia.org/ontology/currentStatus> ?stage . }
@@ -56,16 +57,19 @@ def getRecords(res_class=None):
 		  }
 		  FILTER( str(?g) != '"""+conf.base+"""vocabularies/' )
 		}
+		GROUP BY ?g ?title ?userLabel ?modifierLabel ?date ?stage
 		"""
 
 	records = set()
 	sparql = SPARQLWrapper(conf.myEndpoint)
 	sparql.setQuery(queryRecords)
 	sparql.setReturnFormat(JSON)
+	print("query: \n",queryRecords)
 	results = sparql.query().convert()
+	print("res: \n",results)
 
 	for result in results["results"]["bindings"]:
-		records.add( (result["g"]["value"], result["title"]["value"], result["userLabel"]["value"], result["modifierLabel"]["value"], result["date"]["value"], result["stage"]["value"], result["class"]["value"] ))
+		records.add( (result["g"]["value"], result["title"]["value"], result["userLabel"]["value"], result["modifierLabel"]["value"], result["date"]["value"], result["stage"]["value"], result["classes"]["value"] ))
 	return records
 
 
@@ -77,7 +81,7 @@ def getRecordsPagination(page, filterRecords=''):
 	queryRecordsPagination = """
 		PREFIX prov: <http://www.w3.org/ns/prov#>
 		PREFIX base: <"""+conf.base+""">
-		SELECT DISTINCT ?g ?title ?userLabel ?modifierLabel ?date ?stage ?class
+		SELECT DISTINCT ?g ?title ?userLabel ?modifierLabel ?date ?stage (GROUP_CONCAT(DISTINCT ?class; SEPARATOR=";  ") AS ?classes)
 		WHERE
 		{ GRAPH ?g {
 			?s ?p ?o ; a ?class .
@@ -100,6 +104,7 @@ def getRecordsPagination(page, filterRecords=''):
 		  FILTER( str(?g) != '"""+conf.base+"""vocabularies/' )
 
 		}
+		GROUP BY ?g ?title ?userLabel ?modifierLabel ?date ?stage
 		ORDER BY DESC(?date)
 		LIMIT """+conf.pagination+"""
 		OFFSET  """+offset+"""
@@ -111,7 +116,7 @@ def getRecordsPagination(page, filterRecords=''):
 	sparql.setReturnFormat(JSON)
 	results = sparql.query().convert()
 	for result in results["results"]["bindings"]:
-		records.append( (result["g"]["value"], result["title"]["value"], result["userLabel"]["value"], result["modifierLabel"]["value"], result["date"]["value"], result["stage"]["value"] , result["class"]["value"] ))
+		records.append( (result["g"]["value"], result["title"]["value"], result["userLabel"]["value"], result["modifierLabel"]["value"], result["date"]["value"], result["stage"]["value"] , result["classes"]["value"].split(";  ") ))
 
 	return records
 
@@ -145,7 +150,9 @@ def getCountings(filterRecords=''):
 
 
 def countAll(res_class=None, exclude_unpublished=False):
-	class_restriction = "" if res_class is None else "?s a <"+res_class+"> ."
+	filter_class_exists = "\n".join([f"FILTER EXISTS {{ ?s a <{cls}> }}" for cls in res_class]) if res_class != None else ""
+	filter_class_not_exists = f"FILTER (NOT EXISTS {{ ?s a ?other_class FILTER (?other_class NOT IN ({', '.join([f'<{cls}>' for cls in res_class])})) }})" if res_class != None else ""
+
 	exclude = "" if exclude_unpublished is False \
 		else "?g <http://dbpedia.org/ontology/currentStatus> ?anyValue . FILTER (isLiteral(?anyValue) && lcase(str(?anyValue))= 'published') ."
 	countall = """
@@ -154,7 +161,7 @@ def countAll(res_class=None, exclude_unpublished=False):
 		SELECT (COUNT(DISTINCT ?g) AS ?count)
 		WHERE
 		{ GRAPH ?g { ?s ?p ?o .
-			"""+class_restriction+"""
+			"""+filter_class_exists+filter_class_not_exists+"""
 		}
 		"""+exclude+"""
 			FILTER( str(?g) != '"""+conf.base+"""vocabularies/' && !CONTAINS(STR(?g), "/extraction-")) .
@@ -194,11 +201,11 @@ def getRecordCreator(graph_name):
 def getClass(res_uri):
 	""" get the class of a resource given the URI"""
 
-	q = """ SELECT DISTINCT ?class WHERE {<"""+res_uri+"""> a ?class}"""
+	q = """ SELECT DISTINCT (GROUP_CONCAT(DISTINCT ?class; SEPARATOR=";  ") AS ?classes)  WHERE {<"""+res_uri+"""> a ?class}"""
 	res_class = []
 	results = hello_blazegraph(q)
 	for result in results["results"]["bindings"]:
-		res_class.append(result["class"]["value"])
+		res_class.append(result["classes"]["value"].split(";  "))
 	return res_class[0] if len(res_class) > 0 else ""
 
 def getData(graph,res_template):
@@ -237,6 +244,7 @@ def getData(graph,res_template):
 	properties_dict = {}
 	patterns = []
 	res_class = getClass(graph[:-1])
+	class_patterns = ".".join(['''?subject a <'''+single_class+'''>''' for single_class in res_class]) 
 
 	# check duplicate properties
 	for field in fields:
@@ -269,7 +277,7 @@ def getData(graph,res_template):
 		WHERE { <'''+graph+'''> rdfs:label ?graph_title ;
 								<http://dbpedia.org/ontology/currentStatus> ?stage
 				GRAPH <'''+graph+'''>
-				{	?subject a <'''+res_class+'''> .
+				{	'''+class_patterns+'''.
 					'''+patterns_string+'''
 					OPTIONAL {?subject schema:keywords ?keywords . ?keywords rdfs:label ?keywords_label . } }
 		}
@@ -424,7 +432,6 @@ def retrieve_extractions(res_uri_list):
 			""" . OPTIONAL { ?extraction_entity_"""+query_var_id+""" rdfs:comment ?extraction_comment_"""+query_var_id+"""}"""
 
 		q = """PREFIX schema: <https://schema.org/> PREFIX prov: <http://www.w3.org/ns/prov#> SELECT DISTINCT * WHERE {""" +query_pattern+ """}"""
-		print("\n ---------- \n query: \n", q, "\n ---------- \n")
 		results = hello_blazegraph(q)
 
 		res_dict[uri_id] = []
@@ -451,47 +458,47 @@ def retrieve_extractions(res_uri_list):
 			link = metadata['link']
 			comment = metadata['comment']
 
-			res_dict[uri_id].append({graph: {}})
+			res_dict[uri_id].append({"graph":graph, "metadata": {}})
 
 			# Api metadata
 			if comment:
-				res_dict[uri_id][-1][graph]['results'] = json.loads(comment.replace("'",'"'))
-				res_dict[uri_id][-1][graph]['type'] = 'api'
+				res_dict[uri_id][-1]["metadata"]['results'] = json.loads(comment.replace("'",'"'))
+				res_dict[uri_id][-1]["metadata"]['type'] = 'api'
 				url, parameters = link.rsplit('?', 1)
 				query = {p.split("=")[0]: p.split("=")[1] for p in parameters.split("&")}
-				res_dict[uri_id][-1][graph]['url'] = url
-				res_dict[uri_id][-1][graph]['query'] = query
+				res_dict[uri_id][-1]["metadata"]['url'] = url
+				res_dict[uri_id][-1]["metadata"]['query'] = query
 			
 			# File metadata
 			elif link.startswith(conf.sparqlAnythingEndpoint):
-				res_dict[uri_id][-1][graph]['type'] = 'file'
+				res_dict[uri_id][-1]["metadata"]['type'] = 'file'
 				query = link.split("?query=")[1]
 				url_match = pattern.search(query)
 				if url_match:
 					url = url_match.group(1)
 				else:
 					url = ''
-				res_dict[uri_id][-1][graph]['url'] = url
-				res_dict[uri_id][-1][graph]['query'] = query
+				res_dict[uri_id][-1]["metadata"]['url'] = url
+				res_dict[uri_id][-1]["metadata"]['query'] = query
 
 			# Sparql metadata
 			else:
-				res_dict[uri_id][-1][graph]['type'] = 'sparql'
+				res_dict[uri_id][-1]["metadata"]['type'] = 'sparql'
 				print("LINK,", link)
 				url, query = link.split("?query=")
-				res_dict[uri_id][-1][graph]['url'] = url
-				res_dict[uri_id][-1][graph]['query'] = query
+				res_dict[uri_id][-1]["metadata"]['url'] = url
+				res_dict[uri_id][-1]["metadata"]['query'] = query
 		
 		# Retrieve the keywords populating each extraction graph
 		for n in range(len(res_dict[uri_id])):
-			graph_uri = list(res_dict[uri_id][n].keys())[0]
+			graph_uri = res_dict[uri_id][n]["graph"]
 			idx = graph_uri.split('/extraction-')[-1][:-1]
+			res_dict[uri_id][n]["internalId"] = idx
 			retrieve_graph = """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 				SELECT DISTINCT ?uri ?label WHERE {GRAPH <"""+graph_uri+""">
 				{	?uri rdfs:label ?label .  }}"""
 			graph_results = hello_blazegraph(retrieve_graph)["results"]["bindings"]
-			res_dict[uri_id][n][graph_uri]['output'] = [{"uri": {"value": urllib.parse.unquote(res["uri"]["value"]), "type":res["uri"]["type"]}, "label": {"value": res["label"]["value"], "type":res["label"]["type"]}} for res in graph_results]
-			res_dict[uri_id][n][idx] = res_dict[uri_id][n].pop(graph_uri)
+			res_dict[uri_id][n]["metadata"]['output'] = [{"uri": {"value": urllib.parse.unquote(res["uri"]["value"]), "type":res["uri"]["type"]}, "label": {"value": res["label"]["value"], "type":res["label"]["type"]}} for res in graph_results]
 
 	print("#### Extractions dictionary: ", res_dict)
 	

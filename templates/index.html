@@ -1,4 +1,4 @@
-$def with (wikilist, user, varIDpage, alll, all, notreviewed,underreview,published, page,pagination,filter,filterName,is_git_auth, project,templates)
+$def with (wikilist, user, varIDpage, alll, all, notreviewed, underreview, published, page, pagination, filter, filterName, is_git_auth, project, templates)
 $var user = user
 $var notreviewed = notreviewed
 $var underreview = underreview
@@ -45,21 +45,34 @@ $var project = project
         </section>
       </section>
       <section class="btn-group">
-        <button id="selectTemplateClassButton" title="create a new template" class="menu_btn dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Create a new template</button>
-        <section class="dropdown-menu gradient_dropbox" aria-labelledby="selectTemplateClassButton" role="menu">
-          <form id="selectTemplateClass" name="selectTemplateClass" class="" method="POST">
-            <p>Choose a name</p>
-            <input type="text" name="class_name" value="">
-            <p>OWL class</p>
-            <input type="text" name="class_uri" value="">
-            <button class="btn btn-dark" name="action" value="createTemplate" type="submit">Create template</button>
-          </form>
-        </section>
+        <button id="selectTemplateClassButton" title="create a new template" class="menu_btn">Create a new template <i class="fas fa-plus"></i></button>
       </section>
     </section>
 </section>
+<section id="selectTemplateClassModal" aria-labelledby="selectTemplateClassButton" role="menu">
+  <form id="selectTemplateClass" name="selectTemplateClass" class="" method="POST">
+    <section>
+      <span>New Template  <i class='fas fa-times'></i></span>
+    </section>
+    <section class="modal-input">
+      <span class="label">Name</span><br><span class="comment">choose a name for this template</span>
+      <input type="text" name="class_name" value="" placeholder="e.g.: Work of art">
+    </section>
+    <section class="modal-input">
+      <span class="label">Class</span><br><span class="comment">choose one or multiple OWL classes</span>
+      <input type="text" name="class_uri" value="" placeholder="e.g.: crm:E22_Man-made-object">
+      <section id="uri-container"></section>
+    </section>
+    <section class="modal-input-button">
+      <input type="hidden" class="hiddenInput" name="action" value="createTemplate">
+      <button class="btn btn-dark" name="action" value="createTemplate" type="submit">Create</button>
+      <button class="btn btn-dark discard" value="cancelTemplate" type="submit">Cancel</button>
+    </section>
+  </form>
+</section>
 <script type="text/javascript">
   $$("button[value='$filterName']").addClass("active");
+  const templatesObject = JSON.parse("$templates".replace(/&#39;/g, '"'));
 </script>
 <section class="col-md-12 col-sm-12">
 

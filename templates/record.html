@@ -3,12 +3,12 @@ $var user = user
 $var is_git_auth = is_git_auth
 $var project = project
 
-$if query_templates!=None:
-	<script type="text/javascript">
-		const query_templates_str = '$query_templates'.replace(/&#39;/g, '"');
-		const query_templates = JSON.parse(query_templates_str);
-	</script>
 $if alert == False:
+	$if query_templates!=None:
+		<script type="text/javascript">
+			const query_templates_str = '$query_templates'.replace(/&#39;/g, '"');
+			const query_templates = JSON.parse(query_templates_str);
+		</script>
 	<header class="row needDoc">
 		<button id="showRight"><i class="far fa-lightbulb"></i> help</button>
 		<script type="text/javascript">
@@ -53,6 +53,21 @@ $if alert == False:
 											$$('#$id').prepend($$('<option value="None">Select from the list</option>'));
 										</script>
 							</section>
+							<script type="text/javascript">
+								var elements = $$('#$id')[0].attributes;
+								var attrsToChange = [];
+
+								$$.each(elements, function(index, attr) {
+									if (attr.name.startsWith("data_")) {
+										attrsToChange.push(attr);
+									}
+								});
+								$$.each(attrsToChange, function(index, attr) {
+									var newName = attr.name.replace("data_", "data-");
+									$$('#$id').attr(newName, attr.value);
+									$$('#$id').removeAttr(attr.name);
+								});
+							</script>
 						$if knowledge_extractor != set():
 							$ extractors_list = list(knowledge_extractor)
 							<script type="text/javascript">
@@ -60,7 +75,7 @@ $if alert == False:
 								const extractors = '$extractors_list'.replace(/&#39;/g, '"')
 								const extractorsArray = JSON.parse(extractors)
 								if (extractorsArray.includes('$template')) {
-									generateExtractor('$pageID');
+									generateExtractionField('$pageID');
 								}
 							</script>
 					</section>

@@ -16,7 +16,6 @@ $if query_templates!=None:
 			$$(".documentation").removeClass('col-md-7').addClass('col-md-12 col-sm-4');
 			$$("h2").css('font-size','2em');
 		} );
-		console.log('$knowledge_extractor')
 	</script>
 	$if invalid == True:
 		<h3>The form is not valid, please check mandatory fields</h3>
@@ -94,9 +93,9 @@ $if query_templates!=None:
 														$ lang = k_v[1]
 														$ lang_id = id+'_'+lang
 														$if input.type=="text":
-															<input type="text" value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" mandatory="$input.attrs['mandatory']"/>
+															<input type="text" value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" data-mandatory="$input.attrs['data_mandatory']"/>
 														$else:
-															<textarea value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" mandatory="$input.attrs['mandatory']">$k_v[0]</textarea>	
+															<textarea value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" data-mandatory="$input.attrs['data_mandatory']">$k_v[0]</textarea>	
 														$if len(k_v) == 3:
 															$ lang_id = id+'_mainLang'
 															<input type="hidden" value="$lang" id="$lang_id" name="$lang_id">
@@ -133,14 +132,12 @@ $if query_templates!=None:
 						$ extractors_list = list(knowledge_extractor)
 						$ extractions_object = extractions
 						<script type="text/javascript">
-							console.log('$extractions_object')
-							var extractionsString = `$extractions_object`.replace(/\n/g, " ").replace(/&quot;/g, "'").replace(/&#39;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-							console.log(extractionsString)
+							var extractionsString = `$extractions_object`.replace(/\n/g, "\\n").replace(/&quot;/g, "'").replace(/&#39;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 							const extractionsObj = JSON.parse(extractionsString)
 							const extractors = '$extractors_list'.replace(/&#39;/g, '"')
 							const extractorsArray = JSON.parse(extractors)
 							if (extractorsArray.includes('$template')) {
-								generateExtractor('$pageID');
+								generateExtractionField('$pageID');
 							}
 						</script>
 				</section>

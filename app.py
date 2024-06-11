@@ -8,6 +8,7 @@ import re
 import logging
 import cgi
 from importlib import reload
+import urllib.parse
 from urllib.parse import parse_qs
 import requests
 import web
@@ -254,7 +255,7 @@ class Template:
 			tpl_list = json.load(tpl_file)
 
 		print(res_name)
-		res_type = [i['type'] for i in tpl_list if i["short_name"] == res_name][0]
+		res_type = ";  ".join([i['type'] for i in tpl_list if i["short_name"] == res_name][0])
 		res_full_name = [i['name'] for i in tpl_list if i["short_name"] == res_name][0]
 
 		# if does not exist create the template json file
@@ -411,6 +412,7 @@ class Index:
 		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
 
 		actions = web.input()
+		print(actions)
 		session['ip_address'] = str(web.ctx['ip'])
 		is_git_auth = github_sync.is_git_auth()
 
@@ -519,7 +521,8 @@ class Index:
 		elif actions.action.startswith('createTemplate'):
 			print('create template')
 			is_git_auth = github_sync.is_git_auth()
-			res_type = actions.class_uri.strip() if "class_uri" in actions else conf.main_entity
+			res_type = sorted([ urllib.parse.unquote(actions[class_input].strip()) for class_input in actions if class_input.startswith("uri_class")]) 
+			res_type = conf.main_entity if res_type == [] else res_type
 			res_name = actions.class_name.replace(' ','_').lower() if "class_name" in actions else "not provided"
 
 			with open(TEMPLATE_LIST,'r') as tpl_file:
@@ -963,8 +966,8 @@ class Records:
 			filters_by_template[template["name"]] = filtersBrowse
 		return render.records(user=session['username'], data=records_by_template,
 							title='Latest resources', r_base=conf.base,
-							alll=count_by_template, filters=filters_by_template,is_git_auth=is_git_auth,
-							project=conf.myProject)
+							alll=count_by_template, filters=filters_by_template,
+							is_git_auth=is_git_auth,project=conf.myProject)
 
 	def POST(self):
 		""" EXPLORE page """
@@ -990,11 +993,13 @@ class View(object):
 		record = base+name
 		res_class = queries.getClass(conf.base+name)
 		data, stage, title, properties, data_labels = None, None, None, None, {}
-		extractor = queries.retrieve_extractions(conf.base+name) if u.has_extractor(name, modify=True) else False
+
 		try:
 			res_template = u.get_template_from_class(res_class)
 			data = dict(queries.getData(record+'/',res_template))
 			stage = data['stage'][0] if 'stage' in data else 'draft'
+			previous_extractors = u.has_extractor(res_template, name)
+			extractions_data = queries.retrieve_extractions(previous_extractors)
 
 			with open(res_template) as tpl_form:
 				fields = json.load(tpl_form)
@@ -1015,7 +1020,7 @@ class View(object):
 
 		return render.view(user=session['username'], graphdata=data_labels,
 						graphID=name, title=title, stage=stage, base=base,properties=properties,
-						is_git_auth=is_git_auth,project=conf.myProject,knowledge_extractor=extractor)
+						is_git_auth=is_git_auth,project=conf.myProject,knowledge_extractor=extractions_data)
 
 	def POST(self,name):
 		""" Record web page

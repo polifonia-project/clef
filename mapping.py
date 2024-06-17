@@ -48,9 +48,12 @@ def getValuesFromFields(fieldPrefix, recordData, fields=None, field_type=None):
 				values = value.split(',', 1)
 				results.add(( values[0].strip(), urllib.parse.unquote(values[1]) )) # (id, label)
 		else:
+			print("key:",key, fieldPrefix)
 			if key.startswith(fieldPrefix+'_') and ',' in value: # multiple values from text box (entities) and URL 
 				values = value.split(',', 1)
+				print("val:",values)
 				results.add(( values[0].strip(), urllib.parse.unquote(values[1]) )) # (id, label)
+				print(results)
 			elif key == fieldPrefix: # uri from dropdown (single value from controlled vocabulary) and URL
 				if fields:
 					field = next(field for field in fields if field["id"] == fieldPrefix)
@@ -250,7 +253,7 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 				if len(extracted_keywords) > 0:
 					# link the extraction graph to main Record graph
 					extraction_graph_name = graph_name + "/extraction-" + extraction_num
-					wd.add(( URIRef(base+graph_name+'/'), SCHEMA.keywords, URIRef(base+extraction_graph_name+'/') ))
+					wd.add(( URIRef(base+graph_name+'/'), URIRef(field['property']), URIRef(base+extraction_graph_name+'/') ))
 
 					# store the extraction metadata
 					wd_extraction = rdflib.Graph(identifier=URIRef(base+extraction_graph_name+'/'))

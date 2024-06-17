@@ -90,6 +90,7 @@ $var project = project
         </tr>
         $for result in wikilist:
           $ modified = 'modified' if result[5] == 'modified' else ''
+          $ result[6].sort()
           $ type = [t["name"] for t in templates if t["type"] == result[6]]
           <tr class="$modified">
             <td>$result[1] <p class="res_class_small">$type[0]</p></td>

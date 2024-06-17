@@ -322,7 +322,7 @@ def get_template_from_class(res_type):
 	with open(TEMPLATE_LIST,'r') as tpl_file:
 		data = json.load(tpl_file)
 
-	res_template = [t["template"] for t in data if t["type"] == res_type][0]
+	res_template = [t["template"] for t in data if t["type"] == sorted(res_type)][0]
 	return res_template
 
 def get_class_from_template(res_tpl):
@@ -473,7 +473,7 @@ def update_skos_vocabs(d, skos):
 
 # KNOWLEDGE EXTRACTION
 def has_extractor(res_template, record_name=None):
-	"""Return a set of Knowledge Extraction fields' ids (if record_name == None) 
+	"""Return a set of Knowledge Extraction input fields (if record_name == None) 
 	or a list of named graphs that may contain extractions (if record_name != None)
 
 	Parameters
@@ -496,8 +496,7 @@ def has_extractor(res_template, record_name=None):
 
 			#check whether the Graph may contain any Extraction
 			if 'knowledgeExtractor' in field and field['knowledgeExtractor'] == 'True':
-				result.append(graph_uri)
-				print("r2",result)
+				result.append((graph_uri, field['property']))
 
 			#check whether the Graph may contain any sub-Record
 			if 'import_subtemplate' in field and field['import_subtemplate'] != '':
@@ -516,27 +515,17 @@ def has_extractor(res_template, record_name=None):
 		if data:
 			for field in data:
 				if 'knowledgeExtractor' in field and field['knowledgeExtractor'] == 'True':
-					result.add(res_template)
+					label = field['label'] if 'label' in field else ""
+					pre = field['prepend'] if 'prepend' in field else ""
+
+					# store the extractor details as a tuple
+					result.add((res_template, label, pre))
+
 				elif 'import_subtemplate' in field and field['import_subtemplate'] != '':
 					# iterate over sub-templates
 					result.update(has_extractor(field['import_subtemplate'], record_name=None))
-		return result
 
-def update_knowledge_extraction(data, KE_file):
-	# stores the knowledge extractions set by the user
-	if 'extractions-dict' in data:
-		extractions_object = urllib.parse.unquote(data['extractions-dict'])
-		print('##### obj:',extractions_object)
-		extractions_dict = json.loads(extractions_object)
-		print('##### dict:',extractions_dict)
-		with open(KE_file, 'r') as knowledge_extractors:
-			knowledge_extractor = json.load(knowledge_extractors)
-		for k,v in extractions_dict.items():
-			knowledge_extractor[k] = v
-		print('##### KE:', knowledge_extractor)
-		with open(KE_file, 'w') as file:
-			json.dump(knowledge_extractor, file)
-		print("Knowledge extractor successfully updated!") 
+		return result
 
 def check_mandatory_fields(recordData):
 	tpl_ID = recordData.templateID

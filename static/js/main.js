@@ -258,6 +258,10 @@ $(document).ready(function() {
       addURL(searchID, iframe=true);
     }
 
+    if ( $(this).hasClass('manual-entity')) {
+      addManualEntity(searchID);
+    }
+
     if ( $(this).attr('subtemplate') != undefined) {
       searchCatalogueByClass(searchID);
     }
@@ -333,11 +337,36 @@ $(document).ready(function() {
   $("#lookup").hide();
 	// append WD icon to input fields
 	$('.searchWikidata').parent().prev().append(wdImg);
-  $('.searchGeonames').parent().prev().append(geoImg);
   $('.searchWikidata').parent().prev().append(viafImg);
+  $('.searchGeonames').parent().prev().append(geoImg);
   $('.wikiEntity').append(wdImg);
   $('.geoEntity').append(geoImg);
   $('.viafEntity').append(viafImg); 
+  // append Entity Autocompletion toggle switch to input fields
+  $('.searchWikidata').parent().append($('<span class="toggle-comment">Autocompletion</span>\
+    <label class="switch">\
+      <input type="checkbox" checked>\
+      <span class="slider round"></span>\
+  </label>'))
+  // generate input fields for Entities manual definition
+  $('input~.toggle-comment+.switch').on('click', function() {
+    if (! $(this).find('input').prop('checked')) {
+      var inputField = $(this).prev('.toggle-comment').prev('.searchWikidata');
+      var id = inputField.attr('id');
+      console.log(inputField)
+      inputField.hide();
+      inputField.after($('<span class="comment" data-target="'+id+'">URI</span><input class="col-md-11 manual-entity" id="'+id+'_uri" name="'+id+'_uri" type="text" value="" data-class="'+inputField.attr('data-class')+'">'));
+      inputField.next().next().after($('<span class="comment" data-target="'+id+'">label</span><input class="col-md-11 manual-entity" id="'+id+'_label" name="'+id+'_label" type="text" value="" data-class="'+inputField.attr('data-class')+'"><span class="comment" data-target="'+id+'">Press return to add this entity<br></span>'));
+
+    } else {
+      var inputField = $(this).parent().find('.searchWikidata');
+      var id = inputField.attr('id');
+      console.log(inputField,id)
+      $('.comment[data-target="'+id+'"], .comment[data-target="'+id+'"]+input.manual-entity').remove();
+      inputField.show();
+
+    }
+  })
 	// hide placeholder if filled
 	//colorForm();
 
@@ -1814,6 +1843,30 @@ function searchWDCatalogueAdvanced(searchterm){
   });
 }
 
+// add a manually defined entity
+function addManualEntity(searchterm) {
+  var baseId = searchterm.replace('_uri','').replace('_label','');
+  console.log(baseId)
+  
+
+  $('#'+searchterm).keypress(function(e) {
+    console.log(e.which)
+    console.log(uri, label)
+    var uri = $("#"+baseId+'_uri').val()
+    var label = $("#"+baseId+'_label').val()
+    if (e.which == 13 && uri != '' && label != '') {
+      console.log(uri, label)
+      
+      e.preventDefault();
+      console.log("ciao")
+      console.log($("#"+baseId+'_label').next())
+      $("#"+baseId+'_label').next().after($("<span class='tag " + label + "' data-input='" + baseId + "' data-id='" + label + "'>" + label + "</span><input type='hidden' class='hiddenInput " + label + "' name='" + baseId + "_" + uri + "' value=\" " + uri + "," + encodeURIComponent(label) + "\"/>"))
+    } else if (e.which == 13 && (uri == '' || label == '')) {
+      alert('Please, provide a label and a URI')
+    }
+  });
+}
+
 // search a rdf property in LOV
 function searchLOV(searchterm) {
 	$('#'+searchterm).off('keyup').on('keyup',function(e) {
@@ -3023,11 +3076,6 @@ function add_field(field, res_type, backend_file=null) {
     <label class='col-md-11 col-sm-6' for='browse__"+temp_id+"'>use this value as a filter in <em>Explore</em> page</label>\
     <input type='checkbox' id='browse__"+temp_id+"' name='browse__"+temp_id+"'>\
   </section>";
-  
-  var field_extractor = "<section class='row'>\
-    <label class='col-md-3'>KNOWLEDGE EXTRACTOR</label>\
-    <p class='col-md-8'>A Knowledge Extractor will be available during the record's creation</p>\
-  </section>";
 
   var field_mandatory = "<section class='row'>\
     <label class='col-md-11 col-sm-6' for='mandatory__"+temp_id+"'>make this value mandatory</label>\
@@ -3048,12 +3096,6 @@ function add_field(field, res_type, backend_file=null) {
     <label class='col-md-3' for='subtemplate_class__"+temp_id+"'>OWL CLASS</label>\
     <input type='text' id='subtemplate_class__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_class__"+temp_id+"' disabled>\
   </section>";
-
-  // TODO: show imported template fields
-  /* var field_subtemplate_fields = "<section class='row'>\
-    <label class='col-md-3' for='subtemplate_fields__"+temp_id+"'>FIELDS</label>\
-    <input type='text' id='subtemplate_class__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_class__"+temp_id+"' disabled>\
-  </section>"; */
 
   var field_subtemplate_import = "<section class='row'>\
     <label class='col-md-3'>IMPORT A TEMPLATE</label>\
@@ -3096,7 +3138,7 @@ function add_field(field, res_type, backend_file=null) {
       alert("Max. 1 Knowledge Extraction field allowed");
       return;
     }
-    contents = field_type + field_extractor + open_addons;
+    contents = field_type + field_name + field_prepend + field_property + open_addons;
   }
   else {contents += field_values + field_mandatory + field_hide + field_browse; };
   contents += close_addons + up_down;
@@ -3661,12 +3703,21 @@ function yasqe_to_hidden_field(el,keep=false) {
 
 // generate extraction input field (during form loading)
 function generateExtractionField(resId, subtemplate=null) {
+  // retrieve field's description and name
+  var resIndex = extractorsArray.indexOf(resId);
+  resIndex = resIndex === -1 ? 0 : resIndex;
+  var fieldName = extractorsNames[resIndex];
+  var fieldDescription = extractorsPrepend[resIndex];
+
   // predefined HTML node (extraction input field)
   var extractionRow = $('<section class="row import-form">\
-    <section class="col-md-12 col-sm-12 col-lg-12">ENTITIES</section>\
-      <ul class="imported_graphs" id="imported-graphs-'+resId+'">\
-        <li id="add_extractor"><label class="add-graph-button" onclick="generateExtractor(\'imported-graphs-'+resId+'\')">+ Extract Entities</label></li>\
-      </ul>\
+    <section class="label col-12">'+fieldName.toUpperCase()+'</section>\
+    <section class="col-md-12 col-sm-12 col-lg-12">\
+    <span class="tip" data-toggle="tooltip" data-placement="bottom" title="" data-original-title="'+fieldDescription+'"><i class="fas fa-info-circle"></i></span>\
+    <ul class="imported_graphs" id="imported-graphs-'+resId+'">\
+      <li id="add_extractor"><label class="add-graph-button" onclick="generateExtractor(\'imported-graphs-'+resId+'\')">+ Extract Entities</label></li>\
+    </ul>\
+  </section>\
   </section>');
 
   // add the extraction node to the form
@@ -4016,9 +4067,10 @@ function prevExtractor(toHide, toShow, remove=false, id=null) {
       }
     }
 
+    console.log("c",extractionListId)
     // hide the Extraction documentation and the Extraction form, then show the list of Extractions
     $('.extraction_documentation').hide();
-    $('#imported-graphs-'+extractionListId).parent().next('.block_field').hide();
+    $('#imported-graphs-'+extractionListId).parent().parent().next('.block_field').hide();
     $('#imported-graphs-'+extractionListId).show();
   }  
 }

@@ -412,7 +412,7 @@ def get_subrecords(rdf_property,record_name):
 
 
 def retrieve_extractions(res_uri_list):
-	"""Return a dictionary of Extractions given a list of Named Graphs
+	"""Return a dictionary of Extractions given a list of tuples: [(named_graph_uri, extraction_rdf_property)]'
 	
 	Parameters
 	----------
@@ -423,10 +423,10 @@ def retrieve_extractions(res_uri_list):
 
 
 	# Retrieve the extraction graphs (URI) for each Record/Subrecord
-	for uri in res_uri_list:
+	for uri, rdf_property in res_uri_list:
 		uri_id = uri.replace(conf.base,'')[:-1]
 		query_var_id = uri.rsplit('/',2)[1].replace('-','_')
-		query_pattern = """<"""+uri+"""> schema:keywords ?extraction_graph_"""+query_var_id+"""."""+\
+		query_pattern = """<"""+uri+"""> <"""+rdf_property+"""> ?extraction_graph_"""+query_var_id+"""."""+\
 			""" ?extraction_graph_"""+query_var_id+""" prov:wasGeneratedBy ?extraction_entity_"""+query_var_id+\
 			""" . ?extraction_entity_"""+query_var_id+""" prov:used ?extraction_link_"""+query_var_id+\
 			""" . OPTIONAL { ?extraction_entity_"""+query_var_id+""" rdfs:comment ?extraction_comment_"""+query_var_id+"""}"""

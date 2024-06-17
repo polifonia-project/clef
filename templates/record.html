@@ -70,10 +70,14 @@ $if alert == False:
 							</script>
 						$if knowledge_extractor != set():
 							$ extractors_list = list(knowledge_extractor)
+							$ extractors_template_ids = [tpl[0] for tpl in extractors_list]
+							$ extractors_names = [tpl[1] for tpl in extractors_list]
+							$ extractors_prepend = [tpl[2] for tpl in extractors_list]
 							<script type="text/javascript">
 								const extractionsObj = {}
-								const extractors = '$extractors_list'.replace(/&#39;/g, '"')
-								const extractorsArray = JSON.parse(extractors)
+								const extractorsArray = JSON.parse('$extractors_template_ids'.replace(/&#39;/g, '"'));
+								const extractorsNames = JSON.parse('$extractors_names'.replace(/&#39;/g, '"'));
+								const extractorsPrepend = JSON.parse('$extractors_prepend'.replace(/&#39;/g, '"'));
 								if (extractorsArray.includes('$template')) {
 									generateExtractionField('$pageID');
 								}

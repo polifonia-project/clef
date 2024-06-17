@@ -135,12 +135,16 @@ $if query_templates!=None:
 						</section>
 					$if knowledge_extractor != set():
 						$ extractors_list = list(knowledge_extractor)
+						$ extractors_template_ids = [tpl[0] for tpl in extractors_list]
+						$ extractors_names = [tpl[1] for tpl in extractors_list]
+						$ extractors_prepend = [tpl[2] for tpl in extractors_list]
 						$ extractions_object = extractions
 						<script type="text/javascript">
-							var extractionsString = `$extractions_object`.replace(/\n/g, " ").replace(/&quot;/g, "'").replace(/&#39;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+							var extractionsString = `$extractions_object`.replace(/\n/g, "\\n").replace(/&quot;/g, "'").replace(/&#39;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 							const extractionsObj = JSON.parse(extractionsString)
-							const extractors = '$extractors_list'.replace(/&#39;/g, '"')
-							const extractorsArray = JSON.parse(extractors)
+							const extractorsArray = JSON.parse('$extractors_template_ids'.replace(/&#39;/g, '"'));
+							const extractorsNames = JSON.parse('$extractors_names'.replace(/&#39;/g, '"'));
+							const extractorsPrepend = JSON.parse('$extractors_prepend'.replace(/&#39;/g, '"'));
 							if (extractorsArray.includes('$template')) {
 								generateExtractionField('$pageID');
 							}

@@ -191,13 +191,13 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 				data_class=res_class), )
 
 			if field['type'] == 'Checkbox':
-				prepend_title = '<section class="checkbox_group_label label col-12">'+description+'</section>'
+				prepend_title = '<section class="checkbox_group_label label col-12">'+prepend+"\n"+'<span class="title">'+description+'</span></section>'
 				i = 0
 				params = params + (form.Checkbox(myid+'-'+str(i),
 				value=dropdown_values[0][0]+','+dropdown_values[0][1],
 				description = dropdown_values[0][1],
 				id=myid,
-				pre = prepend_title+prepend,
+				pre = prepend_title,
 				class_= classes+' checkbox_group',
 				checked=False,
 				data_mandatory = mandatory,
@@ -217,7 +217,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 
 			# Subtemplate
 			if field['type'] == 'Subtemplate':
-				resource_class = [t["type"] for t in tpl_list if t["template"] == field['import_subtemplate']][0]
+				resource_class = ";  ".join([t["type"] for t in tpl_list if t["template"] == field['import_subtemplate']][0])
 				params = params + (form.Textbox(myid,
 					description = description,
 					id=myid,
@@ -239,7 +239,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 
 searchRecord = form.Form(
 	form.Textbox("search",
-    	class_="searchWikidata col-md-11",
+    	class_="searchWikidata col-md-12",
     	description="Search",
     	autocomplete="off")
 )

@@ -96,12 +96,12 @@ $var project = project
 												<a target='_blank' href="term-$uri_value[0]">$uri_value[1]</a>
 											</p>
 					</section>
-			$if graphID in knowledge_extractor:
+			$if graphID in knowledge_extractor and len(knowledge_extractor[graphID]) > 0:
 				<section class="info-item col-md-5 col-sm-12">
-					<h4 class="articleSubtitle">ENTITIES </h4>
+					<h4 class="articleSubtitle">$knowledge_extractor[graphID+'_view']['field_name'] </h4>
 					$for n in range(len(knowledge_extractor[graphID])):
 						$for extracted_keyword in knowledge_extractor[graphID][n]["metadata"]["output"]:
-							<p property="https://schema.org/keywords">
+							<p property="$knowledge_extractor[graphID+'_view']['property']">
 								<link property="sameAs" url="$extracted_keyword['uri']['value']"/>
 								<a class="uri" target='_blank' href="$extracted_keyword['uri']['value']">
 									$extracted_keyword['label']['value']

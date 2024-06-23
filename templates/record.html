@@ -8,13 +8,13 @@ $if alert == False:
 		<script type="text/javascript">
 			const query_templates_str = '$query_templates'.replace(/&#39;/g, '"');
 			const query_templates = JSON.parse(query_templates_str);
+			console.log('$template')
 		</script>
 	<header class="row needDoc">
 		<button id="showRight"><i class="far fa-lightbulb"></i> help</button>
 		<script type="text/javascript">
 			$$('#cbp-spmenu-s2').load( "./documentation #documentation", function() {
 				$$(".documentation").removeClass('col-md-7').addClass('col-md-12 col-sm-4');
-				$$("h2").css('font-size','3em');
 			} );
 			setTimeout( function(){ document.getElementById( "recordForm" ).reset(); }, 5 );
 		</script>
@@ -24,35 +24,49 @@ $if alert == False:
 			<h3>Thanks for helping $project to grow!</h3>
 	</header>
 	<section class="corners row">
-		<section class="col-md-8 col-lg-8 col-sm-8">
+		<section class="col-md-12 col-lg-12 col-sm-12 homeheading">
+			<h2>What did you find?</h2>
+		</section>
+		$if template:
+			<section class="col-md-3 col-lg-3 col-sm-3 homeheading">
+				<p class="caption">Table of contents</p>
+				<ul class="fields-list"></ul>
+			</section>
+		<section class="col-md-6 col-lg-6 col-sm-6 homeheading" >
 			<form id="recordForm" class="col-md-12 col-sm-12 col-lg-12" action="" method="POST">
 				<input type='hidden' name='recordID' value=$:pageID>
 				$if template:
 					<input type='hidden' name='templateID' value=$:template>
 				<section class="row">
-					<section class="homeheading col-md-8 col-lg-8 col-sm-8">
-						$for input in record_form.inputs:
-							<section class=" form_row">
-								$ id = input.get_default_id()
-								$if type(input) == Checkbox:
-									<section class="col-md-12 col-sm-12 col-lg-12">
+					<section class="homeheading col-md-12 col-lg-12 col-sm-12">
+						$for idx,input in enumerate(record_form.inputs):
+							$ id = input.get_default_id()
+							$if type(input) == Checkbox:
+								$if type(record_form.inputs[idx-1]) != Checkbox:
+									<section class=" form_row block_field">
 										$:input.pre
-										$:input.render()
-										$:input.description
+										$ i = 0
+										$while type(record_form.inputs[idx+i]) == Checkbox :
+											<section class="col-md-12 col-sm-12 col-lg-12">
+												$:record_form.inputs[idx+i].render()
+												$:record_form.inputs[idx+i].description
+											</section>
+											$ i+=1	
 									</section>
-								$else:
+							$else:
+								<section class=" form_row block_field">
 									<section class="label col-12">
-										$:input.description
+										$:input.pre
+										<span class="title">$:input.description</span>
 									</section>
 									<section class="col-md-12 col-sm-12 col-lg-12 input_or_select detect_web_page">
-										$:input.pre
 										$:input.render()
 									</section>
 									$if type(input) == Dropdown:
 										<script type="text/javascript">
 											$$('#$id').prepend($$('<option value="None">Select from the list</option>'));
 										</script>
-							</section>
+								</section>
 							<script type="text/javascript">
 								var elements = $$('#$id')[0].attributes;
 								var attrsToChange = [];
@@ -68,7 +82,7 @@ $if alert == False:
 									$$('#$id').removeAttr(attr.name);
 								});
 							</script>
-						$if knowledge_extractor != set():
+						$if type(knowledge_extractor) == type(set()):
 							$ extractors_list = list(knowledge_extractor)
 							$ extractors_template_ids = [tpl[0] for tpl in extractors_list]
 							$ extractors_names = [tpl[1] for tpl in extractors_list]
@@ -83,9 +97,6 @@ $if alert == False:
 								}
 							</script>
 					</section>
-					<section class="homeheading col-md-4 col-sm-4 col-lg-4">
-						<h2>What did you find?</h2>
-					</section>
 				</section>
 				<section class="buttonsSection">
 					<input id="save_record" class="btn btn-dark" type="submit" value="Save"/>
@@ -94,7 +105,7 @@ $if alert == False:
 		</section>
 		<section id="searchresult">
 		</section>
-		<section class="homeheading extraction_documentation col-md-4 col-sm-4 col-lg-4" style="display: none;">
+		<section class="homeheading extraction_documentation col-md-3 col-sm-3 col-lg-3" style="display: none;">
 			<p class="caption">Tips</p>
 			<section class="extraction_documentation_api">
 				<p>To properly handle retrieved results, you must provide the keys pointing to the desired values (a URI and its label) within the query output. Results are usually organised as an array of sub-dictionaries within the query output dictionary. Consequently, three paths are needed: one to reach the array of results and the remaining two to access URIs and labels. In case of multiple keys to be accessed, they must be separated by a dot. Example:</p>

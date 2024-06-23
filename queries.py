@@ -411,19 +411,21 @@ def get_subrecords(rdf_property,record_name):
 	return subrecords_list
 
 
-def retrieve_extractions(res_uri_list):
-	"""Return a dictionary of Extractions given a list of tuples: [(named_graph_uri, extraction_rdf_property)]'
+def retrieve_extractions(res_uri_list, view=False):
+	"""Return a dictionary of Extractions given a list of tuples: [(named_graph_uri, extraction_rdf_property, extraction_field_name)]'
 	
 	Parameters
 	----------
 	res_uri_list: list
 		a list of uri (Named Graphs) which may contain Knowledge Extractions
+	view: bool
+		whether to return the extraction_rdf_property and the extraction_field_name for visualization purposes
 	"""
 	res_dict = {}
 
 
 	# Retrieve the extraction graphs (URI) for each Record/Subrecord
-	for uri, rdf_property in res_uri_list:
+	for uri, rdf_property, field_name in res_uri_list:
 		uri_id = uri.replace(conf.base,'')[:-1]
 		query_var_id = uri.rsplit('/',2)[1].replace('-','_')
 		query_pattern = """<"""+uri+"""> <"""+rdf_property+"""> ?extraction_graph_"""+query_var_id+"""."""+\
@@ -435,6 +437,12 @@ def retrieve_extractions(res_uri_list):
 		results = hello_blazegraph(q)
 
 		res_dict[uri_id] = []
+		if view==True:
+			res_dict[uri_id+'_view'] = {
+				'property': rdf_property,
+				'field_name': field_name
+			}
+
 		pattern = re.compile(r'<x-sparql-anything:(.*?)>')
 
 		for result in results["results"]["bindings"]:
@@ -459,6 +467,7 @@ def retrieve_extractions(res_uri_list):
 			comment = metadata['comment']
 
 			res_dict[uri_id].append({"graph":graph, "metadata": {}})
+			
 
 			# Api metadata
 			if comment:

@@ -12,6 +12,7 @@ from collections import defaultdict,OrderedDict
 from importlib import reload
 from json.decoder import JSONDecodeError
 import urllib.parse
+import copy
 
 RESOURCE_TEMPLATES = 'resource_templates/'
 TEMPLATE_LIST = RESOURCE_TEMPLATES+"template_list.json"
@@ -149,18 +150,35 @@ def fields_to_json(data, json_file, skos_file):
 
 	list_dicts = defaultdict(dict)
 	list_ids = sorted([k.split("__")[0] for k in data.keys()])
+	template_config = {'hidden': 'True'}
 
 	for k,v in data.items():
-		if k != 'action':
+		if k != 'action' and '__template__' not in k:
 			# group k,v by number in the k to preserve the order
 			# e.g. '4__type__scope': 'Checkbox'
 			idx, json_key , field_id = k.split("__")
 			list_dicts[int(idx)]["id"] = field_id
 			list_dicts[int(idx)][json_key] = v
+		elif '__template__' in k:
+			if v == 'on':
+				template_config['hidden'] = 'False'
+	
+	with open(TEMPLATE_LIST, 'r') as file:
+		tpls = json.load(file)
+
+	print(tpls)
+	# Modifica il contenuto
+	for tpl in tpls:
+		if tpl['template'] == json_file:
+			tpl['hidden'] = template_config['hidden']
+
+	with open(TEMPLATE_LIST, 'w') as file:
+		json.dump(tpls, file, indent=1)
+			
 	list_dicts = dict(list_dicts)
-	print(list_dicts)
 	for n,d in list_dicts.items():
 		# cleanup existing k,v
+		print("D: ", d)
 		if 'values' in d:
 			values_pairs = d['values'].replace('\r','').strip().split('\n')
 			d["value"] = "URI"
@@ -190,6 +208,7 @@ def fields_to_json(data, json_file, skos_file):
 			d["value"] = "Literal"
 		if d['type'] == 'KnowledgeExtractor':
 			d['knowledgeExtractor'] = "True"
+			d["value"] = "undefined"
 		else:
 			if len(d["label"]) == 0:
 				d["label"] = "no label"
@@ -205,7 +224,7 @@ def fields_to_json(data, json_file, skos_file):
 		for idx in range(len(vocab_data[1])):
 			d['skos'+vocab_data[1][idx]] = d['skos'][idx] 
 		d["disabled"] = "False"
-		d["class"]= "col-md-11 yearField" if d["type"] == "Date" and d["calendar"] == "Year" else "col-md-11"
+		d["class"]= "col-md-12 yearField" if d["type"] == "Date" and d["calendar"] == "Year" else "col-md-12"
 		d["cache_autocomplete"] ="off"
 		# view classes: mark elements in the final Record visualization
 		d["view_class"] = ''
@@ -289,6 +308,7 @@ def updateTemplateList(res_name=None,res_type=None,remove=False):
 		res["short_name"] = res_name.replace(' ','_').lower()
 		res["type"] = res_type
 		res["template"] = RESOURCE_TEMPLATES+'template-'+res_name.replace(' ','_').lower()+'.json'
+		res["hidden"] = "False"
 		data.append(res)
 
 		with open(TEMPLATE_LIST,'w') as tpl_file:
@@ -401,7 +421,7 @@ def check_ask_class():
 	with open(ASK_CLASS,'w') as tpl_file:
 		json.dump(ask_tpl, tpl_file)
 
-def change_template_names():
+def change_template_names(is_git_auth=True):
 	""" open the ASK FORM and change the template short_names with full name
 	to be shown when creating a new record """
 	with open(ASK_CLASS,'r') as tpl_file:
@@ -410,10 +430,20 @@ def change_template_names():
 	with open(TEMPLATE_LIST,'r') as tpl_file:
 		tpl_list = json.load(tpl_file)
 
-	for tpl_file,tpl_name in ask_tpl[0]['values'].items():
-		full_name = [tpl["name"] for tpl in tpl_list if tpl["short_name"] == tpl_name][0]
-		ask_tpl[0]['values'][tpl_file] = full_name
-
+	if is_git_auth:
+		for tpl_file,tpl_name in ask_tpl[0]['values'].items():
+			full_name = [tpl["name"] for tpl in tpl_list if tpl["short_name"] == tpl_name][0]
+			ask_tpl[0]['values'][tpl_file] = full_name
+	else:
+		ask_tpl_copy = copy.deepcopy(ask_tpl)
+		print("AS", ask_tpl_copy)
+		for tpl_file,tpl_name in ask_tpl_copy[0]['values'].items():
+			full_name_list = [tpl["name"] for tpl in tpl_list if tpl["short_name"] == tpl_name and tpl["hidden"] == "False"]
+			if len(full_name_list) > 0:
+				ask_tpl[0]['values'][tpl_file] = full_name_list[0]
+			else:
+				del ask_tpl[0]['values'][tpl_file]
+	print("ASK",ask_tpl)
 	return ask_tpl
 
 # UTILS
@@ -484,26 +514,28 @@ def has_extractor(res_template, record_name=None):
 		a string representing the id of a Named Graph
 	"""
 
+	print("C")
 	if record_name != None:
 
 		#check whether a Record and its sub-Records are associated with any Extraction graph
 		result = []
 		graph_uri = conf.base+record_name+'/'
-		
+
 		with open(res_template,'r') as tpl_file:
 			data = json.load(tpl_file)
+
 		for field in data:
 
 			#check whether the Graph may contain any Extraction
 			if 'knowledgeExtractor' in field and field['knowledgeExtractor'] == 'True':
-				result.append((graph_uri, field['property']))
+				result.append((graph_uri, field['property'], field['label']))
 
 			#check whether the Graph may contain any sub-Record
 			if 'import_subtemplate' in field and field['import_subtemplate'] != '':
 				subrecords = queries.get_subrecords(field['property'],record_name)
 				for subrecord in subrecords:
 					result.extend(has_extractor(field['import_subtemplate'],subrecord.rsplit('/',1)[1]))
-				
+					
 		return result
 	else:
 

@@ -254,9 +254,9 @@ class Template:
 		with open(TEMPLATE_LIST,'r') as tpl_file:
 			tpl_list = json.load(tpl_file)
 
-		print(res_name)
 		res_type = ";  ".join([i['type'] for i in tpl_list if i["short_name"] == res_name][0])
 		res_full_name = [i['name'] for i in tpl_list if i["short_name"] == res_name][0]
+		res_status = [i['hidden'] for i in tpl_list if i["short_name"] == res_name][0]
 
 		# if does not exist create the template json file
 		template_path = RESOURCE_TEMPLATES+'template-'+res_name+'.json'
@@ -280,8 +280,9 @@ class Template:
 
 		return render.template(f=fields,user=session['username'],
 								res_type=res_type,res_name=res_full_name,
-								is_git_auth=is_git_auth,project=conf.myProject,
-								skos_vocabs=skos_file,templates=templates)
+								res_status=res_status,is_git_auth=is_git_auth,
+								project=conf.myProject,skos_vocabs=skos_file,
+								templates=templates,)
 
 	def POST(self, res_name):
 		""" Save the form template for data entry and reload config files
@@ -565,7 +566,8 @@ class Record(object):
 		logged_in = True if user != 'anonymous' else False
 		block_user, limit = u.check_ip(str(web.ctx['ip']), str(datetime.datetime.now()) )
 		u.check_ask_class()
-		ask_form = u.change_template_names()
+		print("gitauth",is_git_auth)
+		ask_form = u.change_template_names(is_git_auth)
 		f = forms.get_form(ask_form,True)
 
 		return render.record(record_form=f, pageID=name, user=user,
@@ -957,13 +959,14 @@ class Records:
 
 		records_by_template , count_by_template , filters_by_template = {} , {} , {}
 		for template in templates:
-			res_class=template["type"]
-			records = queries.getRecords(res_class)
-			records_by_template[template["name"]] = records
-			alll = queries.countAll(res_class,True)
-			count_by_template[template["name"]] = alll
-			filtersBrowse = queries.getBrowsingFilters(template["template"])
-			filters_by_template[template["name"]] = filtersBrowse
+			if not (is_git_auth==False and template["hidden"] =='True'):
+				res_class=template["type"]
+				records = queries.getRecords(res_class)
+				records_by_template[template["name"]] = records
+				alll = queries.countAll(res_class,True)
+				count_by_template[template["name"]] = alll
+				filtersBrowse = queries.getBrowsingFilters(template["template"])
+				filters_by_template[template["name"]] = filtersBrowse
 		return render.records(user=session['username'], data=records_by_template,
 							title='Latest resources', r_base=conf.base,
 							alll=count_by_template, filters=filters_by_template,
@@ -992,14 +995,14 @@ class View(object):
 		base = conf.base
 		record = base+name
 		res_class = queries.getClass(conf.base+name)
-		data, stage, title, properties, data_labels = None, None, None, None, {}
+		data, stage, title, properties, data_labels, extractions_data = None, None, None, None, {}, {}
 
 		try:
 			res_template = u.get_template_from_class(res_class)
 			data = dict(queries.getData(record+'/',res_template))
 			stage = data['stage'][0] if 'stage' in data else 'draft'
 			previous_extractors = u.has_extractor(res_template, name)
-			extractions_data = queries.retrieve_extractions(previous_extractors)
+			extractions_data = queries.retrieve_extractions(previous_extractors,view=True)
 
 			with open(res_template) as tpl_form:
 				fields = json.load(tpl_form)

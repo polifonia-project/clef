@@ -219,7 +219,8 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 		elif field['type']=="KnowledgeExtractor" and "extractions-dict" in recordData:
 			# process extraction parameters
 			extractions_dict = json.loads(urllib.parse.unquote(recordData["extractions-dict"]))
-			extractions_array = extractions_dict[recordID] if recordID in extractions_dict else []
+			extractions_array_unfiltered = extractions_dict[recordID] if recordID in extractions_dict else []
+			extractions_array = [extraction for extraction in extractions_array_unfiltered if 'metadata' in extraction and 'type' in extraction['metadata']]
 
 			for extraction in extractions_array:
 				extraction_num = str(extraction['internalId'])
@@ -256,6 +257,7 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 					wd.add(( URIRef(base+graph_name+'/'), URIRef(field['property']), URIRef(base+extraction_graph_name+'/') ))
 
 					# store the extraction metadata
+					queries.clearGraph(base+extraction_graph_name+'/')
 					wd_extraction = rdflib.Graph(identifier=URIRef(base+extraction_graph_name+'/'))
 					wd_extraction.add(( URIRef(base+extraction_graph_name+'/'), PROV.wasAttributedTo, URIRef(base+userID) ))
 					wd_extraction.add(( URIRef(base+extraction_graph_name+'/'), PROV.generatedAtTime, Literal(datetime.datetime.now(),datatype=XSD.dateTime)  ))

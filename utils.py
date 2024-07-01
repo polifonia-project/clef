@@ -108,8 +108,9 @@ def split_uri(term):
 
 def get_LOV_labels(term, term_type=None):
 	""" get class/ property labels from the form"""
-	print(term)
+	print("TERM:",term)
 	term, label = term, split_uri(term)
+	print("TERM2:",term, label)
 	lov_api = "https://lov.linkeddata.es/dataset/lov/api/v2/term/search?q="
 	t = "&type="+term_type if term_type else ''
 	label_en = "http://www.w3.org/2000/01/rdf-schema#label@en"
@@ -128,6 +129,24 @@ def get_LOV_labels(term, term_type=None):
 					else split_uri(term)
 
 	return term, label
+
+def get_LOV_namespace(term):
+	""" get prefixed name of a property"""
+	print("TERM:",term)
+	term, label = term, split_uri(term)
+	print("TERM2:",term, label)
+	lov_api = "https://lov.linkeddata.es/dataset/lov/api/v2/term/search?q="
+	label_en = "http://www.w3.org/2000/01/rdf-schema#label@en"
+	req = requests.get(lov_api+label+"&type=property")
+
+	if req.status_code == 200:
+		res = req.json()
+		print(res)
+		for result in res["results"]:
+			if result["uri"][0] in [term, term.replace("https","http")]:
+				prefixed_name = result["prefixedName"]
+				return prefixed_name[0]
+	return term 
 
 # CONFIG STUFF
 
@@ -178,7 +197,6 @@ def fields_to_json(data, json_file, skos_file):
 	list_dicts = dict(list_dicts)
 	for n,d in list_dicts.items():
 		# cleanup existing k,v
-		print("D: ", d)
 		if 'values' in d:
 			values_pairs = d['values'].replace('\r','').strip().split('\n')
 			d["value"] = "URI"
@@ -228,7 +246,6 @@ def fields_to_json(data, json_file, skos_file):
 		d["cache_autocomplete"] ="off"
 		# view classes: mark elements in the final Record visualization
 		d["view_class"] = ''
-		d["view_class"] += " oneValue" if "cardinality" in d and d["cardinality"] == "oneValue" else ""
 		d["view_class"] += " subtemplateField" if d["type"] == "Subtemplate" else ""
 
 		
@@ -436,14 +453,12 @@ def change_template_names(is_git_auth=True):
 			ask_tpl[0]['values'][tpl_file] = full_name
 	else:
 		ask_tpl_copy = copy.deepcopy(ask_tpl)
-		print("AS", ask_tpl_copy)
 		for tpl_file,tpl_name in ask_tpl_copy[0]['values'].items():
 			full_name_list = [tpl["name"] for tpl in tpl_list if tpl["short_name"] == tpl_name and tpl["hidden"] == "False"]
 			if len(full_name_list) > 0:
 				ask_tpl[0]['values'][tpl_file] = full_name_list[0]
 			else:
 				del ask_tpl[0]['values'][tpl_file]
-	print("ASK",ask_tpl)
 	return ask_tpl
 
 # UTILS

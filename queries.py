@@ -326,10 +326,11 @@ def getData(graph,res_template):
 
 def describeTerm(name):
 	""" ask if the resource exists, then describe it."""
-	ask = """ASK { ?s ?p <""" +conf.base+name+ """> .}"""
+	ask = """ASK { ?s ?p <""" +name+ """> .}"""
 	results = hello_blazegraph(ask)
 	if results["boolean"] == True: # new entity
-		describe = """DESCRIBE <"""+conf.base+name+ """>"""
+		describe = """DESCRIBE <"""+name+ """>"""
+		print("DESCRIBE", describe, hello_blazegraph(describe))
 		return hello_blazegraph(describe)
 	else: # vocab term
 		ask = """ASK { ?s ?p ?o .
@@ -537,4 +538,21 @@ def saveHiddenTriples(graph, tpl):
 		sparql.setQuery(queryNGraph)
 		sparql.setReturnFormat(JSON)
 		results = sparql.query().convert()
+	print(results)
+	return results
+
+def get_records_from_object(graph_uri):
+	query = """
+		SELECT DISTINCT ?subject ?property ?class ?label
+		WHERE {
+			?subject ?property <"""+graph_uri+""">.
+			?subject rdfs:label ?label .
+			?subject a ?class .
+		}
+	"""
+	sparql = SPARQLWrapper(conf.myEndpoint)
+	sparql.setQuery(query)
+	sparql.setReturnFormat(JSON)
+	results = sparql.query().convert()
+	print(results)
 	return results

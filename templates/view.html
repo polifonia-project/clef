@@ -1,4 +1,4 @@
-$def with (user, graphdata, graphID, title, stage, base,properties,is_git_auth,project,knowledge_extractor)
+$def with (user, graphdata, graphID, title, stage, base,properties,is_git_auth,project,knowledge_extractor,inverses_by_class,inverses_by_properties)
 
 $var user = user
 $var is_git_auth = is_git_auth
@@ -33,7 +33,7 @@ $var project = project
 										<!-- wikidata uri -->
 										<p property="$properties[field][0]">
 											<link property="sameAs" url="http://www.wikidata.org/entity/$uri_value[0]"/>
-											<a class="wikiEntity" target='_blank' href="http://www.wikidata.org/entity/$uri_value[0]">
+											<a class="wikiEntity" target='_blank' href="term-$uri_value[0]">
 												$uri_value[1]
 											</a>
 										</p>
@@ -41,7 +41,7 @@ $var project = project
 										<!-- geonames uri -->
 										<p property="$properties[field][0]">
 											<link property="sameAs" url="https://sws.geonames.org/$uri_value[0]"/>
-											<a class="geoEntity" target='_blank' href="https://sws.geonames.org/$uri_value[0]">
+											<a class="geoEntity" target='_blank' href="term-$uri_value[0]">
 												$uri_value[1]
 											</a>
 										</p>
@@ -50,7 +50,7 @@ $var project = project
 										<p property="$properties[field][0]">
 											<link property="sameAs" url="http://www.viaf.org/viaf/$uri_value[0][4:]"/>
 											<a class="viafEntity" target='_blank'\
-											 href="http://www.viaf.org/viaf/$uri_value[0][4:]">
+											 href="term-$uri_value[0][4:]">
 												$uri_value[1]
 											</a>
 										</p>
@@ -127,4 +127,54 @@ $var project = project
 		<p></p>
 	</section> -->
 
+</section>
+<section class="col-md-12 inverses">
+	<section class="biblio">
+		<h3 class="biblio-label">Incoming properties</h3>
+		<ul class="corners nav nav-tabs mb-3 inverse-properties-tabs">
+			<li class="nav-item" role="presentation">
+				<a class="nav-link dark-nav active" id="template" href="#tab_template">Template</a>
+			</li>
+			<li class="nav-item" role="presentation">
+				<a class="nav-link dark-nav" id="property" href="#tab_property">Property</a>
+			</li>
+		</ul>
+		<section class="inverse-section" id="inverse-section-template" style="display: block;">
+			$for res_type in inverses_by_class:
+				<section class="inverse-template">
+					<span class="inverse-subtitle">$res_type</span>
+					<br>
+					<section class="inverse-results-container">
+					$for property,results in inverses_by_class[res_type]['results'].items():
+						$ property_url, property_short, property_label = property.split(',')
+						<section class="inverse-property">
+							<span><h4 class="articleSubtitle">$property_label</h4><br><a href="$property_url">$property_short</a></span>
+						</section>
+						<section class="inverse-property">
+							$for result in results:
+								$ result_uri, result_label = result.split(',')
+								<span><label>$result_label</label> <a href="$result_uri"><i class="fas fa-external-link-alt"></i></a></span><br>
+						</section>
+					</section>
+				</section>
+		</section>
+		<section class="inverse-section" id="inverse-section-property" style="display: none;">
+			$for property,results in inverses_by_properties.items():
+				$ property_url, property_short = property.split(',')
+				<section class="inverse-property">
+					<span class="inverse-subtitle">$property_short</span>
+					<br>
+					<section class="inverse-results-container">
+						<section class="inverse-property">
+							<span><h4 class="articleSubtitle"><a href="$property_url">$property_short</a></h4></span>
+						</section>
+						<section class="inverse-property">
+							$for result in results:
+								$ result_uri, result_label = result.split(',')
+								<span><label>$result_label:</label> <a href="$result_uri"><i class="fas fa-external-link-alt"></i></a></span><br>
+						</section>
+					</section>
+				</section>
+		</section>
+	</section>
 </section>

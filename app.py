@@ -520,7 +520,7 @@ class Index:
 
 		# create a new template
 		elif actions.action.startswith('createTemplate'):
-			print('create template')
+			print('create template:', actions)
 			is_git_auth = github_sync.is_git_auth()
 			res_type = sorted([ urllib.parse.unquote(actions[class_input].strip()) for class_input in actions if class_input.startswith("uri_class")]) 
 			res_type = conf.main_entity if res_type == [] else res_type
@@ -995,7 +995,7 @@ class View(object):
 		base = conf.base
 		record = base+name
 		res_class = queries.getClass(conf.base+name)
-		data, stage, title, properties, data_labels, extractions_data = None, None, None, None, {}, {}
+		data, stage, title, properties, data_labels, extractions_data, new_dict_classes, properties_sorted = None, None, None, None, {}, {}, {}, {}
 
 		try:
 			res_template = u.get_template_from_class(res_class)
@@ -1019,11 +1019,46 @@ class View(object):
 		except Exception as e:
 			pass
 
+		try:
+			incoming_links = queries.get_records_from_object(base+name)
+			class_sorted = {}
+			for result in incoming_links['results']['bindings']:
+				result_class = result['class']['value']
+				result_property_uri = result['property']['value']
+				result_property = result_property_uri + "," + u.get_LOV_namespace(result_property_uri)
+				result_subject = result['subject']['value'] + ',' + result['label']['value']
+				if result_class not in class_sorted:
+					class_sorted[result_class] = { result_property : [result_subject] }
+				else:
+					if result_property in class_sorted[result_class]:
+						class_sorted[result_class][result_property].append(result_subject)
+					else:
+						class_sorted[result_class][result_property] = [result_subject]
+
+			with open(TEMPLATE_LIST) as tpl_list:
+				templates = json.load(tpl_list)
+			for k in list(class_sorted.keys()):
+				template = next((t["name"], t["template"]) for t in templates if t["type"] == sorted(k.split("; ")))
+				template_name, template_file = template
+				with open(template_file) as tpl_file:
+					template_fields = json.load(tpl_file)
+				property_label = list(class_sorted[k].keys())[0]
+				property_name = next(f["label"] for f in template_fields if f["property"] == property_label.split(',',1)[0])
+				if property_label in properties_sorted:
+					properties_sorted[property_label].extend(class_sorted[k][property_label])
+				else:
+					properties_sorted[property_label] = class_sorted[k][property_label]
+				new_dict_classes[template_name] = {'class':k, 'results': { property_label+','+property_name : class_sorted[k][property_label]} }
+		except Exception as e:
+			pass
+
+
 
 
 		return render.view(user=session['username'], graphdata=data_labels,
 						graphID=name, title=title, stage=stage, base=base,properties=properties,
-						is_git_auth=is_git_auth,project=conf.myProject,knowledge_extractor=extractions_data)
+						is_git_auth=is_git_auth,project=conf.myProject,knowledge_extractor=extractions_data,
+						inverses_by_class=new_dict_classes, inverses_by_properties = properties_sorted)
 
 	def POST(self,name):
 		""" Record web page
@@ -1050,15 +1085,31 @@ class Term(object):
 			the ID of the term, generally the last part of the URL
 		"""
 		web.header("Cache-Control", "no-cache, max-age=0, must-revalidate, no-store")
-		data = queries.describeTerm(name)
+		uri = mapping.getRightURIbase(name)
+		data = queries.describeTerm(uri)
 		is_git_auth = github_sync.is_git_auth()
 
-		count = len([ result["subject"]["value"] \
+		results_by_class = {}
+		appears_in = [ result["subject"]["value"] \
 					for result in data["results"]["bindings"] \
-					if (name in result["object"]["value"] and result["object"]["type"] == 'uri') ])
+					if (name in result["object"]["value"] and result["object"]["type"] == 'uri') ]
+		
+
+		with open(TEMPLATE_LIST) as tpl_list:
+			res_templates = json.load(tpl_list)
+		for res_uri in appears_in:
+			res_class = sorted(queries.getClass(res_uri))
+			res_type = next(t["name"] for t in res_templates if t["type"] == res_class)
+			if res_type in results_by_class:
+				results_by_class[res_type]['results'].append(res_uri)
+			else:
+				results_by_class[res_type] = {'class':res_class, 'results':[res_uri]}
+
+		count = len(appears_in)
 
 		return render.term(user=session['username'], data=data, count=count,
-						is_git_auth=is_git_auth,project=conf.myProject,base=conf.base,name=name)
+						is_git_auth=is_git_auth,project=conf.myProject,base=conf.base,
+						uri=uri,name=name,results=results_by_class)
 
 	def POST(self,name):
 		""" controlled vocabulary term web page

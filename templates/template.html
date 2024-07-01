@@ -213,29 +213,46 @@ $ id = templates.get_default_id()
 											</select>
 										</section>
 										<section class='row'>
-											<label class='col-md-3' for='subtemplate_name__"+temp_id+"'>TEMPLATE NAME</label>
-											<input type='text' id='subtemplate_name__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_name__"+temp_id+"' disabled>
+											<label class='col-md-3' for='subtemplate_name__$id'>TEMPLATE NAME</label>
+											<input type='text' id='subtemplate_name__$id' class='col-md-8 align-self-start' name='subtemplate_name__$id' disabled>
 										</section>
 										<section class='row'>
-											<label class='col-md-3' for='subtemplate_class__"+temp_id+"'>OWL CLASS</label>
-											<input type='text' id='subtemplate_class__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_class__"+temp_id+"' disabled>
+											<label class='col-md-3' for='subtemplate_class__$id'>OWL CLASS</label>
+											<input type='text' id='subtemplate_class__$id' class='col-md-8 align-self-start' name='subtemplate_class__$id' disabled>
+										</section>
+										<section class='row'>
+											<label class='col-md-3' for='subtemplate_class__$id'></label>
+											<input type="button" class="(http://purl.org/spar/fabio/ArtisticWork;  http://www.cidoc-crm.org/cidoc-crm/E28_Conceptual_Object) btn btn-dark check_subtemplate" value="Open subtemplate" onclick="edit_subtemplate(this)">
 										</section>
 										<section class='row'>
 											<label class='col-md-3'>CARDINALITY <br><span class='comment'>the number of expected values</span></label>
 											<section class='col-md-8'>
 												<label for='oneValue__$id'>
-													Merge templates
+													Single use of subtemplate
 													<input type='radio' id='oneValue__$id' name='cardinality__$id' value='oneValue'>
 													</label><br>
 												<label for='multipleValues__$id'>
-													Combine templates
+													Multiple uses of subtemplate
 													<input type='radio' id='multipleValues__$id' name='cardinality__$id' value='multipleValues'>
 													</label><br>
 											</section>
+											<label class='col-md-3'>DATA REUSE <br><span class='comment'>use upper level record data to auto-fill subtemplate fields with same property</span></label>
+											<section class='col-md-8'>
+												<label for='allowDataReuse__$id'>
+													Allow data reuse 
+													<input type='radio' id='allowDataReuse__$id' name='dataReuse__$id' value='allowDataReuse'>
+												</label><br>
+												<label for='denyDataReuse__$id'>
+													Deny data reuse 
+													<input type='radio' id='denyDataReuse__$id' name='dataReuse__$id' value='denyDataReuse'>
+												</label><br>
+											</section>
 										</section>
-										$ cardinality = field['cardinality'] + "__" + id if 'cardinality' in field else "oneValue__" + id
+										$ cardinality = field['cardinality'] + "__" + id if 'cardinality' in field else "allowDataReuse__" + id
+										$ data_reuse = field ['dataReuse'] + "__" + id if 'dataReuse' in field else "denyDataReuse__" + id
 										<script type="text/javascript">
 											$$("#$cardinality").attr('checked', 'checked')
+											$$("#$data_reuse").attr('checked', 'checked')
 											$$("#import_subtemplate__$id").append(importable_templates);
 											$$("#import_subtemplate__$id option[value$$='"+"$field['import_subtemplate']"+"']").attr("selected","selected");
 											import_subtemplate($$("#import_subtemplate__$id")[0]);

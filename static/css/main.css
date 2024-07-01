@@ -184,6 +184,12 @@ button.active {
   border-color: #F5F6FA #F5F6FA rgba(100, 23, 180, 1);
 }
 
+.nav-tabs a.dark-nav.nav-link.active {
+  text-decoration: none !important;
+  background-color: #f5f6fa3a !important;
+  border-color: rgba(100, 23, 180, 1);
+}
+
 .logo_header {
   display: inline-block;
   padding: 5px;
@@ -518,11 +524,11 @@ article p {
   padding: 4em !important;
 }
 
-#recordForm .homeheading:nth-child(2) {
+.corners.row .homeheading:nth-child(2) {
   padding-right: 0.5em !important;
 }
 
-#recordForm .homeheading:nth-child(3) {
+.corners.row .homeheading:nth-child(3) {
   padding-top: 0.35em !important;
   padding-left: 0.5em !important;
 }
@@ -735,7 +741,7 @@ th {
 
 .label .title {
   flex: 1;
-  font-size: 1.2em;
+  font-size: 1em;
 }
 
 .label img, .label i {
@@ -1109,6 +1115,9 @@ table.extraction-table {
   margin-top: 2em;
   margin-bottom: -2.5em;
 }
+table.extraction-table + span + .block_field {
+  margin-top: 3.5em;
+}
 
 table.url-table th, table.url-table td, table.extraction-table th, table.extraction-table td {
   border: 1px solid black;
@@ -1152,6 +1161,11 @@ table.url-table i, table.extraction-table i {
   text-transform: uppercase;
   color: grey;
   font-size: 0.9em !important;
+  display: inline-block;
+}
+
+.subtemplateField:last-child {
+  margin-bottom: 2em;
 }
 
 /*display: inline !important;*/
@@ -1254,15 +1268,67 @@ table.url-table i, table.extraction-table i {
   transition-duration: 0.4s;
 }
 
-.relatedResources {
-  margin: 20px 0px;
+.related-resources-container .articleSubtitle {
+  margin: 2em 0 0 0;
+  display: inline-block;
 }
+.related-resources-container button {
+  display: inline-block;
+  margin-bottom: 0 !important;
+}
+
 
 /* historian/collection template */
 /*.info-item {font-style: italic;}*/
 .sideBoxes {
   margin-top: 3em;
   margin-bottom: 3em;
+}
+
+.inverse-subtitle {
+  padding-left: 1em;
+  padding-top: 1em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: rgb(100, 23, 180);
+  display: inline-block;
+}
+
+.inverse-results-container {
+  display: flex;
+  flex-wrap: wrap; 
+  align-items: flex-start;
+  gap: 20px; 
+  border-bottom: 2px solid rgba(100, 23, 180, 0.12);
+  padding-left: 1em;
+}
+
+.inverse-property {
+  display: flex;
+  flex-direction: column;
+  justify-content: center; 
+  padding: 10px 30px 10px 0; 
+}
+
+.inverse-property:first-of-type {
+  width: 20%
+}
+
+.inverse-property span {
+  font-weight: 400;
+  color: #333;
+
+}
+
+.inverses {
+  margin: 3em 0 -1em 0; 
+  max-height: 1000px;
+  background-color: silver;
+}
+
+.inverses .section-subtitle {
+  font-weight: 400;
+  color: grey;
 }
 
 .info-bio {
@@ -1288,6 +1354,13 @@ table.url-table i, table.extraction-table i {
   color: white !important;
   text-align: left;
   font-size: 32px;
+}
+
+.biblio-navigate {
+  font-weight: 500;
+  text-decoration: underline;
+  color:#333;
+  cursor:pointer;
 }
 
 .bibliospace {
@@ -2528,7 +2601,11 @@ button#showTemplates {
   overflow: hidden;
   transition: max-height 0.3s ease, padding 0.3s ease, margin-top 0.3s ease, margin-bottom 0.3s ease; /* Corretta sintassi per la transizione */
   padding: 1em;
-  max-height: 1000px;
+  max-height: 10000px;
+}
+
+.subform:first-child {
+  margin-top: 1.5em;
 }
 
 .subform.closed {
@@ -2546,6 +2623,10 @@ button#showTemplates {
   margin-right: 2em!important;
   justify-content: flex-end;
   align-items: center;
+}
+
+.subform .title {
+  font-size: 0.8em;
 }
 
 .subform-buttons {

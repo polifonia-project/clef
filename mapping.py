@@ -34,6 +34,7 @@ base = conf.base
 server = sparql.SPARQLServer(conf.myEndpoint)
 dir_path = os.path.dirname(os.path.realpath(__file__))
 RESOURCE_TEMPLATES = conf.resource_templates
+ASK_CLASS = conf.ask_form
 TEMPLATE_LIST = conf.template_list
 
 def getValuesFromFields(fieldPrefix, recordData, fields=None, field_type=None):
@@ -48,12 +49,9 @@ def getValuesFromFields(fieldPrefix, recordData, fields=None, field_type=None):
 				values = value.split(',', 1)
 				results.add(( values[0].strip(), urllib.parse.unquote(values[1]) )) # (id, label)
 		else:
-			print("key:",key, fieldPrefix)
 			if key.startswith(fieldPrefix+'_') and ',' in value: # multiple values from text box (entities) and URL 
 				values = value.split(',', 1)
-				print("val:",values)
 				results.add(( values[0].strip(), urllib.parse.unquote(values[1]) )) # (id, label)
-				print(results)
 			elif key == fieldPrefix: # uri from dropdown (single value from controlled vocabulary) and URL
 				if fields:
 					field = next(field for field in fields if field["id"] == fieldPrefix)
@@ -131,10 +129,12 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 				for predicate_obj, inner_dict in binding.items():
 					if predicate_obj.endswith('_property'):
 						predicate = URIRef(inner_dict['value'])
-						obj_value = binding[predicate_obj.replace("_property", "")]['value']
-						obj_type = binding[predicate_obj.replace("_property", "")]['type']
-						obj = URIRef(obj_value) if obj_type == "uri" else Literal(obj_value, datatype="http://www.w3.org/2001/XMLSchema#string")
-						label = binding[predicate_obj.replace("_property", "") + "_label"]['value'] if predicate_obj.replace("_property", "") + "_label" in binding else None
+						short_predicate_obj = predicate_obj.replace("_property", "")
+						obj_value = binding[short_predicate_obj]['value']
+						obj_type = binding[short_predicate_obj]['type']
+						obj_datatype = binding[short_predicate_obj]['datatype'] if 'datatype' in binding[short_predicate_obj] else ''
+						obj = URIRef(obj_value) if obj_type == "uri" else Literal(obj_value, datatype=obj_datatype)
+						label = binding[short_predicate_obj + "_label"]['value'] if predicate_obj.replace("_property", "") + "_label" in binding else None
 						wd.add((subject, URIRef(predicate), obj))
 						print(subject, predicate, obj, label)
 						if label:
@@ -161,6 +161,7 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 					else getValuesFromFields(field['id'], recordData, field_type=field['value']) if 'value' in field and field['value'] == 'URL' \
 					else getLiteralValuesFromFields(field['id'], recordData) if 'value' in field and field['value'] == 'Literal' else recordData[field['id']]
 			# TODO disambiguate as URI, value
+			print("VALUE:", value)
 			if field["disambiguate"] == 'True': # use the key 'disambiguate' as title of the graph
 				main_lang = value['mainLang']
 				main_value = [label for label in value['results'] if label[1] == main_lang]
@@ -287,7 +288,8 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 						# process a new subrecord, send its data to the triplestore, and link it to the main record
 						subrecord_id = subrecord
 						subrecord_template = field['import_subtemplate']
-						processed_subrecord = process_new_subrecord(recordData,userID,stage,subrecord_template,subrecord)
+						allow_data_reuse = fields if 'dataReuse' in field and field['dataReuse']=='allowDataReuse' else False
+						processed_subrecord = process_new_subrecord(recordData,userID,stage,subrecord_template,subrecord,supertemplate=None,allow_data_reuse=allow_data_reuse)
 						subrecord_id, retrieved_label = processed_subrecord
 					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+subrecord_id) ))
 					wd.add(( URIRef(base+subrecord_id), RDFS.label, Literal(retrieved_label, datatype="http://www.w3.org/2001/XMLSchema#string")))
@@ -315,57 +317,97 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 
 	return 'records/'+recordID+'.ttl'
 	
-def process_new_subrecord(data, userID, stage, sub_tpl, subrecord_id):
+def process_new_subrecord(data, userID, stage, sub_tpl, subrecord_id, supertemplate=None, allow_data_reuse=False):
 	# prepare a new dict to store data of subrecord-x
 	new_record_data = {'recordID': subrecord_id,}
-
+	label = 'No Label!'
 	with open(sub_tpl) as fields:
 		subtemplate = json.load(fields)
+	subtemplate = sorted(subtemplate, key=lambda x: x['type'] == 'subtemplate')
 	# process the input data related to subrecord-x
 	for subtemplate_field in subtemplate:
-		subfield_id = subtemplate_field['id']
+		if subtemplate_field['hidden'] == 'False':
+			subfield_id = subtemplate_field['id']
+			rdf_property = subtemplate_field['property']
 
-		# Subtemplate
-		if subtemplate_field['type'] == 'Subtemplate':
-			key = subfield_id+"_"+subrecord_id
-			# Process inner-subrecords and retrieve their ids,labels in order to provide a link to them in the upper-level subrecord
-			if key+"-subrecords" in data:
-				new_record_data[subfield_id] = [[]]
-				inner_subtemplate = subtemplate_field['import_subtemplate']
-				for inner_subrecord in data[key+"-subrecords"].split(","):
-					if ";" in inner_subrecord:
-						processed_subrecord = inner_subrecord.split(";",1)
-					else:
-						processed_subrecord = process_new_subrecord(data,userID,stage,inner_subtemplate,inner_subrecord)
-					new_record_data[subfield_id][0].append(processed_subrecord) # store the id,label pair inside the subrecord dict
+			# Subtemplate
+			if subtemplate_field['type'] == 'Subtemplate':
+				key = subfield_id+"_"+subrecord_id
+				# Process inner-subrecords and retrieve their ids,labels in order to provide a link to them in the upper-level subrecord
+				if key+"-subrecords" in data:
+					new_record_data[subfield_id] = [[]]
+					inner_subtemplate = subtemplate_field['import_subtemplate']
+					data_reuse = subtemplate if 'dataReuse' in subtemplate_field and subtemplate_field['dataReuse']=='allowDataReuse' else False
+					for inner_subrecord in data[key+"-subrecords"].split(","):
+						if ";" in inner_subrecord:
+							processed_subrecord = inner_subrecord.split(";",1)
+						else:
+							processed_subrecord = process_new_subrecord(data,userID,stage,inner_subtemplate,inner_subrecord,subrecord_id,data_reuse)
+						new_record_data[subfield_id][0].append(processed_subrecord) # store the id,label pair inside the subrecord dict
 
-		# Date
-		elif subtemplate_field['type'] == 'Date':
-			key = subtemplate_field['id']+"_"+subrecord_id
-			new_record_data[subtemplate_field['id']] = data[key]
+			# Date
+			elif subtemplate_field['type'] == 'Date':
+				key = subtemplate_field['id']+"_"+subrecord_id
+				if key in data:
+					new_record_data[subtemplate_field['id']] = data[key]
+				elif allow_data_reuse:
+					upper_level_field_ids = [field['id'] for field in allow_data_reuse if field['property'] == rdf_property and field['type'] == subtemplate_field['type']]
+					if len(upper_level_field_id) > 0:
+						upper_level_field_id = upper_level_field_ids[0]
+						look_for_id = upper_level_field_id+'_'+supertemplate if supertemplate else upper_level_field_id
+						new_record_data[subtemplate_field['id']] = data[look_for_id]
+						data[key] = data[look_for_id]
 
-		# Knowledge Extraction
-		elif subtemplate_field['type'] == 'KnowledgeExtractor' and 'extractions-dict' in data:
-			new_record_data['extractions-dict'] = data['extractions-dict']
-			for keyword_key,keyword_value in data.items():
-				print("FFF", subrecord_id)
-				if keyword_key.startswith('keyword_'+subrecord_id):
-					print("QQQQ",keyword_key,keyword_value)
-					new_record_data[keyword_key]=keyword_value
+			# Knowledge Extraction
+			elif subtemplate_field['type'] == 'KnowledgeExtractor' and 'extractions-dict' in data:
+				new_record_data['extractions-dict'] = data['extractions-dict']
+				for keyword_key,keyword_value in data.items():
+					if keyword_key.startswith('keyword_'+subrecord_id):
+						new_record_data[keyword_key]=keyword_value
 
-		# Multiple values fields: Literals or URI
-		elif 'value' in subtemplate_field and (subtemplate_field['value'] == 'Literal' or subtemplate_field['value'] in ['URI','URL','Place']):
-			keys = [input_id for input_id in data.keys() if input_id.startswith(subtemplate_field['id']+"_") and input_id.endswith("_"+subrecord_id)]
-			for key in keys:
-				shortened_key = key.rsplit("_",1)[0]
-				new_record_data[shortened_key] = data[key]
+			# Multiple values fields: Literals or URI
+			elif 'value' in subtemplate_field and (subtemplate_field['value'] == 'Literal' or subtemplate_field['value'] in ['URI','URL','Place']):
+				keys = [input_id for input_id in data.keys() if input_id.startswith(subtemplate_field['id']+"_") and input_id.endswith("_"+subrecord_id)]
+				if len(keys) > 0:
+					for key in keys:
+						shortened_key = key.rsplit("_",1)[0]
+						new_record_data[shortened_key] = data[key]
 
-			# Label: disambiguate field
-			if subtemplate_field['disambiguate'] == "True":
-				main_lang_input_field = subfield_id+'_mainLang_'+subrecord_id 
-				main_lang = data[main_lang_input_field] if main_lang_input_field in data else "No main lang"
-				label_input_field = subfield_id+"_"+main_lang+"_"+subrecord_id
-				label = data[label_input_field] if label_input_field in data else "No label"
+					# Label: disambiguate field
+					if subtemplate_field['disambiguate'] == "True":
+						main_lang_input_field = subfield_id+'_mainLang_'+subrecord_id 
+						main_lang = data[main_lang_input_field] if main_lang_input_field in data else "No main lang"
+						label_input_field = subfield_id+"_"+main_lang+"_"+subrecord_id
+						label = data[label_input_field] if label_input_field in data else "No label"
+				elif allow_data_reuse:
+					upper_level_field_ids = [field['id'] for field in allow_data_reuse if field['property'] == rdf_property and field['type'] == subtemplate_field['type']]
+					if len(upper_level_field_ids) > 0:
+						upper_level_field_id = upper_level_field_ids[0]
+						if supertemplate:
+							keys = [input_id for input_id in data.keys() if input_id.startswith(upper_level_field_id+"_") and input_id.endswith("_"+supertemplate)]
+						else:
+							keys = [input_id for input_id in data.keys() if input_id.startswith(upper_level_field_id+"_")]
+						for key in keys:
+							cut_number = 1 if supertemplate else 0
+							shortened_key = key.rsplit("_",cut_number)[0]
+							shortened_key = key.split("_")[1]
+							shortened_key = subfield_id+'_'+shortened_key
+							new_record_data[shortened_key] = data[key]
+							data[shortened_key+'_'+subrecord_id] = data[key]
+
+
+						# Label: disambiguate field
+						if subtemplate_field['disambiguate'] == "True":
+							main_lang_input_field = subfield_id+'_mainLang_'+subrecord_id
+							main_lang = data[main_lang_input_field] if main_lang_input_field in data else "No main lang"
+							label_input_field = upper_level_field_id+"_"+main_lang+"_"+ supertemplate if supertemplate else upper_level_field_id+'_'+main_lang
+							with open(TEMPLATE_LIST,'r') as tpl_file:
+								tpl_list = json.load(tpl_file)
+							disambiguation_label = [t['name'] for t in tpl_list if t['template']==sub_tpl][0]
+							label = data[label_input_field] + " - " + disambiguation_label if label_input_field in data else "No label"
+							new_label_input_id = subfield_id + '_' + main_lang
+							new_record_data[new_label_input_id] = label
+
 
 		
 
@@ -377,7 +419,7 @@ def process_new_subrecord(data, userID, stage, sub_tpl, subrecord_id):
 	result = [subrecord_id,label]
 	return result
 
-def find_label(tpl):
+""" def find_label(tpl):
 	# Retrieve the field associated with the Primary Key (i.e., the label) of the Record
 	with open(tpl) as tpl_file:
 		tpl_fields = json.load(tpl_file)
@@ -385,4 +427,4 @@ def find_label(tpl):
 	label_field_id = fields_id[0] if fields_id != [] else False
 	
 	# TODO: add a mechanism to handle potential Templates without a Primary Key in case it's needed
-	return label_field_id
+	return label_field_id """

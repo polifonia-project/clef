@@ -176,6 +176,7 @@ $(document).ready(function() {
         suggestionTags.appendChild(tag);
       });
     } else {
+      console.log(element)
       const previousURLS = Array.from(parent.querySelectorAll('span.tag, input.hiddenInput'));
       previousURLS.forEach(tag => {
         tag.remove();
@@ -267,7 +268,7 @@ $(document).ready(function() {
       addManualEntity(searchID);
     }
 
-    if ( $(this).attr('data-subform') != undefined && $(this).hasClass('disambiguate')) {
+    if ( $(this).attr('subtemplate') != undefined) {
       searchCatalogueByClass(searchID);
     }
 
@@ -456,39 +457,9 @@ $(document).ready(function() {
         tabTrigger.show()
       })
     });
-  
-  // alternate inverse entities navigation in "view" page
-  $(".inverse-properties-tabs .nav-item a").on('click', function () {
-    if (! $(this).hasClass('active')) {
-      $(".inverse-properties-tabs .nav-item a").toggleClass("active");
-      $(".inverse-section").hide();
-      var openTab = $(this).attr("id");
-      console.log("#inverse-section-"+openTab)
-      $("#inverse-section-"+openTab).show();
-    }
-  });
-  
-  // show entity icons in "term" page
-  $("h3.articleSubtitle + a").each(function() {
-    if ($(this).attr('href').startsWith('http://www.wikidata.org/entity/')) {
-      $(this).parent().append(wdImgIcon);
-    } else if ($(this).attr('href').startsWith('https://sws.geonames.org/')) {
-      $(this).parent().append(geoImg);
-    } else if ($(this).attr('href').startsWith('http://www.viaf.org/viaf/')) {
-      $(this).parent().append(viafImgIcon);
-    }
-  })
   // show related resources in "term" page
-  $(".showRes").on("click", function() {
-    var data = {
-        count: $(this).data("count"),
-        uri: $(this).data("uri"),
-        class: $(this).data("class"),
-        limit_query: $(this).data("limit"),
-        offset_query: $(this).data("offset")
-    };
-    searchResources({ data: data }, $(this));
-  });
+  $(".showRes").on("click", {count: $(".showRes").data("count"), uri: $(".showRes").data("uri"), limit_query: $(".showRes").data("limit"), offset_query: $(".showRes").data("offset")}, searchResources);
+
   // sortable blocks in TEMPLATE setup
   moveUpAndDown() ;
 
@@ -518,16 +489,168 @@ $(document).ready(function() {
 
   // display subtemplates ('Subtemplate' fields)
   $("[data-subtemplate]").each(function() {
-    console.log($(this));
+    // get the class of the subtemplate and its fields
+    var subtemplateClass = $(this).attr("data-subtemplate");
+    var subtemplateFields = $('[data-class="'+subtemplateClass+'"]');
+    var subtemplateId = $(this).attr('id');
+    var fieldName = $(this).parent().prev().text(); 
 
-    var dataCls = $(this).attr('data-class');
-    var dataSubtemplate = $(this).attr('data-subtemplate')
-    if (! $("[data-subtemplate='"+dataCls+"']").length) {
-      prepareSubtemplateForms($(this));
-    } else {
-      console.log(dataCls)
-      $("[data-class='"+dataSubtemplate+"']").parent().parent().hide();
-    }
+    /* if ($(this).hasClass("oneValue")) {
+      // merged subtemplates: hide the 'subtemplate' field then link it to its sub-fields
+      $(this).parent().parent().hide();
+      $(this).attr('type', 'hidden');
+      var formId = $('.corners form').attr('id'); // either 'recordForm' or 'modifyForm'
+      var allowDataReuse = $(this).hasClass('allowDataReuse');
+
+      // define a new id (timespan) for the subrecord or retrieve the existing one
+      let subformId = '';
+      var now = new Date().valueOf();
+      var timespanId = (now / 1000).toString().replace('.', '-');
+      if($(this).next('span').next('.hiddenInput').length) {
+        var existingSubform = $(this).next().next().val();
+        subformId = existingSubform.split(',')[0];
+      } else {
+        subformId = timespanId;
+      }
+      console.log(subtemplateFields);
+      // adapt the subrecord's input fields to the defined schema
+      subtemplateFields.each(function() {
+        if (allowDataReuse) {
+          console.log(this);
+          var rdfProperty = $(this).attr('data-property');
+          console.log(rdfProperty)
+          var upperLevelClass = $('[data-subtemplate="'+$(this).attr('data-class')+'"]').attr('data-class');
+          console.log(upperLevelClass)
+          if ($('[data-class="'+upperLevelClass+'"][data-property="'+rdfProperty+'"]').length > 0) {
+            $(this).parent().parent().hide();
+          } 
+        }
+        var baseId = $(this).attr('id').split('_')[0];
+
+        // subrecord's input fields and the main language hidden input must be like: 'inputFieldID_subrecordID'
+        if (formId === 'recordForm') {
+          // modify the main language id for primary keys
+          if ($(this).hasClass('disambiguate')) {
+            var mainLangInputId = baseId+'_mainLang_'+subformId;
+            $('#'+baseId+'_mainLang').attr('id', mainLangInputId);      
+            $('#'+mainLangInputId).attr('name',mainLangInputId);
+          }
+          // modify sub-fields' ids
+          $(this).attr('id', $(this).attr('id')+"_"+subformId);
+          $(this).attr('name', $(this).attr('id'));
+          $(this).attr('data-subform',subformId);
+        }
+
+        // modify show_language onclick (literal input fields)
+        $('#'+'languages-'+baseId).find('a').each(function() {
+          var onclickAttr = $(this).attr('onclick');
+          var regex = /'([^"]*)'/g;
+          var originalIdExtended = onclickAttr.match(regex)[0];
+          var originalId = originalIdExtended.substring(1, originalIdExtended.length-1)
+          $(this).attr('onclick', onclickAttr.replace(originalId, originalId+'_'+subformId));
+        });
+      });
+
+      // associate the 'Subtemplate' input field to its Subrecord
+      var hiddenSubrecordLink = $('<input type="hidden" name="'+subtemplateId+'-subrecords" value="'+subformId+'"/>');
+      $('#'+formId).append(hiddenSubrecordLink);
+
+      // check if a subrecord is already associated with this 'subtemplate' field and fill the subtemplate with its data
+      if(subformId !== timespanId) {
+        $(this).next().hide();
+        $(this).next().next().remove();
+        var currentUrl = window.location.href.split("/");
+        var currentAction = currentUrl[currentUrl.length-1].split("-")[0]; // modify or review
+        var requestUrl = '/'+currentAction+"-"+subformId;
+        $.ajax({
+          type:'GET',
+          url:requestUrl,
+          dataType:"html",
+          success:function(data) {
+            subtemplateFields.each(function() {
+              var subtemplateFieldId = $(this).attr('id');
+              var idRoot = subtemplateFieldId.split('_')[0];
+              var cloneElements = $(data).find('[id^="'+idRoot+'"]').parent();
+              let mainLang = '';
+              if (cloneElements.find('#'+idRoot+'_mainLang').length) { mainLang = cloneElements.find('#'+idRoot+'_mainLang').val().toUpperCase()}
+              cloneElements.find('input').each(function() {
+                cloneId = $(this).attr('name')+'_'+subformId;
+                $(this).attr('name', cloneId);
+                $(this).attr('id', cloneId);
+                $(this).addClass('subrecord-field');
+                $(this).attr('data-subform', subformId)
+              });
+              $(this).parent().replaceWith(cloneElements);
+              cloneElements.find('[lang]').each(function() {
+                modify_lang_inputs($(this));
+              });
+              cloneElements.parent().find('.main-lang').removeClass('main-lang');
+              cloneElements.parent().find('[title="text language: '+mainLang+'"]').addClass('main-lang');
+            });
+          }
+        });
+      }
+    } */
+    /* else { */
+      // multiple subtemplates 
+      $(this).hide();
+      
+      // get the class of the subtemplate and hide it, then clone each field before creating a subrecord
+      subtemplateFields.each(function() {
+        // mark the original input fields to be easily recognised and retrieved when necessary
+        // hide them to not be displayed in the back-end input dictionary
+        $(this).addClass('original-subtemplate');
+        $(this).parent().parent().hide();
+        var name = $(this).parent().prev().find('span').text().trim().replace('**','');
+        $('.fields-list li').each(function() {
+          if ($(this).text().trim() === name) {
+            $(this).remove();
+          }
+        });
+        console.log(name)
+      });
+      // get the display name assigned to the 'Subtemplate' field and create a button for adding new subrecords
+      var fieldName = $(this).parent().prev().text();
+      const createBtn = $('<span class="add-span"><i class="material-icons">playlist_add</i><span> Define a new'+fieldName+'</span></span>');
+      createBtn.on('click', function() {
+        createSubrecord(subtemplateClass,fieldName,createBtn)
+      });
+
+      if ($(this).hasClass("oneValue")) {
+        let subformId;
+        var now = new Date().valueOf();
+        var timespanId = (now / 1000).toString().replace('.', '-');
+        if($(this).next('span').next('.hiddenInput').length) {
+          var existingSubform = $(this).next().next().val();
+          subformId = existingSubform.split(',')[0];
+        } else {
+          subformId = timespanId;
+        } 
+
+        var hiddenSubrecordLink = $('<input type="hidden" name="'+subtemplateId+'-subrecords" value="'+subformId+'"/>');
+        $('#modifyForm, #recordForm').append(hiddenSubrecordLink);
+
+        $(this).after(createBtn);
+        createSubrecord(subtemplateClass,fieldName,createBtn,subformId,"oneValue");
+        createBtn.remove();
+
+
+      } else {
+        $(this).after(createBtn);
+      }
+
+      
+      // create hidden fields to store subrecords information when loading a previously created Record (only in modify/review page)
+      if ($('.corners form').attr('id') === "modifyForm") {
+        var subtemplateFieldId = $(this).attr('id');
+        var subrecords = "";
+        $('[data-input="'+subtemplateFieldId+'"').each(function() {
+          subrecords+=$(this).attr('id')+";"+$(this).text()+",";
+        })
+        $('#modifyForm').append('<input type="hidden" name="'+subtemplateFieldId+'-subrecords" id="'+subtemplateFieldId+'-subrecords" value="'+subrecords.slice(0,-1)+'">');
+      
+      }
+    /* } */
   });
 
   $('textarea').each(function() {
@@ -559,76 +682,6 @@ $(window).on('resize', function() {
     })
   })
 });
-
-function prepareSubtemplateForms(element) {
-  // get the class of the subtemplate and its fields
-  var subtemplateClass = $(element).attr("data-subtemplate");
-  var subtemplateFields = $('[data-class="'+subtemplateClass+'"]');
-  var subtemplateId = $(element).attr('id');
-  var fieldName = $(element).parent().prev().text(); 
-  var allowDataReuse = $(element).hasClass('allowDataReuse');
-
-  
-  // multiple subtemplates 
-  
-  $(element).hide();
-  
-  // get the class of the subtemplate and hide it, then clone each field before creating a subrecord
-  subtemplateFields.each(function() {
-    console.log($(this))
-    // mark the original input fields to be easily recognised and retrieved when necessary
-    // hide them to not be displayed in the back-end input dictionary
-    $(this).addClass('original-subtemplate');
-    $(this).parent().parent().hide();
-    var name = $(element).parent().prev().find('span').text().trim().replace('**','');
-    $('.fields-list li').each(function() {
-      if ($(this).text().trim() === name) {
-        $(this).remove();
-      }
-    });
-  });
-  // get the display name assigned to the 'Subtemplate' field and create a button for adding new subrecords
-  var fieldName = $(element).parent().prev().text();
-  const createBtn = $('<span class="add-span"><i class="material-icons">playlist_add</i><span> Define a new'+fieldName+'</span></span>');
-  createBtn.on('click', function() {
-    createSubrecord(subtemplateClass,fieldName,createBtn,dataReuse=allowDataReuse)
-  });
-
-  if ($(element).hasClass("oneValue")) {
-    let subformId;
-    var now = new Date().valueOf();
-    var timespanId = (now / 1000).toString().replace('.', '-');
-    if($(element).next('span').next('.hiddenInput').length) {
-      var existingSubform = $(element).next().next().val();
-      subformId = existingSubform.split(',')[0];
-    } else {
-      subformId = timespanId;
-    } 
-
-    var hiddenSubrecordLink = $('<input type="hidden" name="'+subtemplateId+'-subrecords" value="'+subformId+'"/>');
-    console.log(hiddenSubrecordLink);
-    $('#modifyForm, #recordForm').append(hiddenSubrecordLink);
-
-    $(element).after(createBtn);
-    createSubrecord(subtemplateClass,fieldName,createBtn,allowDataReuse,subformId,"oneValue");
-    createBtn.remove();
-
-  } else {
-    $(element).after(createBtn);
-  }
-
-  
-  // create hidden fields to store subrecords information when loading a previously created Record (only in modify/review page)
-  if ($('.corners form').attr('id') === "modifyForm") {
-    var subtemplateFieldId = $(element).attr('id');
-    var subrecords = "";
-    $('[data-input="'+subtemplateFieldId+'"').each(function() {
-      subrecords+=$(element).attr('id')+";"+$(element).text()+",";
-    })
-    $('#modifyForm').append('<input type="hidden" name="'+subtemplateFieldId+'-subrecords" id="'+subtemplateFieldId+'-subrecords" value="'+subrecords.slice(0,-1)+'">');
-  
-  }
-}
 
 
 /////////////////////////
@@ -1106,11 +1159,13 @@ function makeSPARQLQuery( endpointUrl, sparqlQuery, doneCallback ) {
 
 // Ancillary function: set #searchresult div position (css)
 function setSearchResult(searchterm){
+  var position = $('#'+searchterm).position();
+  var leftpos = position.left+80;
   var offset = $('#'+searchterm).offset();
-  var leftpos = offset.left+15;
   var height = $('#'+searchterm).height();
   var width = $('#'+searchterm).width();
-  var top = offset.top + height + 15 + "px";
+  var top = offset.top + height + "px";
+  var right = offset.left + width + "px";
 
   $('#searchresult').css( {
       'position': 'absolute',
@@ -1323,7 +1378,7 @@ function searchCatalogueAdvanced(searchterm) {
               e.preventDefault();
               var oldID = $(this).attr('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
               var oldLabel = $(this).text();
-              $('#' + searchterm).next('.tags-url').append("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(JSON.stringify(obj)) + "\"/>");
+              $('#' + searchterm).after("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(JSON.stringify(obj)) + "\"/>");
               $("#searchresult").hide();
               $('#' + searchterm).val('');
             });
@@ -1344,23 +1399,14 @@ function searchCatalogueAdvanced(searchterm) {
 
 // search catalogue's records belonging to a desired class 
 function searchCatalogueByClass(searchterm) {
-  
   // get the required class
-  var resource_class = $('#'+searchterm).attr('data-class');
-  var resource_classes = resource_class.split(';').map(cls => cls.trim()).filter(cls => cls !== "");
-  var class_triples = resource_classes.map(cls => `?s a <${cls}> .`).join(" ");
-  var filter_clause = `FILTER NOT EXISTS { ?s a ?otherClass . FILTER (?otherClass NOT IN (${resource_classes.map(cls => `<${cls}>`).join(", ")})) }`;
-  
-  // other ids
-  var dataSubform = $("#"+searchterm).attr('data-subform');
-  var subrecordBase = $("[data-subtemplate='"+resource_class+"']").attr('id');
+  var resource_class = $('#'+searchterm).attr('subtemplate');
 
   // get an array of subrecords created within the same webpage and not saved yet:
   // they must belong to the same required class
   var yet_to_save_keys = [];
   var yet_to_save_resources = [];
-  console.log('.disambiguate[data-class="' + resource_class + '"]:not([data-subform="'+dataSubform+'"])')
-  $('.disambiguate[data-class="' + resource_class + '"]:not([data-subform="'+dataSubform+'"]').each(function() {
+  $('.disambiguate[class*="' + resource_class + '"]').each(function() {
     yet_to_save_keys.push($(this).val());
     var key_id = $(this).attr('id');
     var subrecord = $('input[type="hidden"][value*="'+key_id+'"]');
@@ -1368,7 +1414,7 @@ function searchCatalogueByClass(searchterm) {
   });
   
   // on key up look for suggestions based on the new input string
-  $('#'+searchterm).off('keyup').on('keyup', function(e) {
+  $('#'+searchterm).keyup(function(e) {
     var useful_yet_to_save_keys = yet_to_save_keys.filter(function(value) {
       return value.toLowerCase().includes($('#'+searchterm).val().toLowerCase()) && value.trim() !== '';
     });
@@ -1377,7 +1423,7 @@ function searchCatalogueByClass(searchterm) {
     var offset = $('#'+searchterm).offset();
     var leftpos = offset.left+15;
     var height = $('#'+searchterm).height();
-    var top = offset.top + height + 15 + "px";
+    var top = offset.top + height + "px";
     var max_width = '600px';
     $('#searchresult').css( {
         'position': 'absolute',
@@ -1392,7 +1438,7 @@ function searchCatalogueByClass(searchterm) {
 
     // prepare the query
 	  var query_term = $('#'+searchterm).val();
-    var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o where { ?o bds:search '"+query_term+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o . "+class_triples+filter_clause+"}";
+    var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o where { ?o bds:search '"+query_term+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o ; a <"+resource_class+"> .}"
     var encoded = encodeURIComponent(query);
 
     // send the query request to the catalogue
@@ -1420,27 +1466,17 @@ function searchCatalogueByClass(searchterm) {
         // add tag if the user chooses an item from the catalogue
         $('a[data-id^="' + base + '"]').each(function () {
           $(this).bind('click', function (e) {
-            console.log($(this))
             e.preventDefault();
             var oldID = this.getAttribute('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
             var oldLabel = $(this).text();
+            $('#' + searchterm).next('i').after("<span class='tag "+oldID+"' data-input='"+searchterm+"' data-id='"+oldID+"'>"+oldLabel+"</span>");
             $("#searchresult").hide();
-
-            var subform = $('#' + searchterm).parent().parent().parent().parent();
-            var subformHeading = subform.find('h4');
-            toggleSubform(subformHeading);
-            subformHeading.attr('onclick','');
-            subformHeading.html(oldLabel+"<section class='buttons-container'>\
-              <button class='btn btn-dark delete' title='delete-subrecord' onclick='cancel_subrecord(event,"+$(this).parent()+")'>\
-                <i class='far fa-trash-alt'></i>\
-              </button>\
-              </section>");
-
-            if ($('[name="'+subrecordBase+'-subrecords"]').length) {
-              $('[name="'+subrecordBase+'-subrecords"]').val($('[name="'+subrecordBase+'-subrecords"]').val()+","+oldID+";"+oldLabel);
+            $('#' + searchterm).val('');
+            if ($('[name="'+searchterm+'-subrecords"]').length) {
+              $('[name="'+searchterm+'-subrecords"]').val($('[name="'+searchterm+'-subrecords"]').val()+","+oldID+";"+oldLabel);
             } else {
-              const new_sub = $("<input type='hidden' name='"+subrecordBase+"-subrecords' value='"+oldID+";"+oldLabel+"'>")
-              $('#recordForm, #modifyForm').append(new_sub)
+              const new_sub = $("<input type='hidden' name='"+searchterm+"-subrecords' value='"+oldID+";"+oldLabel+"'>")
+              $('#recordForm').append(new_sub)
             }
           });
 
@@ -1450,32 +1486,23 @@ function searchCatalogueByClass(searchterm) {
         for (let j = 0; j < useful_yet_to_save_keys.length; j++) {
           var resource_id = yet_to_save_resources[j];
           var resource_name = useful_yet_to_save_keys[j];
-          $('#searchresult').append("<div class='wditem'><a class='blue orangeText unsaved' target='"+resource_id+"'>"+resource_name+"</a></div>")
+          $('#searchresult').append("<div class='wditem'><a class='blue orangeText' target='"+resource_id+"'>"+resource_name+"</a></div>")
         }
 
         // add tag if the user chooses an item from yet to save resources
-        $('.unsaved a[target]').each(function () {
+        $('a[target]').each(function () {
           $(this).bind('click', function (e) {
             e.preventDefault();
             var target = $(this).attr('target');
             var label = $(this).text();
+            $('#' + searchterm).next('i').after("<span class='tag-subrecord "+resource_class+"' id='"+target+"-tag'>" + label + "</span><i class='far fa-edit' onclick='modifySubrecord("+target+", keep=true)'></i><i class='far fa-trash-alt' onclick='modifySubrecord("+target+", keep=false)'></i>");
             $("#searchresult").hide();
-
-            var subform = $('#' + searchterm).parent().parent().parent().parent();
-            var subformHeading = subform.find('h4');
-            toggleSubform(subformHeading);
-            subformHeading.attr('onclick','');
-            subformHeading.html(label+"<section class='buttons-container'>\
-              <button class='btn btn-dark delete' title='delete-subrecord' onclick='cancel_subrecord(event,"+$(this).parent()+")'>\
-                <i class='far fa-trash-alt'></i>\
-              </button>\
-              </section>");
-            
-            if ($('[name="'+subrecordBase+'-subrecords"]').length) {
-              $('[name="'+subrecordBase+'-subrecords"]').val($('[name="'+subrecordBase+'-subrecords"]').val()+","+target+";"+label);
+            $('#' + searchterm).val('');
+            if ($('[name="'+searchterm+'-subrecords"]').length) {
+              $('[name="'+searchterm+'-subrecords"]').val($('[name="'+searchterm+'-subrecords"]').val()+","+target+";"+label);
             } else {
-              const new_sub = $("<input type='hidden' name='"+subrecordBase+"-subrecords' value='"+target+";"+label+"'>")
-              $('#recordForm, #modifyForm').append(new_sub)
+              const new_sub = $("<input type='hidden' name='"+searchterm+"-subrecords' value='"+target+";"+label+"'>")
+              $('#recordForm').append(new_sub)
             }
           });
 
@@ -1634,7 +1661,7 @@ function searchWD(searchterm) {
                 e.preventDefault();
                 var oldID = this.getAttribute('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
                 var oldLabel = $(this).text();
-                $('#' + searchterm).next('div').append("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "_" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(oldLabel) + "\"/>");
+                $('#' + searchterm).next('div').append("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(oldLabel) + "\"/>");
                 $("#searchresult").hide();
                 $('#' + searchterm).val('');
               });
@@ -1654,7 +1681,7 @@ function searchWD(searchterm) {
 	    	var now = new Date().valueOf();
   			var newID = 'MD'+now;
   			if (!$('#'+searchterm).val() == '') {
-  				$('#'+searchterm).next('.tags-url').append("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"-"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
+  				$('#'+searchterm).after("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"-"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
   			};
   			$("#searchresult").hide();
   	    	$('#'+searchterm).val('');
@@ -1688,7 +1715,7 @@ function searchWDAdvanced(searchterm) {
             e.preventDefault();
             var oldID = $(this).attr('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
             var oldLabel = $(this).text();
-            $('#' + searchterm).next('.tags-url').append("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "_" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(JSON.stringify(obj)) + "\"/>");
+            $('#' + searchterm).after("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "_" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(JSON.stringify(obj)) + "\"/>");
             $("#searchresult").hide();
             $('#' + searchterm).val('');
           });
@@ -1704,14 +1731,14 @@ function searchWDAdvanced(searchterm) {
               // to avoid repetitions of the same element: $("#searchresult").find("[data-id="+item.viafid+"]").length === 0
               $.each(viafData.result, function (i, item) {
                 if ($("#searchresult").find("[data-id="+item.viafid+"]").length === 0 && $("#searchresult > .viafitem").length <5) {
-                  $("#searchresult").append("<div class='viafitem'><a class='blue' target='_blank' href='http://www.viaf.org/viaf/" + item.viafid + "'>" + viafImgIcon + "</a> <a class='blue' data-id='" + item.viafid + "'>" + item.term + "</a> " + "</div>"); // no item.DESCRIPTION!
+                  $("#searchresult").append("<div class='viafitem'><a class='blue' target='_blank' href='http://www.viaf.org/viaf/" + item.viafid + "'>" + viafImg + "</a> <a class='blue' data-id='" + item.viafid + "'>" + item.term + "</a> " + "</div>"); // no item.DESCRIPTION!
       
                   // add tag if the user chooses an item from viaf
                   $('a[data-id="' + item.viafid + '"]').each(function () {
                     $(this).bind('click', function (e) {
                       e.preventDefault();
                       var input_name = (searchterm.split('_').length == 2) ? searchterm.split('')[0] + item.viafid + searchterm.split('_')[1] : searchterm + '-' + item.viafid;
-                      $('#' + searchterm).next('.tags-url').append("<span class='tag " + item.viafid + "' data-input='" + searchterm + "' data-id='" + item.viafid + "'>" + item.term + "</span><input type='hidden' class='hiddenInput " + item.viafid + "' name='" + input_name + "' value=\"viaf" + item.viafid + "," + encodeURIComponent(item.term) + "\"/>");
+                      $('#' + searchterm).after("<span class='tag " + item.viafid + "' data-input='" + searchterm + "' data-id='" + item.viafid + "'>" + item.term + "</span><input type='hidden' class='hiddenInput " + item.viafid + "' name='" + input_name + "' value=\"viaf" + item.viafid + "," + encodeURIComponent(item.term) + "\"/>");
                       $("#searchresult").hide();
                       $('#' + searchterm).val('');
                     });
@@ -1747,7 +1774,7 @@ function searchWDAdvanced(searchterm) {
                 e.preventDefault();
                 var oldID = this.getAttribute('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
                 var oldLabel = $(this).text();
-                $('#' + searchterm).next('.tags-url').append("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(oldLabel) + "\"/>");
+                $('#' + searchterm).after("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(oldLabel) + "\"/>");
                 $("#searchresult").hide();
                 $('#' + searchterm).val('');
               });
@@ -1788,7 +1815,7 @@ function searchWDCatalogueAdvanced(searchterm){
             e.preventDefault();
             var oldID = $(this).attr('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
             var oldLabel = $(this).text();
-            $('#' + searchterm).next('.tags-url').append("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "_" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(JSON.stringify(obj)) + "\"/>");
+            $('#' + searchterm).after("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "_" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(JSON.stringify(obj)) + "\"/>");
             $("#searchresult").hide();
             $('#' + searchterm).val('');
           });
@@ -1808,7 +1835,7 @@ function searchWDCatalogueAdvanced(searchterm){
                     $(this).bind('click', function (e) {
                       e.preventDefault();
                       var input_name = (searchterm.split('_').length == 2) ? searchterm.split('')[0] + item.viafid + searchterm.split('_')[1] : searchterm + '-' + item.viafid;
-                      $('#' + searchterm).next('.tags-url').append("<span class='tag " + item.viafid + "' data-input='" + searchterm + "' data-id='" + item.viafid + "'>" + item.term + "</span><input type='hidden' class='hiddenInput " + item.viafid + "' name='" + input_name + "' value=\"viaf" + item.viafid + "," + encodeURIComponent(item.term) + "\"/>");
+                      $('#' + searchterm).after("<span class='tag " + item.viafid + "' data-input='" + searchterm + "' data-id='" + item.viafid + "'>" + item.term + "</span><input type='hidden' class='hiddenInput " + item.viafid + "' name='" + input_name + "' value=\"viaf" + item.viafid + "," + encodeURIComponent(item.term) + "\"/>");
                       $("#searchresult").hide();
                       $('#' + searchterm).val('');
                       //colorForm();
@@ -1830,7 +1857,7 @@ function searchWDCatalogueAdvanced(searchterm){
               e.preventDefault();
               var oldID = $(this).attr('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
               var oldLabel = $(this).text();
-              $('#' + searchterm).next('.tags-url').append("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(JSON.stringify(obj)) + "\"/>");
+              $('#' + searchterm).after("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(JSON.stringify(obj)) + "\"/>");
               $("#searchresult").hide();
               $('#' + searchterm).val('');
             });
@@ -1886,7 +1913,7 @@ function searchLOV(searchterm) {
             var offset = $('#'+searchterm).offset();
             var height = $('#'+searchterm).height();
             var width = $('#'+searchterm).width();
-            var top = offset.top + height - 275 + "px";
+            var top = offset.top + height - 294 + "px";
             var right = offset.left + width + "px";
 
             $('#'+searchres_div).css( {
@@ -2357,6 +2384,7 @@ function expandUrlInput(event, el) {
 
 // NLP
 function nlpText(searchterm) {
+  console.log('f')
   var lang = searchterm.split('_')[1];
   var baseID = searchterm.split('_')[0];
 	$('textarea#'+searchterm).keypress( throttle(function(e) {
@@ -2459,13 +2487,15 @@ function replace_existing_subforms() {
 }
 
 // create subrecords
-function createSubrecord(resourceClass, fieldName, el, dataReuse=false, subformId=null,cardinality=null ) {
+function createSubrecord(resourceClass, fieldName, el, subformId=null,cardinality=null ) {
+  console.log(cardinality)
   // prepare a new subrecord id 
   if (!subformId) {
     var now = new Date().valueOf();
     subformId = (now / 1000).toString().replace('.', '-');
   }
   var formId = $('.corners').eq(0).find('form').eq(0).attr('id'); // either 'recordForm' or 'modifyForm'
+  /* replace_existing_subforms(); */
 
   // prepare the new subrecord form
   const subrecordSection = $("<section class='subform_section col-md-12 col-sm-12'></section>");
@@ -2473,145 +2503,126 @@ function createSubrecord(resourceClass, fieldName, el, dataReuse=false, subformI
 
   // create a clone for each input belonging to the requested (sub-)template
   $("[data-class='"+resourceClass+"'][class~='original-subtemplate']").each(function() {
-    let moveOn = true;
+    // CREATE A CLONE ELEMENT
+    const cloneElement = $(this).parent().parent().clone();
+    cloneElement.attr("style", "display: block"); // make it visible
+    cloneElement.find('input').attr('data-subform',subformId); // associate the input field with the subrecord id
+    cloneElement.find('input').removeClass('original-subtemplate');
+    // associate proper identifiers to input fields belonging to the subrecord form
+    var inputId = cloneElement.find('input:not([type="hidden"])').attr('id');
+    cloneElement.find('input:not([type="hidden"])').attr('id', inputId+"_"+subformId.toString());
+    cloneElement.find('input:not([type="hidden"])').attr('name', inputId+"_"+subformId.toString());
 
-    // DATA REUSE: 
-    // do not clone Elements in case data reuse is allowed and the same property is used in the upper level Form
-    
-    if (dataReuse==true) {
-      var rdfProperty = $(this).attr('data-property');
-      var dataCls = $(this).attr('data-class');
-      var upperLevelCls= $("[data-subtemplate='"+dataCls+"']").attr('data-class');
-      if ($("[data-class='"+upperLevelCls+"'][data-property='"+rdfProperty+"']").length) {
-        moveOn = false;
-      };
+    // SET LITERAL INPUT FIELDS
+    if (cloneElement.find('[lang]').length>0) {
+      var literalInput = cloneElement.find('[lang]');
+      var languageListSection = literalInput.parent().prev();
+      languageListSection.find('a').each(function() {
+        var onclickAttr = $(this).attr('onclick');
+        var regex = /'([^"]*)'/g;
+        var originalIdExtended = onclickAttr.match(regex)[0];
+        var originalId = originalIdExtended.substring(1, originalIdExtended.length-1)
+        $(this).attr('onclick', onclickAttr.replace(originalId, originalId+'_'+subformId));
+      });
     }
-
-    if (moveOn) {
-
-      // CREATE A CLONE ELEMENT
-      const cloneElement = $(this).parent().parent().clone();
-      cloneElement.attr("style", "display: block"); // make it visible
-      cloneElement.find('input:not([type="hidden"]):not(label.switch input)').attr('data-subform',subformId); // associate the input field with the subrecord id
-      cloneElement.find('input').removeClass('original-subtemplate');
-      // associate proper identifiers to input fields belonging to the subrecord form
-      var inputId = cloneElement.find('input:not([type="hidden"]):not(label.switch input)').attr('id');
-      cloneElement.find('input:not([type="hidden"]):not(label.switch input)').attr('id', inputId+"_"+subformId.toString());
-      cloneElement.find('input:not([type="hidden"]):not(label.switch input)').attr('name', inputId+"_"+subformId.toString());
-
-      // SET LITERAL INPUT FIELDS
-      if (cloneElement.find('[lang]').length>0) {
-        var literalInput = cloneElement.find('[lang]');
-        var languageListSection = literalInput.parent().prev();
-        languageListSection.find('a').each(function() {
-          var onclickAttr = $(this).attr('onclick');
-          var regex = /'([^"]*)'/g;
-          var originalIdExtended = onclickAttr.match(regex)[0];
-          var originalId = originalIdExtended.substring(1, originalIdExtended.length-1)
-          $(this).attr('onclick', onclickAttr.replace(originalId, originalId+'_'+subformId));
-        });
-      }
-      // add a main-lang hidden input in case of primary key
-      if (cloneElement.find('input.disambiguate').next('[type="hidden"]').length > 0) {
-        var primaryKeyLangId = cloneElement.find('input.disambiguate').next('[type="hidden"]').attr('id');
-        cloneElement.find('input[type="hidden"]').attr('id', primaryKeyLangId+"_"+subformId.toString());
-        cloneElement.find('input[type="hidden"]').attr('name', primaryKeyLangId+"_"+subformId.toString());
-      }
-      console.log(cloneElement.find('[data-subtemplate]'));
-      // SET SUBTEMPLATE FIELDS '+' BUTTON
-      cloneElement.find('[data-subtemplate]').each(function(){
-        prepareSubtemplateForms($(this), hide=true);
-        
-        /* var subtemplateClass = $(this).attr('data-subtemplate');
-        var fieldName = $(this).parent().prev().text();
-        var addSubrecordBtn = $(this).next('i');
-        addSubrecordBtn.on('click', function(){
-          createSubrecord(subtemplateClass,fieldName,addSubrecordBtn);
-        }) */
+    // add a main-lang hidden input in case of primary key
+    if (cloneElement.find('input.disambiguate').next('[type="hidden"]').length > 0) {
+      var primaryKeyLangId = cloneElement.find('input.disambiguate').next('[type="hidden"]').attr('id');
+      cloneElement.find('input[type="hidden"]').attr('id', primaryKeyLangId+"_"+subformId.toString());
+      cloneElement.find('input[type="hidden"]').attr('name', primaryKeyLangId+"_"+subformId.toString());
+    }
+    
+    // SET SUBTEMPLATE FIELDS '+' BUTTON
+    cloneElement.find('[data-subtemplate]').each(function(){
+      var subtemplateClass = $(this).attr('data-subtemplate');
+      var fieldName = $(this).parent().prev().text();
+      var addSubrecordBtn = $(this).next('i');
+      addSubrecordBtn.on('click', function(){
+        createSubrecord(subtemplateClass,fieldName,addSubrecordBtn);
       })
+    })
 
-      // retrieve previously provided values in case they are available (i.e., modify subrecords):
-      let clonedElementValues = [];
-      // a) single value fields
-      if ($('#'+formId+' #'+inputId+"_"+subformId).length >0) {
-        const toBeModified = $('#'+formId+' #'+inputId+'_'+subformId);
-        cloneElement.find('input').val(toBeModified.val());
-      } 
-      // b) multiple values fields
-      if ($('#'+formId+' [name^="'+inputId+'_"][name$="_'+subformId+'"]:not([name="'+inputId.split('_')[0]+'_'+subformId+'"])').length >0) {
-        
-        var importedValues = $('#'+formId+' [name^="'+inputId.split('_')[0]+'_"][name$="_'+subformId+'"]:not([name="'+inputId.split('_')[0]+'_'+subformId+'"])');
-        cloneElement.find('.label div a').remove();
-        if ($('#'+inputId).hasClass('searchWikidata') || $('#'+inputId).hasClass('searchVocab') || $('#'+inputId).hasClass('searchGeonamaes')) {
-          importedValues.each(function(){
-              // imported values and URIs
-              var value = $(this).val();
-              var code = value.split(",")[0];
-              var label = decodeURIComponent(value.split(",")[1]);
-              var importedValueSpan = $("<span class='tag "+code+"' data-input='"+inputId+'__'+subformId+"' data-id='"+code+"'>"+label+"</span>");
-              clonedElementValues.push(importedValueSpan);
-              clonedElementValues.push($(this));
-              $(this).remove();
-          });
-        } else {
-          importedValues.each(function(){
-            // multiple-lang literal values
+    // retrieve previously provided values in case they are available (i.e., modify subrecords):
+    let clonedElementValues = [];
+    // a) single value fields
+    if ($('#'+formId+' #'+inputId+"_"+subformId).length >0) {
+      const toBeModified = $('#'+formId+' #'+inputId+'_'+subformId);
+      cloneElement.find('input').val(toBeModified.val());
+    } 
+    // b) multiple values fields
+    if ($('#'+formId+' [name^="'+inputId+'_"][name$="_'+subformId+'"]:not([name="'+inputId.split('_')[0]+'_'+subformId+'"])').length >0) {
+      
+      var importedValues = $('#'+formId+' [name^="'+inputId.split('_')[0]+'_"][name$="_'+subformId+'"]:not([name="'+inputId.split('_')[0]+'_'+subformId+'"])');
+      cloneElement.find('.label div a').remove();
+      if ($('#'+inputId).hasClass('searchWikidata') || $('#'+inputId).hasClass('searchVocab') || $('#'+inputId).hasClass('searchGeonamaes')) {
+        importedValues.each(function(){
+            // imported values and URIs
+            var value = $(this).val();
+            var code = value.split(",")[0];
+            var label = decodeURIComponent(value.split(",")[1]);
+            var importedValueSpan = $("<span class='tag "+code+"' data-input='"+inputId+'__'+subformId+"' data-id='"+code+"'>"+label+"</span>");
+            clonedElementValues.push(importedValueSpan);
             clonedElementValues.push($(this));
-            cloneElement.find('input').remove();
-            if($(this).attr('lang') != undefined) {
-              let lang = $(this).attr('lang');
-              const newLangItem = $('<a class="lang-item" title="text language: '+lang.toUpperCase()+'" onclick="show_lang(\''+$(this).attr('id')+'\')">'+lang+'</a>');
-              cloneElement.find('div').append(newLangItem);
-            } else {
-              let mainLang = $(this).val();
-              cloneElement.find('div a[title="text language: '+mainLang.toUpperCase()+'"]').addClass('main-lang');
-            }       
-          });
-          cloneElement.find('div a').eq(0).addClass('selected-lang');
-          clonedElementValues[0].show();
-        }
-      } 
-      // c) subrecords fields (inner subrecords)
-      if ($('[name="'+inputId+'_'+subformId+'-subrecords"]').length>0) {
+            $(this).remove();
+        });
+      } else {
+        importedValues.each(function(){
+          // multiple-lang literal values
+          clonedElementValues.push($(this));
+          cloneElement.find('input').remove();
+          if($(this).attr('lang') != undefined) {
+            let lang = $(this).attr('lang');
+            const newLangItem = $('<a class="lang-item" title="text language: '+lang.toUpperCase()+'" onclick="show_lang(\''+$(this).attr('id')+'\')">'+lang+'</a>');
+            cloneElement.find('div').append(newLangItem);
+          } else {
+            let mainLang = $(this).val();
+            cloneElement.find('div a[title="text language: '+mainLang.toUpperCase()+'"]').addClass('main-lang');
+          }       
+        });
+        cloneElement.find('div a').eq(0).addClass('selected-lang');
+        clonedElementValues[0].show();
+      }
+    } 
+    // c) subrecords fields (inner subrecords)
+    if ($('[name="'+inputId+'_'+subformId+'-subrecords"]').length>0) {
 
-        // retrieve subrecords
-        var subrecords = $('[name="'+inputId+'_'+subformId+'-subrecords"]').val().split(',');
-        console.log("Sub", subrecords)
-        var subtemplateFieldId = $(this).attr('name').replace('-subrecords', '');
-        var subrecordCls = $('#'+subtemplateFieldId).attr('subtemplate')
-        for (let i=0; i<subrecords.length;i++){
-          var code = subrecords[i];
-          let label = "";
-          if (subrecords[i].includes(";")) {
-            code = subrecords[i].split(";")[0];
-            label = subrecords[i].split(";")[1];
-          } else {          
-            var subrecordLabelField = $('.original-subtemplate.disambiguate[class*="('+subrecordCls+')"]');
-            if (subrecordLabelField.length > 0) {
-              var mainLang = $('#'+subrecordLabelField.attr('id').split('_')[0] + '_mainLang_' + code).val();
-              label = $('#'+subrecordLabelField.attr('id').split('_')[0]+'_'+mainLang+'_'+code).val();
-            }
+      // retrieve subrecords
+      var subrecords = $('[name="'+inputId+'_'+subformId+'-subrecords"]').val().split(',');
+      var subtemplateFieldId = $(this).attr('name').replace('-subrecords', '');
+      var subrecord_cls = $('#'+subtemplateFieldId).attr('subtemplate')
+      for (let i=0; i<subrecords.length;i++){
+        var code = subrecords[i];
+        let label = "";
+        if (subrecords[i].includes(";")) {
+          code = subrecords[i].split(";")[0];
+          label = subrecords[i].split(";")[1];
+        } else {          
+          var subrecordLabelField = $('.original-subtemplate.disambiguate[class*="('+subrecordCls+')"]');
+          if (subrecordLabelField.length > 0) {
+            var mainLang = $('#'+subrecordLabelField.attr('id').split('_')[0] + '_mainLang_' + code).val();
+            label = $('#'+subrecordLabelField.attr('id').split('_')[0]+'_'+mainLang+'_'+code).val();
           }
         }
-      
+        var subrecordValueSpan = $("<span class='tag-subrecord "+subrecordCls+"' id='"+code+"-tag'>"+label+"</span>")
+        var modifyButton = $('<i class="far fa-edit" onclick="modifySubrecord(`'+code+'`, keep=true)"></i>')
+        var deleteButton = $('<i class="far fa-trash-alt" onclick="modifySubrecord(`'+code+'`, keep=false)"></i>')
+        clonedElementValues.push(subrecordValueSpan, modifyButton, deleteButton);
       }
-
-      
-      cloneElement.find('.input_or_select').eq(0).append(clonedElementValues);
-      subrecordForm.append(cloneElement);
+    
     }
+
+    
+    cloneElement.find('.input_or_select').eq(0).append(clonedElementValues);
+    subrecordForm.append(cloneElement);
 
   })
 
-  // Add Knowledge Extraction input field if required
+  // add knowledge extractor if required
   var resourceTemplate = $('[data-subtemplate="'+resourceClass+'"').attr('data-subtemplateid');
+  console.log($('[data-subtemplate="'+resourceClass+'"'), resourceTemplate)
   if (extractorsArray.includes(resourceTemplate)) {
     generateExtractionField(subformId,subrecordForm);
   }
-
-  console.log(fieldName, cardinality)
-
-  // Save button, Cancel button, Accordion title (only in case multiple subrecords are allowed)
   if (cardinality==null) {
     // subform accordion
     const subrecordTitle = $("<h4 class='subrecord-title italic' onclick='toggleSubform(this)'>New instance of "+fieldName+"<i class='fas fa-chevron-down chevron'></i></h4>");
@@ -2636,6 +2647,7 @@ function createSubrecord(resourceClass, fieldName, el, dataReuse=false, subformI
         // for each subtemplate field, create an hidden input value including a list of related subrecords
         // this is needed to streamline the creation of records (back-end application)
         var subrecordBase = $("[data-subtemplate='"+resourceClass+"']").attr('id'); // the 'id' of the 'subtemplate' field (within the main record)
+        console.log(subrecordBase)
         var createdSubrecords = $('[name="'+subrecordBase+'-subrecords"]');
         if (createdSubrecords.length) {
             var toExtendValue = createdSubrecords.val();
@@ -2654,7 +2666,6 @@ function createSubrecord(resourceClass, fieldName, el, dataReuse=false, subformI
     // CANCEL SUBRECORD
     cancelSubrecordButton.on('click', function(e) {
       // hide_subform
-      e.preventDefault();
       cancel_subrecord(this);
     });
     
@@ -2662,91 +2673,27 @@ function createSubrecord(resourceClass, fieldName, el, dataReuse=false, subformI
     subrecordForm.append(subrecordButtons);
   }
   subrecordSection.append(subrecordForm);
-
-  /* subrecordForm.find('input[type="text"]').on('click', function(){
-    searchID = $(this).attr('id');
-    console.log(searchID)
-    if ( $(this).hasClass('searchWikidata') && $(this).hasClass('wikidataConstraint') && $(this).hasClass('catalogueConstraint')) {
-      searchWDCatalogueAdvanced(searchID);
-    } else if ( $(this).hasClass('searchWikidata') && !($(this).hasClass('wikidataConstraint')) && !($(this).hasClass('catalogueConstraint')) ) {
-      searchWD(searchID);
-    } else if ( $(this).hasClass('searchWikidata') && $(this).hasClass('wikidataConstraint')) {
-      searchWDAdvanced(searchID);
-    } else if ( $(this).hasClass('searchWikidata') && $(this).hasClass('catalogueConstraint')) {
-      searchCatalogueAdvanced(searchID);
-    };
-
-    if ( $(this).hasClass('searchGeonames') ) {
-      searchGeonames(searchID);
-    };
-
-    if ( $(this).hasClass('searchSkos') ) {
-      searchSkos(searchID);
-    };
-
-    if ( $(this).hasClass('searchGeneral') ) {
-      searchCatalogue('search');
-    };
-
-    if ( $(this).hasClass('searchLOV') ) {
-      searchLOV(searchID);
-    };
-
-    if ( $(this).hasClass('urlField') ) {
-      addURL(searchID);
-    };
-
-    if ( $(this).hasClass('yearField') ) {
-      searchYear(searchID);
-    };
-
-    if ( $(this).hasClass('multimediaField')) {
-      addMultimedia(searchID);
-    }
-
-    if ( $(this).hasClass('websitePreview')) {
-      addURL(searchID, iframe=true);
-    }
-
-    if ( $(this).hasClass('manual-entity')) {
-      addManualEntity(searchID);
-    }
-
-    if ( $(this).attr('subtemplate') != undefined) {
-      searchCatalogueByClass(searchID);
-    }
-
-  }); */
-
-
-  $(el).before(subrecordSection);
-  if (!subrecordSection.find('input:visible, .add-span:visible').length > 0) {
-    $(el).parent().parent().hide();
-  }
-
+  /* $('.main_content').eq(0).prepend(subrecordSection);  */
+  $(el).before(subrecordSection)
 }
 
 // hide and show subrecord input fields
 function toggleSubform(element,label=null) {
   $(element).find('.chevron').toggleClass('rotate');
   $(element).toggleClass('closed-title');
-  $(element).next('.subform').toggleClass('closed');
+  $('.subform').toggleClass('closed');
 
   // change Subrecord title
   if (label) {
     const subformId = $(element).next('.subform').attr('id').replace('-form', '')
     $(element).html(label+"<section class='buttons-container'>\
-      <button class='btn btn-dark delete' title='delete-subrecord'>\
+      <button class='btn btn-dark delete' title='delete-subrecord' onclick='cancel_subrecord("+$(this).parent()+")'>\
         <i class='far fa-trash-alt'></i>\
       </button>\
-      <button class='btn btn-dark modify' title='modify-subrecord' onclick='modifySubrecord(\'"+subformId+"\', keep=true)'>\
+      <button class='btn btn-dark' title='modify-subrecord' onclick='modifySubrecord(\'"+subformId+"\', keep=true)'>\
         <i class='far fa-edit'></i>\
       </button>\
     </section>");
-    $(element).find('.delete').on('click', function(e) {
-      e.preventDefault();
-      cancel_subrecord($(this).parent());
-    })
     $(element).removeClass('italic');
     $('html, body').animate({
       scrollTop: $(element).parent().offset().top - 200
@@ -2756,6 +2703,15 @@ function toggleSubform(element,label=null) {
 
 // CANCEL SUBRECORD (before adding it to #recordForm)
 function cancel_subrecord(subrecord_section) {
+  if ($('.subform_section').length > 1) {
+    $('.subform_section').each(function () {
+      var right_css = parseInt($(this).css('right'));
+      $(this).css('right', 'calc('+right_css+'px -  30%)');
+    });
+  } else {
+    $('.modal-previewMM').remove();
+  }
+  $('main form').append($('#searchresult'));
   $(subrecord_section).closest('.subform_section').remove();
 };
 
@@ -2909,64 +2865,48 @@ function saveTheWeb(input_url) {
 ///////////////
 
 // search catalogue resources on click and offset
-function searchResources(event, element) {
+function searchResources(event) {
   var uri = event.data.uri;
   var count = event.data.count;
-  var resClass = event.data.class;
-  var offsetQuery = parseInt(event.data.offset_query, 10);
-  var limitQuery = parseInt(event.data.limit_query, 10);
-  console.log(offsetQuery,limitQuery)
-  
-  var classes = JSON.parse(resClass.replace(/'/g, '"'));
-  let typePatterns = classes.map(cls => `?o rdf:type <${cls}> .`).join(" ");
-  let filterNotExists = `
-      FILTER NOT EXISTS {
-          ?o rdf:type ?otherClass .
-          FILTER(?otherClass NOT IN (${classes.map(cls => `<${cls}>`).join(", ")}))
-      }
-  `;
-  
-  var query;
-  
-  if (offsetQuery === 0) {
-      query = `select distinct ?o ?label ${inGraph} where { ?o ?p <${uri}> ; rdfs:label ?label . ${typePatterns} ${filterNotExists} } ORDER BY ?o LIMIT ${limitQuery}`;
+  var offset_query = event.data.offset_query;
+  var limit_query = event.data.limit_query;
+
+  if (offset_query == "0") {
+    var query = "select distinct ?o ?label "+inGraph+" where { ?o ?p <"+uri+"> ; rdfs:label ?label . } ORDER BY ?o LIMIT "+limit_query+" "
   } else {
-      query = `select distinct ?o ?label ${inGraph} where { ?o ?p <${uri}> ; rdfs:label ?label . ${typePatterns} ${filterNotExists} } ORDER BY ?o OFFSET ${offsetQuery} LIMIT ${limitQuery}`;
+    var query = "select distinct ?o ?label "+inGraph+" where { ?o ?p <"+uri+"> ; rdfs:label ?label . } ORDER BY ?o OFFSET "+offset_query+" LIMIT "+limit_query+" "
   }
-  
-  var encoded = encodeURIComponent(query);
+  var encoded = encodeURIComponent(query)
   $.ajax({
-      type: 'GET',
-      url: myPublicEndpoint + '?query=' + encoded,
-      headers: { Accept: 'application/sparql-results+json; charset=utf-8'},
-      success: function(returnedJson) {
+        type: 'GET',
+        url: myPublicEndpoint+'?query=' + encoded,
+        headers: { Accept: 'application/sparql-results+json; charset=utf-8'},
+        success: function(returnedJson) {
           if (!returnedJson.results.bindings.length) {
-              $("[data-class='" + resClass + "'] + br + .related-resources").append("<div class='wditem noresults'>No more resources</div>");
+            $(".relatedResources").append("<div class='wditem noresults'>No more resources</div>");
           } else {
-              for (let i = 0; i < returnedJson.results.bindings.length; i++) {
-                  var myUrl = returnedJson.results.bindings[i].o.value;
-                  // exclude named graphs from results
-                  if (myUrl.substring(myUrl.length - 1) !== "/") {
-                      var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1);
-                      var newItem = $("<div id='" + resID + "' class='wditem'><a class='blue orangeText' target='_blank' href='view-" + resID + "'><i class='fas fa-external-link-alt'></i></a> <span class='orangeText' data-id='" + myUrl + "'>" + decodeURIComponent(unescape(returnedJson.results.bindings[i].label.value)) + "</span></div>").hide();
-                      $(element).parent().find('.related-resources').prepend(newItem);
-                      newItem.show('slow');
-                  }
-              }
-          }
-      }
+            for (i = 0; i < returnedJson.results.bindings.length; i++) {
+              var myUrl = returnedJson.results.bindings[i].o.value;
+              // exclude named graphs from results
+              if ( myUrl.substring(myUrl.length-1) != "/") {
+                var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1)
+                var newItem = $("<div id='"+resID+"' class='wditem'><a class='blue orangeText' target='_blank' href='view-"+resID+"'><i class='fas fa-external-link-alt'></i></a> <span class='orangeText' data-id=" + returnedJson.results.bindings[i].o.value + "'>" + decodeURIComponent( unescape(returnedJson.results.bindings[i].label.value)) + "</span></div>").hide();
+                $(".relatedResources").prepend(newItem);
+                newItem.show('slow');
+                };
+              };
+          };
+        }
   });
-  
   // update offset query
-  offsetQuery += limitQuery;
-  $(element).data('offset', offsetQuery);
-  if (offsetQuery >= count) {
-      $(element).hide();
-      //$(".hideRes").show();
-  } else {
-    $(element).html("show more");
+  var offset_query = offset_query+limit_query ;
+  $(".showRes").html("show more");
+  event.data.offset_query = offset_query;
+  if (event.data.offset_query > count) {
+    $(".showRes").hide();
+    //$(".hideRes").show();
   }
-}
+};
 
 
 //////////////
@@ -3297,7 +3237,7 @@ function add_field(field, res_type, backend_file=null) {
 
   var field_check_subtemplate = "<section class='row' style='display:none'>\
     <label class='col-md-3'></label>\
-    <input type='button' class='("+res_type+") btn btn-dark check_subtemplate' value='Open subtemplate' onclick='edit_subtemplate(this)'></input>\
+    <input type='button' class='("+res_type+") btn btn-dark check_subtemplate' value='Edit subtemplate' onclick='edit_subtemplate(this)'></input>\
   </section>"
 
   var field_cardinality = "<section class='row'>\
@@ -3314,20 +3254,6 @@ function add_field(field, res_type, backend_file=null) {
     </section>\
   </section>";
 
-  var field_data_reuse = "<section class='row'>\
-    <label class='col-md-3'>DATA REUSE <br><span class='comment'>use upper level record data to auto-fill subtemplate fields with same property</span></label>\
-    <section class='col-md-8'>\
-      <label for='allowDataReuse__"+temp_id+"'>\
-        Allow data reuse\
-        <input type='radio' id='allowDataReuse__"+temp_id+"' name='dataReuse__"+temp_id+"' value='allowDataReuse' checked>\
-      </label><br>\
-      <label for='denyDataReuse__"+temp_id+"'>\
-        Deny data reuse\
-        <input type='radio' id='denyDataReuse__"+temp_id+"' name='dataReuse__"+temp_id+"' value='denyDataReuse'>\
-      </label><br>\
-    </section>\
-  </section>";
-
   var open_addons = "<section id='addons__"+temp_id+"'>";
   var close_addons = "</section>";
   var up_down = '<a href="#" class="up"><i class="fas fa-arrow-up"></i></a> <a href="#" class="down"><i class="fas fa-arrow-down"></i></a><a href="#" class="trash"><i class="far fa-trash-alt"></i></a>';
@@ -3339,7 +3265,7 @@ function add_field(field, res_type, backend_file=null) {
   else if (field =='Skos') { contents += field_available_vocabularies + accepted_values_vocabularies + field_placeholder + field_mandatory + field_hide + field_browse ; }
   else if (field =='Multimedia') { contents += field_multimedia + field_placeholder + field_mandatory + field_hide; }
   else if (field =='WebsitePreview') { contents += field_placeholder + field_mandatory + field_hide; }
-  else if (field =='Subtemplate') { contents = field_type + field_name + field_prepend + field_property + field_subtemplate_import + field_subtemplate_name + field_subtemplate_class + field_check_subtemplate + field_cardinality + field_data_reuse + field_mandatory + field_hide + field_browse + open_addons; }
+  else if (field =='Subtemplate') { contents = field_type + field_name + field_prepend + field_property + field_subtemplate_import + field_subtemplate_name + field_subtemplate_class + field_check_subtemplate + field_cardinality + field_mandatory + field_hide + field_browse + open_addons; }
   else if (field =='KnowledgeExtractor') {
     if ($("select option:selected[value='KnowledgeExtractor']").length > 0) {
       alert("Max. 1 Knowledge Extraction field allowed");
@@ -3364,8 +3290,7 @@ function import_subtemplate(el) {
   var requested_name = el.options[el.selectedIndex].text;
   var name_field = $(el).parent().next().find('input[type="text"]').eq(0);
   var class_field = $(el).parent().next().next().find('input[type="text"]').eq(0);
-  var edit_field = $(el).parent().next().next().next().find('input[type="button"]').eq(0);
-  console.log(edit_field)
+  var edit_field = $(el).parent().next().next().next('input[type="button"]');
   $(name_field).parent().show();
   $(class_field).parent().show();
   // make fields not modifiable unless creating a new subtemplate
@@ -3374,7 +3299,7 @@ function import_subtemplate(el) {
  
   if (requested_template !== "CreateNewSubtemplate") {
     // hide new template button
-    edit_field.parent().show();
+    edit_field.hide();
     // import an existing template
     var encoded_template = encodeURIComponent(requested_template.replace("resource_templates/", ""));
     var url = window.location.href.split("/");
@@ -3400,7 +3325,7 @@ function import_subtemplate(el) {
     class_field.attr("disabled", false); 
     name_field.focus(); // autofocus the name input field
     name_field.val(""); class_field.val(""); // make the fields empty
-    edit_field.parent().show();
+    edit_field.show();
   }
   
 }
@@ -3408,33 +3333,19 @@ function import_subtemplate(el) {
 function edit_subtemplate(el) {
   var class_field = $(el).parent().prev().find('input').val();
   var name_field = $(el).parent().prev().prev().find('input').val();
-  var template_name = $(el).parent().prev().prev().prev().find('select').val();
   if (class_field==='' || name_field==='') {
     alert("Please, specify a label and a class");
-  } else if (template_name ==="CreateNewSubtemplate") {
+  } else {
     var modified_cls = name_field.toLowerCase().replaceAll(" ", "_");
     var url = "/template-" + modified_cls;
-    var class_list = '';
-    var classes = class_field.split("; ");
-    for (let i = 0; i < classes.length; i++) { 
-      let new_class = "&uri_class_" + i + "=" + encodeURIComponent(classes[i]); 
-      class_list += new_class;
-    }
-
-    console.log(class_list)
-
     console.log(url);
     $.ajax({
       type: 'POST',
-      url: '/welcome-1?action=createTemplate'+class_list+'&class_name='+encodeURIComponent(name_field),
+      url: '/welcome-1?action=createTemplate&class_uri='+encodeURIComponent(class_field)+'&class_name='+encodeURIComponent(name_field),
       success: function(data) {
         setTimeout(function() { window.open(url, "_blank") }, 500);
       }
     })
-  } else {
-    var modified_cls = name_field.toLowerCase().replaceAll(" ", "_");
-    var url = "/template-" + modified_cls;
-    setTimeout(function() { window.open(url, "_blank") }, 500);
   }
 }
 
@@ -3547,7 +3458,7 @@ function SPARQL_constraint_editor(field,el,temp_id,reset=false) {
         bd:serviceParam wikibase:endpoint "www.wikidata.org";
           wikibase:api "EntitySearch";
           mwapi:search "insertQueryTerm";
-          mwapi:language "en". #choose language
+          mwapi:language "en".
         ?item wikibase:apiOutputItem mwapi:item.
     }
     SERVICE wikibase:label {bd:serviceParam wikibase:language "en".}
@@ -3980,7 +3891,7 @@ function generateExtractionTagList(subtemplate,recordId,results,id) {
     <td id='graph-"+id+"'></td>\
     <td>\
       <button class='btn btn-dark delete' title='delete-extraction' onclick='deleteExtractor(\""+id+"\")'><i class='far fa-trash-alt'></i></button>\
-      <button class='btn btn-dark' title='modify-extraction' onclick='modifyExtractor(event,\""+recordId+"\", \""+id+"\")'><i class='far fa-edit'></i></button>\
+      <button class='btn btn-dark' title='modify-extraction' onclick='modifyExtractor(\""+recordId+"\", \""+id+"\")'><i class='far fa-edit'></i></button>\
     </td>\
   </tr>"));
   
@@ -4068,21 +3979,13 @@ function deleteExtractor(id) {
   extractionsObj[recordId] = extractionsObj[recordId].filter(obj => obj.internalId != parseInt(extractionNum));
 }
 
-function modifyExtractor(event,record,id) {
-  event.preventDefault();
+function modifyExtractor(record,id) {
   // look for the extraction information within the extractions Object
   var extractionNumber = parseInt(id.replace(record,'').replace('-',''));
   var extractions = extractionsObj[record];
   const extraction = extractions.find(obj => obj.internalId == extractionNumber);
   const extractionParameters = extraction ? extraction["metadata"] : undefined;
   const extractorType = extractionParameters.type
-
-  // hide the extraction table row
-  if ($("#graph-"+id).parent().parent().find('tr').length == 1) {
-    $("#graph-"+id).parent().parent().parent().addClass('hidden');
-  }
-  $("#graph-"+id).parent().remove();
-
   
   // generate the form for the extraction
   generateExtractor("imported-graphs-"+record,extractionNumber);
@@ -4117,7 +4020,7 @@ function modifyExtractor(event,record,id) {
     const query = extractionParameters.query;
 
     // set the URL
-    $('#SparqlUrl, #FileUrl').val(url);
+    $('#SparqlUrl').val(url);
 
     // set the SPARQL query
     $('#yasqe > .yasqe').remove();

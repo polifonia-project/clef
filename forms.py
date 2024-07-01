@@ -78,7 +78,9 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 			classes = classes+' websitePreview' if field['type'] == 'WebsitePreview' else classes
 			classes = classes+' disabled' if 'disabled' in field and field['disabled'] == "True" else classes
 			classes = classes+ ' ' + field['cardinality'] if 'cardinality' in field else classes
+			classes = classes+ ' ' + field['dataReuse'] if 'dataReuse' in field else classes
 			autocomplete = field['cache_autocomplete'] if 'cache_autocomplete' in field and len(field['cache_autocomplete']) > 0 else ''
+			rdf_property = field['property'] if 'property' in field else ''
 			mandatory = field['mandatory'] if 'mandatory' in field and field['mandatory'] == 'True' else 'False'
 
 			# text box
@@ -100,6 +102,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					class_= classes,
 					value=default,
 					lang=conf.mainLang,
+					data_property = rdf_property,
 					data_mandatory = mandatory,
 					data_class=res_class) , )
 				else:
@@ -112,6 +115,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					class_= classes,
 					value=default,
 					lang=conf.mainLang,
+					data_property = rdf_property,
 					data_mandatory = mandatory,
 					data_class=res_class), )
 
@@ -124,6 +128,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					pre = prepend,
 					class_= classes,
 					value=default,
+					data_property = rdf_property,
 					data_mandatory = mandatory,
 					data_class=res_class), )
 				
@@ -136,6 +141,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 				pre = prepend,
 				class_= classes,
 				value=default,
+				data_property = rdf_property,
 				data_mandatory = mandatory,
 				data_class=res_class) , )
 
@@ -149,6 +155,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 				class_= classes,
 				value=default,
 				lang=conf.mainLang,
+				data_property = rdf_property,
 				data_mandatory = mandatory,
 				data_class=res_class), )
 
@@ -159,6 +166,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					id=myid,
 					pre = prepend,
 					class_= classes,
+					data_property = rdf_property,
 					data_mandatory = mandatory,
 					data_class=res_class), )
 				elif field['calendar'] == 'Day':
@@ -167,6 +175,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					id=myid,
 					pre = prepend,
 					class_= classes,
+					data_property = rdf_property,
 					data_mandatory = mandatory,
 					data_class=res_class), )
 				elif field['calendar'] == 'Year':
@@ -176,6 +185,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					pre = prepend,
 					class_= classes,
 					value=default,
+					data_property = rdf_property,
 					data_mandatory = mandatory,
 					data_class=res_class), )
 
@@ -187,6 +197,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 				id=myid,
 				pre = prepend,
 				class_= classes,
+				data_property = rdf_property,
 				data_mandatory = mandatory,
 				data_class=res_class), )
 
@@ -200,6 +211,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 				pre = prepend_title,
 				class_= classes+' checkbox_group',
 				checked=False,
+				data_property = rdf_property,
 				data_mandatory = mandatory,
 				data_class=res_class), )
 
@@ -212,6 +224,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					pre = '',
 					class_= classes+' checkbox_group following_checkbox',
 					checked=False,
+					data_property = rdf_property,
 					data_mandatory = mandatory,
 					data_class=res_class), )
 
@@ -227,6 +240,7 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					value=default,
 					data_mandatory = mandatory,
 					data_class=res_class,
+					data_property = rdf_property,
 					data_subtemplate = resource_class,
 					data_subtemplateID = field['import_subtemplate']), ) + get_form(field['import_subtemplate'], subtemplate=True)
 

@@ -52,6 +52,22 @@ $if alert == False:
 												$:record_form.inputs[idx+i].description
 											</section>
 											$ i+=1	
+											<script type="text/javascript">
+												console.log("$id".split('-')[0])
+												var elements = $$("#"+"$id".split('-')[0])[0].attributes;
+												var attrsToChange = [];
+			
+												$$.each(elements, function(index, attr) {
+													if (attr.name.startsWith("data_")) {
+														attrsToChange.push(attr);
+													}
+												});
+												$$.each(attrsToChange, function(index, attr) {
+													var newName = attr.name.replace("data_", "data-");
+													$$('#$id'.split('-')[0]).attr(newName, attr.value);
+													$$('#$id'.split('-')[0]).removeAttr(attr.name);
+												});
+											</script>
 									</section>
 							$else:
 								<section class=" form_row block_field">
@@ -67,21 +83,22 @@ $if alert == False:
 											$$('#$id').prepend($$('<option value="None">Select from the list</option>'));
 										</script>
 								</section>
-							<script type="text/javascript">
-								var elements = $$('#$id')[0].attributes;
-								var attrsToChange = [];
+								<script type="text/javascript">
+									console.log('$id')
+									var elements = $$('#$id')[0].attributes;
+									var attrsToChange = [];
 
-								$$.each(elements, function(index, attr) {
-									if (attr.name.startsWith("data_")) {
-										attrsToChange.push(attr);
-									}
-								});
-								$$.each(attrsToChange, function(index, attr) {
-									var newName = attr.name.replace("data_", "data-");
-									$$('#$id').attr(newName, attr.value);
-									$$('#$id').removeAttr(attr.name);
-								});
-							</script>
+									$$.each(elements, function(index, attr) {
+										if (attr.name.startsWith("data_")) {
+											attrsToChange.push(attr);
+										}
+									});
+									$$.each(attrsToChange, function(index, attr) {
+										var newName = attr.name.replace("data_", "data-");
+										$$('#$id').attr(newName, attr.value);
+										$$('#$id').removeAttr(attr.name);
+									});
+								</script>
 						$if type(knowledge_extractor) == type(set()):
 							$ extractors_list = list(knowledge_extractor)
 							$ extractors_template_ids = [tpl[0] for tpl in extractors_list]

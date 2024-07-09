@@ -232,21 +232,30 @@ def fields_to_json(data, json_file, skos_file):
 				d["label"] = "no label"
 			if len(d["property"]) == 0:
 				d["property"] = "http://example.org/"+d["id"]
+
 		# add default values
 		d['searchWikidata'] = "True" if d['type'] == 'Textbox' and d['value'] == 'URI' else "False"
 		d['searchGeonames'] = "True" if d['type'] == 'Textbox' and d['value'] == 'Place' else "False"
 		d['searchSkos'] = "True" if d['type'] == 'Skos' else "False"
 		d['url'] = "True" if d['type'] == 'Textbox' and d['value'] == 'URL' else "False"
+
+		# update SKOS thesauri list and mark selected ones
 		vocab_data = update_skos_vocabs(d, SKOS_VOCAB)
 		d['skosThesauri'] = vocab_data[0]
 		for idx in range(len(vocab_data[1])):
 			d['skos'+vocab_data[1][idx]] = d['skos'][idx] 
+
+		# imported subtemplates
+		d["import_subtemplate"] = [RESOURCE_TEMPLATES+field_key+".json" for field_key in d if field_key.startswith("template-")]
+
+		# extra
 		d["disabled"] = "False"
 		d["class"]= "col-md-12 yearField" if d["type"] == "Date" and d["calendar"] == "Year" else "col-md-12"
 		d["cache_autocomplete"] ="off"
 		# view classes: mark elements in the final Record visualization
 		d["view_class"] = ''
 		d["view_class"] += " subtemplateField" if d["type"] == "Subtemplate" else ""
+		
 
 		
 	# add a default disambiguate if none is selected
@@ -529,7 +538,6 @@ def has_extractor(res_template, record_name=None):
 		a string representing the id of a Named Graph
 	"""
 
-	print("C")
 	if record_name != None:
 
 		#check whether a Record and its sub-Records are associated with any Extraction graph
@@ -546,7 +554,7 @@ def has_extractor(res_template, record_name=None):
 				result.append((graph_uri, field['property'], field['label']))
 
 			#check whether the Graph may contain any sub-Record
-			if 'import_subtemplate' in field and field['import_subtemplate'] != '':
+			if 'import_subtemplate' in field and field['import_subtemplate'] != []:
 				subrecords = queries.get_subrecords(field['property'],record_name)
 				for subrecord in subrecords:
 					result.extend(has_extractor(field['import_subtemplate'],subrecord.rsplit('/',1)[1]))
@@ -568,9 +576,10 @@ def has_extractor(res_template, record_name=None):
 					# store the extractor details as a tuple
 					result.add((res_template, label, pre))
 
-				elif 'import_subtemplate' in field and field['import_subtemplate'] != '':
+				elif 'import_subtemplate' in field and field['import_subtemplate'] != []:
 					# iterate over sub-templates
-					result.update(has_extractor(field['import_subtemplate'], record_name=None))
+					for imported_template in field['import_subtemplate']:
+						result.update(has_extractor(imported_template, record_name=None))
 
 		return result
 

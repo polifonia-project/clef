@@ -276,13 +276,13 @@ class Template:
 		# importable templates
 		u.check_ask_class()
 		ask_form = u.change_template_names()
-		templates = forms.get_form(ask_form,True).inputs[0]
+		templates = ask_form[0]['values']
 
 		return render.template(f=fields,user=session['username'],
 								res_type=res_type,res_name=res_full_name,
 								res_status=res_status,is_git_auth=is_git_auth,
 								project=conf.myProject,skos_vocabs=skos_file,
-								templates=templates,)
+								templates=templates)
 
 	def POST(self, res_name):
 		""" Save the form template for data entry and reload config files

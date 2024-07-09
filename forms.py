@@ -30,7 +30,7 @@ def parse_config_variables(text:str, conf):
 		text = text.replace(k, v)
 	return text
 
-def get_form(json_form, from_dict=False, subtemplate=False):
+def get_form(json_form, from_dict=False, supertemplate=False):
 	""" read config in 'template-(.*).json' and return a webpy form """
 	import io
 	if from_dict == False:
@@ -88,6 +88,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 			default = field['defaultvalue'] if 'defaultvalue' in field else ''
 			# dropdown
 			dropdown_values = [(k,v) for k,v in field['values'].items()] if 'values' in field else None
+			# subtemplate
+			data_supertemplate = supertemplate if supertemplate else 'None'
 
 			# Text box
 			if field['type'] == 'Textbox' and field['value'] == 'Literal':
@@ -104,7 +106,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					lang=conf.mainLang,
 					data_property = rdf_property,
 					data_mandatory = mandatory,
-					data_class=res_class) , )
+					data_class=res_class,
+					data_supertemplate=data_supertemplate) , )
 				else:
 					params = params + (form.Textbox(myid,
 					type='text',
@@ -117,7 +120,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					lang=conf.mainLang,
 					data_property = rdf_property,
 					data_mandatory = mandatory,
-					data_class=res_class), )
+					data_class=res_class,
+					data_supertemplate=data_supertemplate), )
 
 			# Entities, SKOS thesauri, links
 			if field['type'] in ['Skos', 'WebsitePreview'] or (field['type'] == 'Textbox' and field['value'] in ['URL', 'URI', 'Place']):
@@ -130,7 +134,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					value=default,
 					data_property = rdf_property,
 					data_mandatory = mandatory,
-					data_class=res_class), )
+					data_class=res_class,
+					data_supertemplate=data_supertemplate), )
 				
 			# Multimedia Link
 			if field['type'] == 'Multimedia':
@@ -143,7 +148,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 				value=default,
 				data_property = rdf_property,
 				data_mandatory = mandatory,
-				data_class=res_class) , )
+				data_class=res_class,
+				data_supertemplate=data_supertemplate) , )
 
 			# Text box
 			if field['type'] == 'Textarea':
@@ -157,7 +163,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 				lang=conf.mainLang,
 				data_property = rdf_property,
 				data_mandatory = mandatory,
-				data_class=res_class), )
+				data_class=res_class,
+				data_supertemplate=data_supertemplate), )
 
 			if field['type'] == 'Date':
 				if field['calendar'] == 'Month':
@@ -168,7 +175,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					class_= classes,
 					data_property = rdf_property,
 					data_mandatory = mandatory,
-					data_class=res_class), )
+					data_class=res_class,
+					data_supertemplate=data_supertemplate), )
 				elif field['calendar'] == 'Day':
 					params = params + (form.Date(myid,
 					description = description,
@@ -177,7 +185,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					class_= classes,
 					data_property = rdf_property,
 					data_mandatory = mandatory,
-					data_class=res_class), )
+					data_class=res_class,
+					data_supertemplate=data_supertemplate), )
 				elif field['calendar'] == 'Year':
 					params = params + (form.Textbox(myid,
 					description = description,
@@ -187,7 +196,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					value=default,
 					data_property = rdf_property,
 					data_mandatory = mandatory,
-					data_class=res_class), )
+					data_class=res_class,
+					data_supertemplate=data_supertemplate), )
 
 			if field['type'] == 'Dropdown':
 				params = params + (form.Dropdown(myid,
@@ -199,7 +209,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 				class_= classes,
 				data_property = rdf_property,
 				data_mandatory = mandatory,
-				data_class=res_class), )
+				data_class=res_class,
+				data_supertemplate=data_supertemplate), )
 
 			if field['type'] == 'Checkbox':
 				prepend_title = '<section class="checkbox_group_label label col-12">'+prepend+"\n"+'<span class="title">'+description+'</span></section>'
@@ -213,7 +224,8 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 				checked=False,
 				data_property = rdf_property,
 				data_mandatory = mandatory,
-				data_class=res_class), )
+				data_class=res_class,
+				data_supertemplate=data_supertemplate), )
 
 				for value in dropdown_values[1:]:
 					i += 1
@@ -226,25 +238,32 @@ def get_form(json_form, from_dict=False, subtemplate=False):
 					checked=False,
 					data_property = rdf_property,
 					data_mandatory = mandatory,
-					data_class=res_class), )
+					data_class=res_class,
+					data_supertemplate=data_supertemplate), )
 
 			# Subtemplate
 			if field['type'] == 'Subtemplate':
-				resource_class = ";  ".join([t["type"] for t in tpl_list if t["template"] == field['import_subtemplate']][0])
-				params = params + (form.Textbox(myid,
-					description = description,
-					id=myid,
-					placeholder=placeholder,
-					pre = prepend,
-					class_= classes,
-					value=default,
-					data_mandatory = mandatory,
-					data_class=res_class,
-					data_property = rdf_property,
-					data_subtemplate = resource_class,
-					data_subtemplateID = field['import_subtemplate']), ) + get_form(field['import_subtemplate'], subtemplate=True)
+				dropdown_templates = []
+				for imported_template in field['import_subtemplate']:
+					template_dict = next(t for t in tpl_list if t["template"] == imported_template)
+					resource_class = template_dict['type']
+					resource_name = template_dict['name']
+					dropdown_templates.append((resource_class,resource_name))
+					params = params + get_form(imported_template, supertemplate=myid)
+				params = params + (form.Dropdown(myid,
+				description = description,
+				args=dropdown_templates,
+				placeholder=placeholder,
+				id=myid,
+				pre = prepend,
+				class_= classes,
+				data_property = rdf_property,
+				data_mandatory = mandatory,
+				data_class=res_class,
+				data_subtemplate=myid,
+				data_supertemplate=data_supertemplate), )
 
-	if subtemplate:
+	if supertemplate:
 		return params
 	else: 
 		myform = form.Form(*params)

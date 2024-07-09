@@ -85,7 +85,7 @@ def getRightURIbase(value):
 
 def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 	""" transform input data into RDF, upload data to the triplestore, dump data locally """
-	print("RECORD DATA:", recordData)
+	print("RECORD DATA:", recordData, "TEMPLATE:", tpl_form)
 
 	# MAPPING FORM / PROPERTIES
 	if tpl_form:
@@ -191,7 +191,6 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 					wd.add(( URIRef(base+graph_name), URIRef(field['property']), Literal(value) ))
 			# multiple-values fields
 			elif isinstance(value,dict):
-				print("Checkpoint:", value, field['id'])
 				if value['type'] == 'URL': #url
 					for URL in value['results']:
 						if URL[1] != "":
@@ -199,7 +198,6 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 							wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(valueURL) ))
 				elif value['type'] == 'URI': #object properties
 					rdf_property = SKOS.prefLabel if field['type'] == 'Skos' else RDFS.label
-					print(field['type'], rdf_property)
 					for entity in value['results']:
 						entityURI = getRightURIbase(entity[0]) # Wikidata or new entity 
 						wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(entityURI) ))
@@ -277,7 +275,6 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 					server.update('load <file:///'+dir_path+'/records/'+recordID+"-extraction-"+extraction_num+'.ttl> into graph <'+base+extraction_graph_name+'/>')
 		# SUBTEMPLATE
 		elif field['type']=="Subtemplate" and field['id'] in recordData:
-			print(recordData[field['id']])
 			if type(recordData[field['id']]) != type([]) and field['id']+"-subrecords" in recordData:
 				# get the list of subrecords associated to a 'Subtemplate' field
 				subrecords = recordData[field['id']+"-subrecords"].split(",") if recordData[field['id']+"-subrecords"] != "" else []
@@ -287,13 +284,12 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 					else:
 						# process a new subrecord, send its data to the triplestore, and link it to the main record
 						subrecord_id = subrecord
-						subrecord_template = field['import_subtemplate']
 						allow_data_reuse = fields if 'dataReuse' in field and field['dataReuse']=='allowDataReuse' else False
-						processed_subrecord = process_new_subrecord(recordData,userID,stage,subrecord_template,subrecord,supertemplate=None,allow_data_reuse=allow_data_reuse)
+						processed_subrecord = process_new_subrecord(recordData,userID,stage,subrecord,supertemplate=None,allow_data_reuse=allow_data_reuse)
 						subrecord_id, retrieved_label = processed_subrecord
 					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+subrecord_id) ))
 					wd.add(( URIRef(base+subrecord_id), RDFS.label, Literal(retrieved_label, datatype="http://www.w3.org/2001/XMLSchema#string")))
-			else:
+			elif type(recordData[field['id']]) == type([]):
 				for entity in recordData[field['id']]:
 					entity_URI, entity_label = entity
 					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+entity_URI) ))
@@ -317,13 +313,22 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 
 	return 'records/'+recordID+'.ttl'
 	
-def process_new_subrecord(data, userID, stage, sub_tpl, subrecord_id, supertemplate=None, allow_data_reuse=False):
+def process_new_subrecord(data, userID, stage, subrecord_id, supertemplate=None, allow_data_reuse=False):
 	# prepare a new dict to store data of subrecord-x
 	new_record_data = {'recordID': subrecord_id,}
 	label = 'No Label!'
-	with open(sub_tpl) as fields:
+	
+	# retrieve the template path based on selected class
+	subrecord_class = data[subrecord_id+'-class']
+	with open(TEMPLATE_LIST) as templates:
+		templates_list = json.load(templates)
+	subtemplate_path = next(t["template"] for t in templates_list if t["type"]==sorted(subrecord_class.split(", ")))
+
+	# access the template file
+	with open(subtemplate_path) as fields:
 		subtemplate = json.load(fields)
 	subtemplate = sorted(subtemplate, key=lambda x: x['type'] == 'subtemplate')
+
 	# process the input data related to subrecord-x
 	for subtemplate_field in subtemplate:
 		if subtemplate_field['hidden'] == 'False':
@@ -336,13 +341,12 @@ def process_new_subrecord(data, userID, stage, sub_tpl, subrecord_id, supertempl
 				# Process inner-subrecords and retrieve their ids,labels in order to provide a link to them in the upper-level subrecord
 				if key+"-subrecords" in data:
 					new_record_data[subfield_id] = [[]]
-					inner_subtemplate = subtemplate_field['import_subtemplate']
 					data_reuse = subtemplate if 'dataReuse' in subtemplate_field and subtemplate_field['dataReuse']=='allowDataReuse' else False
 					for inner_subrecord in data[key+"-subrecords"].split(","):
 						if ";" in inner_subrecord:
 							processed_subrecord = inner_subrecord.split(";",1)
 						else:
-							processed_subrecord = process_new_subrecord(data,userID,stage,inner_subtemplate,inner_subrecord,subrecord_id,data_reuse)
+							processed_subrecord = process_new_subrecord(data,userID,stage,inner_subrecord,subrecord_id,data_reuse)
 						new_record_data[subfield_id][0].append(processed_subrecord) # store the id,label pair inside the subrecord dict
 
 			# Date
@@ -403,28 +407,15 @@ def process_new_subrecord(data, userID, stage, sub_tpl, subrecord_id, supertempl
 							label_input_field = upper_level_field_id+"_"+main_lang+"_"+ supertemplate if supertemplate else upper_level_field_id+'_'+main_lang
 							with open(TEMPLATE_LIST,'r') as tpl_file:
 								tpl_list = json.load(tpl_file)
-							disambiguation_label = [t['name'] for t in tpl_list if t['template']==sub_tpl][0]
+							disambiguation_label = [t['name'] for t in tpl_list if t['template']==subtemplate_path][0]
 							label = data[label_input_field] + " - " + disambiguation_label if label_input_field in data else "No label"
 							new_label_input_id = subfield_id + '_' + main_lang
 							new_record_data[new_label_input_id] = label
 
 
-		
-
-
 	print("#### DATA:\n",new_record_data)
 	store_data = storify(new_record_data)
 	grapht_to_clear = None if stage == 'not modified' else base+subrecord_id+"/"
-	inputToRDF(store_data,userID,stage,graphToClear=grapht_to_clear,tpl_form=sub_tpl)
+	inputToRDF(store_data,userID,stage,graphToClear=grapht_to_clear,tpl_form=subtemplate_path)
 	result = [subrecord_id,label]
 	return result
-
-""" def find_label(tpl):
-	# Retrieve the field associated with the Primary Key (i.e., the label) of the Record
-	with open(tpl) as tpl_file:
-		tpl_fields = json.load(tpl_file)
-	fields_id = [field['id'] for field in tpl_fields if field['disambiguate'] == "True"]
-	label_field_id = fields_id[0] if fields_id != [] else False
-	
-	# TODO: add a mechanism to handle potential Templates without a Primary Key in case it's needed
-	return label_field_id """

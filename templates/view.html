@@ -161,17 +161,17 @@ $var project = project
 		<section class="inverse-section" id="inverse-section-property" style="display: none;">
 			$for property,results in inverses_by_properties.items():
 				$ property_url, property_short = property.split(',')
-				<section class="inverse-property">
+				<section class="inverse-properties">
 					<span class="inverse-subtitle">$property_short</span>
 					<br>
 					<section class="inverse-results-container">
 						<section class="inverse-property">
-							<span><h4 class="articleSubtitle"><a href="$property_url">$property_short</a></h4></span>
+							<span><a href="$property_url">$property_short</a></span>
 						</section>
 						<section class="inverse-property">
 							$for result in results:
 								$ result_uri, result_label = result.split(',')
-								<span><label>$result_label:</label> <a href="$result_uri"><i class="fas fa-external-link-alt"></i></a></span><br>
+								<span><label>$result_label</label> <a href="$result_uri"><i class="fas fa-external-link-alt"></i></a></span><br>
 						</section>
 					</section>
 				</section>

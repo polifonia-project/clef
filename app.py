@@ -1138,17 +1138,18 @@ class DataModel:
 		res_data_models = []
 		for t in tpl_list:
 			if 'status' not in t:
-				res_class = t["type"]
+				res_classes = t["type"]
 				res_name = t["name"]
 				with open(t["template"],'r') as tpl_file:
 					fields = json.load(tpl_file)
-					res_class_label = u.get_LOV_labels(res_class,'class')
+					res_class_label = [u.get_LOV_labels(res_class,'class') for res_class in res_classes]
 					res_data_model = {}
 					res_data_model["res_name"] = res_name
 					res_data_model["res_class_label"] = res_class_label
 					props_labels = [ u.get_LOV_labels(field["property"],'property') for field in fields]
 					res_data_model["props_labels"] = props_labels
 				res_data_models.append(res_data_model)
+		print(res_data_models)
 		return render.datamodel(user=session['username'], data=res_data_models,is_git_auth=is_git_auth,
 								project=conf.myProject)
 
@@ -1322,6 +1323,32 @@ class Sparqlanything(object):
 		sparql.setQuery(query_str_decoded)
 		sparql.setReturnFormat(JSON)
 		results = sparql.query().convert()
+
+		for result in results["results"]["bindings"]:
+			uri = result["uri"]["value"]
+			if not (uri.startswith("http://") or uri.startswith("https://")):
+				print(uri)
+				term = uri
+				base_url = "https://wikidata.org/w/api.php"
+				params = {
+					"action": "wbsearchentities",
+					"search": term,
+					"format": "json",
+					"language": "it"
+				}
+				
+				try:
+					response = requests.get(base_url, params=params)
+					response.raise_for_status()  # Check if the request was successful
+					data = response.json()  # Parse the JSON response
+					new_uri = data["search"][0]["concepturi"] if len(data["search"]) > 0 else conf.base+str(time.time()).replace('.','-')
+					result["uri"]["value"] = new_uri
+
+				except requests.exceptions.HTTPError as http_err:
+					print(f"HTTP error occurred: {http_err}")
+				except Exception as err:
+					print(f"Other error occurred: {err}")
+				
 		return json.dumps(results)
 	
 class Wikidata(object):

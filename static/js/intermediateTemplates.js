@@ -1,7 +1,7 @@
 /* intermediateTemplates.js
 ---------------------------- 
 this file contains the js code devoted to the proper
- management of the Intermediate Templates feature. 
+management of the Intermediate Templates feature. 
 */
 
 /////////////////////////
@@ -373,20 +373,20 @@ function modifySubrecord(subId, keep) {
         
         // import data from triplestore in case the subrecord has not been loaded yet
         if (! $('[data-subform="'+subId+'"').length) {
-        var currentUrl = window.location.href;
-        var subrecordUrl = currentUrl.replace(/(modify|review)-\d+-\d+/, `$1-${subId}`);
-        $.ajax({
-            type:'GET',
-            url:subrecordUrl,
-            dataType:"html",
-            success:function(data) {
-            var relevantField = $(data).find('[class*="'+originalSubtemplateClass+'"]');
-            $('#modifyForm').append(relevantField);
-            createSubrecord(originalSubtemplateClass,fieldName,el,subformId=subId);
-            }
-        });
+            var currentUrl = window.location.href;
+            var subrecordUrl = currentUrl.replace(/(modify|review)-\d+-\d+/, `$1-${subId}`);
+            $.ajax({
+                type:'GET',
+                url:subrecordUrl,
+                dataType:"html",
+                success:function(data) {
+                    var relevantField = $(data).find('[class*="'+originalSubtemplateClass+'"]');
+                    $('#modifyForm').append(relevantField);
+                    createSubrecord(originalSubtemplateClass,fieldName,el,subformId=subId);
+                }
+            });
         } else {
-        createSubrecord(originalSubtemplateClass,fieldName,el,subformId=subId);
+            createSubrecord(originalSubtemplateClass,fieldName,el,subformId=subId);
         }
 
     }
@@ -407,26 +407,32 @@ function toggleSubform(element,label=null) {
   
     // change Subrecord title
     if (label) {
-      const subformId = $(element).next('.subform').attr('id').replace('-form', '')
-      $(element).html(label+"<section class='buttons-container'>\
+        const subformId = $(element).next('.subform').attr('id').replace('-form', '')
+        $(element).html(label+"<section class='buttons-container'>\
         <button class='btn btn-dark delete' title='delete-subrecord'>\
-          <i class='far fa-trash-alt'></i>\
+            <i class='far fa-trash-alt'></i>\
         </button>\
         <button class='btn btn-dark modify' title='modify-subrecord'>\
-          <i class='far fa-edit'></i>\
+            <i class='far fa-edit'></i>\
         </button>\
-      </section>");
-      $(element).find('.delete').on('click', function(e) {
+        </section>");
+
+        // delete button
+        $(element).find('.delete').on('click', function(e) {
         e.preventDefault();
-        cancelSubrecord($(this).parent());
-      });
-      $(element).find('.modify').on('click', function(e) {
-        e.preventDefault();
-        modifySubrecord(subformId, keep=true);
-      });
-      $(element).removeClass('italic');
-      $('html, body').animate({
-        scrollTop: $(element).parent().offset().top - 200
-      }, 800);
+            cancelSubrecord($(this).parent());
+        });
+
+        // modify button 
+        $(element).find('.modify').on('click', function(e) {
+            e.preventDefault();
+            modifySubrecord(subformId, keep=true);
+        });
+
+        // style
+        $(element).removeClass('italic');
+        $('html, body').animate({
+            scrollTop: $(element).parent().offset().top - 200
+        }, 800);
     }
-  }
+}

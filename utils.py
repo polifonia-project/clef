@@ -629,3 +629,16 @@ def get_query_templates(res_tpl):
 			elif 'catalogueConstraint' in field:
 				query_dict[field_id] = field['catalogueConstraint'].replace('\r','').replace('\n','')
 	return query_dict
+
+
+# CHARTS CONFIG
+def charts_to_json(charts_file, data):
+	print("CHARTS DATA", data)
+
+	""" with open(charts_file, 'w') as fout:
+		fout.write(json.dumps(charts, indent=1)) """
+
+def delete_charts(charts_file):
+	with open(charts_file, 'w') as fout:
+		fout.write(json.dumps({}, indent=1))
+	

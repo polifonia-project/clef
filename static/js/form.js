@@ -303,7 +303,7 @@ function searchCatalogueByClass(searchterm) {
 
     // other ids
     var dataSubform = $("#"+searchterm).attr('data-subform');
-    var subrecordBase = $("[data-subtemplate='"+resource_class+"']").attr('id');
+    var subrecordBase = $('#'+searchterm).attr('data-supertemplate');
 
     // get an array of subrecords created within the same webpage and not saved yet:
     // they must belong to the same required class

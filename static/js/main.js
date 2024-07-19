@@ -1429,4 +1429,3 @@ function getRecordsByPropValue(el, resElem, elemClass='', typeProp=false) {
         }
   });
 };
-

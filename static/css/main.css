@@ -546,7 +546,8 @@ article p {
   color: rgba(100, 23, 180, 1);
   border-bottom: solid 2px rgba(100, 23, 180, 1);
   padding: 5px;
-  font-size: 25px
+  margin-right: 1em;
+  font-size: 25px;
 }
 
 .homeheading h2 {
@@ -1150,6 +1151,27 @@ table.url-table i, table.extraction-table i {
   padding-right: 2em;
 }
 
+.articleBox > section:first-child {
+  padding: 5em;
+}
+
+.counterBox {
+  border: solid 2px rgb(100, 23, 180);
+  color: rgb(100, 23, 180);
+  padding: 1.5em 2em;
+  margin: 1em;
+}
+
+.counterNum {
+  font-size: 3em;
+}
+
+.chart-heading {
+  display: block;
+  max-width: 45%;
+  margin: 0 2em 0 1em;
+}
+
 .articleTitle {
   font-size: 5em;
   text-transform: none !important;
@@ -1163,9 +1185,23 @@ table.url-table i, table.extraction-table i {
   font-size: 0.9em !important;
 }
 
+.chart-heading .articleSubtitle {
+  text-transform: none;
+  color: grey !important;
+}
+
+.charthr {
+  margin: 5em 0px;
+}
+
+.counters > p, .stats-block > p {
+  font-size: 1.4em;
+}
+
 .subtemplateField:last-child {
   margin-bottom: 2em;
 }
+
 
 /*display: inline !important;*/
 .columns {
@@ -1848,7 +1884,6 @@ select-selected.select-arrow-active:after {
 
 .block_field:not(.form_row) input[type='checkbox'] {
   margin-right: 1em;
-  margin-top: 0.4em;
 }
 
 .block_field input[type='url'] {
@@ -1861,6 +1896,15 @@ select-selected.select-arrow-active:after {
 
 .block_field label.col-md-3 {
   font-weight: 600;
+}
+
+.block_field label.inner-label {
+  font-weight: 600;
+  color: grey;
+}
+
+.block_field:not(.form_row) label.inner-label+input {
+  margin-left: 0 !important;
 }
 
 .comment {
@@ -2005,7 +2049,7 @@ button#showTemplates {
   outline: none;
 }
 
-#updateTemplate {
+#updateTemplate, #addChart {
   margin-right: 1%;
 }
 
@@ -2066,6 +2110,10 @@ button#showTemplates {
 
   header h3 {
     font-size: 2em;
+  }
+
+  .articleBox > section:first-child {
+    padding: 2em !important;
   }
 
   .articleTitle {
@@ -2913,4 +2961,44 @@ h4.subrecord-title.closed-title {
 @keyframes upToDown {
   from {height: 0px; padding-top:0px}
   to {height: 32px; padding-top:5px}
+}
+
+/*  Charts */
+.center-checkbox {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Allinea gli elementi al centro in senso orizzontale */
+}
+
+.center-checkbox input {
+  margin: 0 !important;
+}
+
+
+.charts-list {
+  list-style: none;
+}
+
+.charts-list .fa-edit {
+  color: rgb(100, 23, 180) !important;
+  cursor: pointer;
+}
+
+.charts-yasqe {
+  padding: 0 !important
+}
+
+li.col-md-12 {
+  padding: 0 !important;
+}
+
+li.col-md-12 label, .inner-label {
+  text-align: left !important;
+  padding-left: 0 !important;
+}
+
+.yasqe-max {
+  margin:0 !important;
+  padding:0 !important;
+  width: 100%;
 }

@@ -66,7 +66,9 @@ urls = (
 	prefix + '/savetheweb-(.+)','Savetheweb',
 	prefix + '/nlp','Nlp',
 	prefix + '/sparqlanything', 'Sparqlanything',
-	prefix + '/wd', 'Wikidata'
+	prefix + '/wd', 'Wikidata',
+	prefix + '/charts', 'Charts',
+	prefix + '/charts-template', 'ChartsTemplate'
 )
 
 app = web.application(urls, globals())
@@ -1369,6 +1371,75 @@ class Wikidata(object):
 		sparql.setReturnFormat(JSON)
 		results = sparql.query().convert()
 		return json.dumps(results)
+	
+class Charts(object):
+	def GET(self):
+		web.header("X-Forwarded-For", session['ip_address'])
+		web.header("Cache-Control", "no-cache, max-age=0, must-revalidate, no-store")
+		web.header("Content-Type","text/html; charset=utf-8")
+		web.header('Access-Control-Allow-Origin', '*')
+		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+
+		is_git_auth = github_sync.is_git_auth()
+		with open(conf.charts) as chart_file:
+			charts = json.load(chart_file)
+		
+		for chart in charts["charts"]:
+			if chart["type"] == "counter":
+				for counter in chart["counters"]:
+					counter_query = counter["query"]
+					query_results = queries.hello_blazegraph(counter_query)
+					count_result = [result["count"]["value"] for result in query_results["results"]["bindings"]]
+					count = int(count_result[0]) if len(count_result) > 0 else 0
+					counter["count"] = count
+			else:
+				chart_id = str(time.time()).replace('.','-')
+				stats_query = chart["query"]
+				x_var, x_name = chart["x-axis"].split(",",1)
+				x_var = x_var.replace("?","")
+				y_var, y_name = chart["y-axis"].split(",",1)
+				y_var = y_var.replace("?","")
+				query_results = queries.hello_blazegraph(stats_query)
+				stats_result = []
+				for result in query_results["results"]["bindings"]:
+					x_value = int(result[x_var]["value"]) if "datatype" in result[x_var] and result[x_var]["datatype"] == "http://www.w3.org/2001/XMLSchema#integer" else result[x_var]["value"]
+					y_value = int(result[y_var]["value"]) if "datatype" in result[y_var] and result[y_var]["datatype"] == "http://www.w3.org/2001/XMLSchema#integer" else result[y_var]["value"]
+					stats_result.append({x_name: x_value, y_name: y_value})
+				if "sorted" in chart and chart["sorted"] != "None":
+					sort_key = x_name if chart["sorted"] == "x" else y_name
+					stats_result = list(reversed(sorted(stats_result, key=lambda x: x[sort_key])))
+				chart["stats"] = json.dumps(stats_result)
+				chart["info"] = (chart_id, x_name, y_name)
+				print(charts)
+				
+
+
+		return render.charts(user=session['username'], is_git_auth=is_git_auth,
+					   project=conf.myProject, charts=charts)
+	
+class ChartsTemplate(object):
+	def GET(self):
+		web.header("X-Forwarded-For", session['ip_address'])
+		web.header("Cache-Control", "no-cache, max-age=0, must-revalidate, no-store")
+		web.header("Content-Type","text/html; charset=utf-8")
+		web.header('Access-Control-Allow-Origin', '*')
+		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+
+		is_git_auth = github_sync.is_git_auth()
+		with open(conf.charts) as chart_file:
+			charts = json.load(chart_file)
+
+		return render.charts_template(user=session['username'], is_git_auth=is_git_auth,
+					   project=conf.myProject, charts=charts)
+
+	def POST(self):
+		data = web.input()
+		if 'action' in data and 'deleteTemplate' in data.action:
+			u.delete_charts(conf.charts)
+		elif 'action' in data and 'updateTemplate' in data.action:
+			u.charts_to_json(conf.charts, data)
+		raise web.seeother(prefixLocal+'/welcome-1')
+
 
 if __name__ == "__main__":
 	app.run()

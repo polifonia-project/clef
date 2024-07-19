@@ -1,0 +1,49 @@
+$def with(user,is_git_auth,project,charts)
+$var user = user
+$var is_git_auth = is_git_auth
+$var project = project
+
+<!-- Header -->
+<header class="row">
+	<h3 class="col-md-12 col-lg-12 col-sm-12">$project in numbers</h3>
+</header>
+<!-- Resources -->
+<script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+<script src="https://cdn.amcharts.com/lib/5/xy.js"></script>
+<script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+<!-- Charts -->
+<section class="row articleBox">
+	<section class="col-md-12 col-sm-12">
+	$for chart in charts["charts"]:
+		$if chart["type"] == "counter":
+			<section class="row counters">
+				<section class="chart-heading">
+					<h2>$chart["title"]</h2>
+					<p>$chart["description"]</p>
+				</section>
+				
+			$for counter in chart["counters"]:
+				$if "count" in counter:
+					<section class="counterBox col-md-2 col-sm-5">
+						<p class="counterNum">$counter["count"]</p>
+						<p class="counterLabel">$counter["title"]</p>
+					</section>
+			</section>
+		$elif chart["type"] == "bar-chart":
+			$ info = chart["info"]
+			<section class="row stats-block">
+				<section class="chart-heading">
+					<h2>$chart["title"]</h2>
+					<p>$chart["description"]</p>
+				</section>
+				<div id="$info[0]" class="col-md-6 col-sm-12" style="height:50vh"></div>
+			</section>
+			<script id="$info[0]_data" type="application/json">$:chart["stats"]</script>
+			$if chart["categorical"] == "y":
+				<script> invertedBarchart("$info[0]","$info[1]","$info[2]"); </script>
+			$else:
+				<script> barchart("$info[0]","$info[1]","$info[2]"); </script>
+		<hr class="charthr">	
+		
+	</section>
+</section>

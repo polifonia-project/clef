@@ -30,7 +30,7 @@ def parse_config_variables(text:str, conf):
 		text = text.replace(k, v)
 	return text
 
-def get_form(json_form, from_dict=False, supertemplate=False):
+def get_form(json_form, from_dict=False, supertemplate=False, processed_templates=[]):
 	""" read config in 'template-(.*).json' and return a webpy form """
 	import io
 	if from_dict == False:
@@ -52,6 +52,7 @@ def get_form(json_form, from_dict=False, supertemplate=False):
 
 	res_class = [t["type"] for t in tpl_list if t["template"] == json_form]
 	res_class = ";  ".join(res_class[0]) if len(res_class) > 0 else "none"
+	processed_templates.append(json_form)
 
 	for field in fields:
 		if 'hidden' in field and field['hidden'] == 'False': # do not include hidden fields
@@ -89,7 +90,7 @@ def get_form(json_form, from_dict=False, supertemplate=False):
 			# dropdown
 			dropdown_values = [(k,v) for k,v in field['values'].items()] if 'values' in field else None
 			# subtemplate
-			data_supertemplate = supertemplate if supertemplate else 'None'
+			data_supertemplate = 'True' if supertemplate else 'None'
 
 			# Text box
 			if field['type'] == 'Textbox' and field['value'] == 'Literal':
@@ -247,9 +248,10 @@ def get_form(json_form, from_dict=False, supertemplate=False):
 				for imported_template in field['import_subtemplate']:
 					template_dict = next(t for t in tpl_list if t["template"] == imported_template)
 					resource_class = template_dict['type']
+					resource_class_string = ";  ".join(resource_class)
 					resource_name = template_dict['name']
-					dropdown_templates.append((resource_class,resource_name))
-					params = params + get_form(imported_template, supertemplate=myid)
+					dropdown_templates.append((resource_class_string,resource_name))
+					params = params + get_form(imported_template, supertemplate=True, processed_templates=processed_templates) if imported_template not in processed_templates else params
 				params = params + (form.Dropdown(myid,
 				description = description,
 				args=dropdown_templates,

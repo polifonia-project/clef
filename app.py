@@ -612,7 +612,7 @@ class Record(object):
 			# load the template selected by the user
 			if 'res_name' in recordData:
 				if recordData.res_name != 'None':
-					f = forms.get_form(recordData.res_name)
+					f = forms.get_form(recordData.res_name,processed_templates=[])
 					query_templates = u.get_query_templates(recordData.res_name)
 					extractor = u.has_extractor(recordData.res_name)
 					return render.record(record_form=f, pageID=name, user=user, alert=block_user,
@@ -1108,10 +1108,11 @@ class Term(object):
 				results_by_class[res_type] = {'class':res_class, 'results':[res_uri]}
 
 		count = len(appears_in)
+		map_coordinates = (queries.geonames_geocoding(uri)) if uri.startswith("https://sws.geonames.org/") else None
 
 		return render.term(user=session['username'], data=data, count=count,
 						is_git_auth=is_git_auth,project=conf.myProject,base=conf.base,
-						uri=uri,name=name,results=results_by_class)
+						uri=uri,name=name,results=results_by_class,map=map_coordinates)
 
 	def POST(self,name):
 		""" controlled vocabulary term web page
@@ -1392,7 +1393,24 @@ class Charts(object):
 					count_result = [result["count"]["value"] for result in query_results["results"]["bindings"]]
 					count = int(count_result[0]) if len(count_result) > 0 else 0
 					counter["count"] = count
-			else:
+			elif chart["type"] == "map":
+				chart_id = str(time.time()).replace('.','-')
+				query_results = queries.hello_blazegraph(chart["query"])["results"]["bindings"]
+				stats_result = []
+				for result in query_results:
+					geonames = result["geonames"]["value"]
+					lat, long = queries.geonames_geocoding(geonames)
+					i = 0
+					while i < int(result["count"]["value"]):
+						stats_result.append({
+							"title" : result["title"]["value"],
+							"latitude": lat,
+							"longitude": long
+						})
+						i += 1
+				chart["stats"] = json.dumps(stats_result)
+				chart["info"] = chart_id
+			elif chart["type"] == "chart":
 				chart_id = str(time.time()).replace('.','-')
 				stats_query = chart["query"]
 				x_var, x_name = chart["x-axis"].split(",",1)

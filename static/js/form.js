@@ -293,9 +293,9 @@ function searchCatalogueAdvanced(searchterm) {
 }
 
 // search catalogue's records belonging to a desired class 
-function searchCatalogueByClass(searchterm) {
-
+function searchCatalogueByClass(searchterm,fieldId,singleValue) {
     // get the required class
+    console.log(fieldId)
     var resource_class = $('#'+searchterm).attr('data-class');
     var resource_classes = resource_class.split(';').map(cls => cls.trim()).filter(cls => cls !== "");
     var class_triples = resource_classes.map(cls => `?s a <${cls}> .`).join(" ");
@@ -309,7 +309,6 @@ function searchCatalogueByClass(searchterm) {
     // they must belong to the same required class
     var yet_to_save_keys = [];
     var yet_to_save_resources = [];
-    console.log('.disambiguate[data-class="' + resource_class + '"]:not([data-subform="'+dataSubform+'"])')
     $('.disambiguate[data-class="' + resource_class + '"]:not([data-subform="'+dataSubform+'"]').each(function() {
         yet_to_save_keys.push($(this).val());
         var key_id = $(this).attr('id');
@@ -385,12 +384,13 @@ function searchCatalogueByClass(searchterm) {
                             <i class='far fa-trash-alt'></i>\
                         </button>\
                         </section>");
-
-                        if ($('[name="'+subrecordBase+'-subrecords"]').length) {
-                        $('[name="'+subrecordBase+'-subrecords"]').val($('[name="'+subrecordBase+'-subrecords"]').val()+","+oldID+";"+oldLabel);
+                        
+                        if ($('[name="'+fieldId+'-subrecords"]').length && !singleValue) {
+                            $('[name="'+fieldId+'-subrecords"]').val($('[name="'+fieldId+'-subrecords"]').val()+","+oldID+";"+oldLabel);
                         } else {
-                        const new_sub = $("<input type='hidden' name='"+subrecordBase+"-subrecords' value='"+oldID+";"+oldLabel+"'>")
-                        $('#recordForm, #modifyForm').append(new_sub)
+                            $('[name="'+fieldId+'-subrecords"]').remove();
+                            const new_sub = $("<input type='hidden' name='"+fieldId+"-subrecords' value='"+oldID+";"+oldLabel+"'>")
+                            $('#recordForm, #modifyForm').append(new_sub)
                         }
                     });
 
@@ -421,10 +421,10 @@ function searchCatalogueByClass(searchterm) {
                         </button>\
                         </section>");
                         
-                        if ($('[name="'+subrecordBase+'-subrecords"]').length) {
-                            $('[name="'+subrecordBase+'-subrecords"]').val($('[name="'+subrecordBase+'-subrecords"]').val()+","+target+";"+label);
+                        if ($('[name="'+fieldId+'-subrecords"]').length) {
+                            $('[name="'+fieldId+'-subrecords"]').val($('[name="'+fieldId+'-subrecords"]').val()+","+target+";"+label);
                         } else {
-                            const new_sub = $("<input type='hidden' name='"+subrecordBase+"-subrecords' value='"+target+";"+label+"'>")
+                            const new_sub = $("<input type='hidden' name='"+fieldId+"-subrecords' value='"+target+";"+label+"'>")
                             $('#recordForm, #modifyForm').append(new_sub)
                         }
                     });

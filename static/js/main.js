@@ -267,10 +267,6 @@ $(document).ready(function() {
       addManualEntity(searchID);
     }
 
-    if ( $(this).attr('data-subform') != undefined && $(this).hasClass('disambiguate')) {
-      searchCatalogueByClass(searchID);
-    }
-
 	});  
   
   // remove modal preview

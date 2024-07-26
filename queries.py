@@ -9,6 +9,7 @@ from pymantic import sparql
 import utils as u
 import urllib.parse
 import re
+import requests
 
 u.reload_config()
 
@@ -556,3 +557,15 @@ def get_records_from_object(graph_uri):
 	results = sparql.query().convert()
 	print(results)
 	return results
+
+# GET LATITUDE AND LONGITUDE GIVEN A GEONAMES URI
+def geonames_geocoding(geonames_uri):
+	uri_id = geonames_uri.replace("https://sws.geonames.org/","")
+	search_url = f'http://api.geonames.org/getJSON?geonameId={uri_id}&username=palread'
+	print(search_url)
+	response = requests.get(search_url)
+	data = response.json()
+	print("RESP:", data)
+	latitude = data['lat']
+	longitude = data['lng']
+	return latitude, longitude

@@ -1151,10 +1151,6 @@ table.url-table i, table.extraction-table i {
   padding-right: 2em;
 }
 
-.articleBox > section:first-child {
-  padding: 5em;
-}
-
 .counterBox {
   border: solid 2px rgb(100, 23, 180);
   color: rgb(100, 23, 180);
@@ -2894,6 +2890,10 @@ h4.subrecord-title.closed-title {
 }
 
 /* custom YASQE */
+.yasqe > .CodeMirror {
+  border-radius: .25rem !important;
+}
+
 .yasqe-buttons {
   background-color: #F7F7F7;
   border: solid 1px #D1D1D1;
@@ -2947,6 +2947,7 @@ h4.subrecord-title.closed-title {
 .material-icons {font-size: 1.5em;}
 .link_btn, .btn {white-space: nowrap; font-weight: 500;}
 .add_fields .link_btn {display: inline-block; margin-bottom: 8px}
+.leaflet-popup-close-button,.leaflet-control-zoom-in,.leaflet-control-zoom-out {text-decoration: none !important;}
 
 /* Animations */
 @keyframes fadeIn {
@@ -2988,6 +2989,10 @@ h4.subrecord-title.closed-title {
   padding: 0 !important
 }
 
+.charts-yasqe > .yasqe {
+  margin-right: -30px !important;
+}
+
 li.col-md-12 {
   padding: 0 !important;
 }
@@ -3001,4 +3006,8 @@ li.col-md-12 label, .inner-label {
   margin:0 !important;
   padding:0 !important;
   width: 100%;
+}
+
+.articleBox.chartsBox > section:first-child {
+  padding: 5em;
 }

@@ -322,7 +322,7 @@ def process_new_subrecord(data, userID, stage, subrecord_id, supertemplate=None,
 	subrecord_class = data[subrecord_id+'-class']
 	with open(TEMPLATE_LIST) as templates:
 		templates_list = json.load(templates)
-	subtemplate_path = next(t["template"] for t in templates_list if t["type"]==sorted(subrecord_class.split(", ")))
+	subtemplate_path = next(t["template"] for t in templates_list if t["type"]==sorted(subrecord_class.split(";  ")))
 
 	# access the template file
 	with open(subtemplate_path) as fields:

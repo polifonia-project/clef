@@ -5,9 +5,10 @@ to create or modify explorative charts
 */
 
 $(document).ready(function() {
-    $("#addChart").on('click', function(e) {
-        addChart(e);
-    })
+    $(document).on('click', '#addChart', function(e) {
+        e.preventDefault();
+        addChart();
+    });
 });
 
 
@@ -27,23 +28,25 @@ function generateYASQE(elementId,query=null) {
 }
 
 // add a new Chart block to define a new Chart
-function addChart(e) {
-    e.preventDefault();
+function addChart(chart) {
+
 
     // get last chart index
     const lastChart = $(".sortable .block_field:last-child");
     var index = lastChart.data("index");
-    
+    console.log(index)
+
     // set Chart block HTML code    
-    var newIndex = index++;
+    var newIndex = index + 1;
     var newId = Date.now().toString();
     var newFieldBlock = "<section class='block_field' data-index='"+newIndex+"'>\
         <section class='row'>\
-            <label class='col-md-3'>CHART TYPE</label>\
+            <label class='col-md-3'>TYPE</label>\
             <select onchange='changeChart(this)' class='col-md-8 custom-select' name='type__"+newId+"' id='type__"+newId+"'>\
                 <option value='None'>Select</option>\
                 <option value='counter'>Counter</option>\
-                <option value='bar-chart'>Bar chart</option>\
+                <option value='chart'>Chart</option>\
+                <option value='map'>Map</option>\
             </select>\
         </section>\
         <section class='row'>\
@@ -56,10 +59,24 @@ function addChart(e) {
         </section>\
     </section>"
 
+    // add Type related fields
+    if (chart === "counter") {
+
+    } else if (chart === "chart") {
+
+    } else if (chart === "map") {
+
+    }
+    
     // add Chart block
-    lastChart.after($(newFieldBlock))
-    return false;
+    
+    lastChart.after($(newFieldBlock));
+    $("#type__"+newId+" > option[value='"+chart+"']").attr("selected","selected");
+    console.log($("#type__"+newId+" > option[value='"+chart+"']"))
+
+    
 }
+
 
 function changeChart(select) {
 
@@ -98,68 +115,65 @@ function removeCounter(element) {
 
 
 function barchart(elid,data_x,data_y) {
-  var data = JSON.parse($('#'+elid+'_data').html());
-  am5.ready(function() {
-  var root = am5.Root.new(elid);
-  root.setThemes([ am5themes_Animated.new(root) ]);
-  var chart = root.container.children.push(am5xy.XYChart.new(root, {
-    panX: true,
-    panY: true,
-    wheelX: "panX",
-    wheelY: "zoomX",
-    pinchZoomX:true
-  }));
-  var cursor = chart.set("cursor", am5xy.XYCursor.new(root, {}));
-  cursor.lineY.set("visible", false);
-  var xRenderer = am5xy.AxisRendererX.new(root, { minGridDistance: 30 });
-  xRenderer.labels.template.setAll({
-    rotation: -90,
-    centerY: am5.p50,
-    centerX: am5.p100,
-    paddingRight: 15
-  });
+    var data = JSON.parse($('#'+elid+'_data').html());
+    am5.ready(function() {
+    var root = am5.Root.new(elid);
+    root.setThemes([ am5themes_Animated.new(root) ]);
+    var chart = root.container.children.push(am5xy.XYChart.new(root, {
+        panX: true,
+        panY: true,
+        wheelX: "panX",
+        wheelY: "zoomX",
+        pinchZoomX:true
+    }));
+    var cursor = chart.set("cursor", am5xy.XYCursor.new(root, {}));
+    cursor.lineY.set("visible", false);
+    var xRenderer = am5xy.AxisRendererX.new(root, { minGridDistance: 30 });
+    xRenderer.labels.template.setAll({
+        rotation: -30,
+        centerY: am5.p50,
+        centerX: am5.p100,
+        paddingRight: 15
+    });
 
-  var xAxis = chart.xAxes.push(am5xy.CategoryAxis.new(root, {
-    maxDeviation: 0.3,
-    categoryField: data_x,
-    renderer: xRenderer,
-    tooltip: am5.Tooltip.new(root, {})
-  }));
+    var xAxis = chart.xAxes.push(am5xy.CategoryAxis.new(root, {
+        maxDeviation: 0.3,
+        categoryField: data_x,
+        renderer: xRenderer,
+        tooltip: am5.Tooltip.new(root, {})
+    }));
 
-  var yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, {
-    maxDeviation: 0.3,
-    renderer: am5xy.AxisRendererY.new(root, {})
-  }));
+    var yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, {
+        maxDeviation: 0.3,
+        renderer: am5xy.AxisRendererY.new(root, {})
+    }));
 
-  var series = chart.series.push(am5xy.ColumnSeries.new(root, {
-    name: "Series 1",
-    xAxis: xAxis,
-    yAxis: yAxis,
-    valueYField: data_y,
-    sequencedInterpolation: true,
-    categoryXField: data_x,
-    tooltip: am5.Tooltip.new(root, {
-      labelText:"{valueY}"
-    })
-  }));
+    var series = chart.series.push(am5xy.ColumnSeries.new(root, {
+        name: "Series 1",
+        xAxis: xAxis,
+        yAxis: yAxis,
+        valueYField: data_y,
+        sequencedInterpolation: true,
+        categoryXField: data_x,
+        tooltip: am5.Tooltip.new(root, {
+        labelText:"{valueY}"
+        })
+    }));
 
-  series.columns.template.setAll({ cornerRadiusTL: 5, cornerRadiusTR: 5 });
-  series.columns.template.adapters.add("fill", function(fill, target) {
-    return chart.get("colors").getIndex(series.columns.indexOf(target));
-  });
+    series.columns.template.setAll({ cornerRadiusTL: 5, cornerRadiusTR: 5 });
+    series.columns.template.adapters.add("fill", function(fill, target) {
+        return chart.get("colors").getIndex(series.columns.indexOf(target));
+    });
 
-  series.columns.template.adapters.add("stroke", function(stroke, target) {
-    return chart.get("colors").getIndex(series.columns.indexOf(target));
-  });
+    series.columns.template.adapters.add("stroke", function(stroke, target) {
+        return chart.get("colors").getIndex(series.columns.indexOf(target));
+    });
 
-
-
-
-  xAxis.data.setAll(data);
-  series.data.setAll(data);
-  series.appear(1000);
-  chart.appear(1000, 100);
-  });
+    xAxis.data.setAll(data);
+    series.data.setAll(data);
+    series.appear(1000);
+    chart.appear(1000, 100);
+    });
 };
 
 function invertedBarchart(elid,data_x,data_y) {
@@ -223,14 +237,159 @@ function invertedBarchart(elid,data_x,data_y) {
             return chart.get("colors").getIndex(series.columns.indexOf(target));
         });
     
-    
-    
-    
-            yAxis.data.setAll(data);
-            series.data.setAll(data);
-            series.appear(1000);
-            chart.appear(1000, 100);
+        yAxis.data.setAll(data);
+        series.data.setAll(data);
+        series.appear(1000);
+        chart.appear(1000, 100);
     });
-    
 };
   
+
+function piechart(elid,data_x,data_y,legend,donut=false) {
+    var data = JSON.parse($('#'+elid+'_data').html());
+    am5.ready(function() {
+        var root = am5.Root.new(elid);
+        root.setThemes([
+          am5themes_Animated.new(root),
+        ]);
+        
+        var chart;
+
+        if (donut) {
+            chart = root.container.children.push(am5percent.PieChart.new(root, {
+            layout: root.verticalLayout,
+            innerRadius: am5.percent(50)
+            }));
+        } else {
+            chart = root.container.children.push(am5percent.PieChart.new(root, {
+                layout: root.verticalLayout
+            }));
+        }
+        
+        
+        var series = chart.series.push(am5percent.PieSeries.new(root, {
+          valueField: "Creations",
+          categoryField: "Authors"
+        }));
+        series.data.setAll(data);
+        series.appear(1000, 100);
+
+        if (legend==="True") {
+            let legendDiv = chart.children.push(am5.Legend.new(root, {
+                centerX: am5.percent(50),
+                x: am5.percent(50),
+                marginTop: 15,
+                marginBottom: 15
+            }));
+            
+            legendDiv.data.setAll(series.dataItems);
+        }
+    });
+};
+
+function map(elid) {
+    var data = JSON.parse($('#'+elid+'_data').html());
+
+    am5.ready(function() {
+        var root = am5.Root.new(elid);
+        root.setThemes([
+        am5themes_Animated.new(root)
+        ]);
+        var chart = root.container.children.push(
+        am5map.MapChart.new(root, {
+            panX: "rotateX",
+            panY: "translateY",
+            projection: am5map.geoMercator(),
+        })
+        );
+
+        var zoomControl = chart.set("zoomControl", am5map.ZoomControl.new(root, {}));
+        zoomControl.homeButton.set("visible", true);
+
+        var polygonSeries = chart.series.push(
+        am5map.MapPolygonSeries.new(root, {
+            geoJSON: am5geodata_worldLow,
+            exclude: ["AQ"]
+        })
+        );
+
+        polygonSeries.mapPolygons.template.setAll({
+        fill:am5.color(0xdadada)
+        });
+        var pointSeries = chart.series.push(am5map.ClusteredPointSeries.new(root, {}));
+
+        pointSeries.set("clusteredBullet", function(root) {
+            var container = am5.Container.new(root, {
+                cursorOverStyle:"pointer"
+            });
+
+            var circle1 = container.children.push(am5.Circle.new(root, {
+                radius: 8,
+                tooltipY: 0,
+                fill: am5.color(0xff8c00)
+            }));
+
+            var circle2 = container.children.push(am5.Circle.new(root, {
+                radius: 12,
+                fillOpacity: 0.3,
+                tooltipY: 0,
+                fill: am5.color(0xff8c00)
+            }));
+
+            var circle3 = container.children.push(am5.Circle.new(root, {
+                radius: 16,
+                fillOpacity: 0.3,
+                tooltipY: 0,
+                fill: am5.color(0xff8c00)
+            }));
+
+            var label = container.children.push(am5.Label.new(root, {
+                centerX: am5.p50,
+                centerY: am5.p50,
+                fill: am5.color(0xffffff),
+                populateText: true,
+                fontSize: "8",
+                text: "{value}"
+            }));
+
+            container.events.on("click", function(e) {
+                pointSeries.zoomToCluster(e.target.dataItem);
+            });
+
+            return am5.Bullet.new(root, {
+                sprite: container
+            });
+        });
+
+        // Create regular bullets
+        pointSeries.bullets.push(function() {
+            var circle = am5.Circle.new(root, {
+                radius: 6,
+                tooltipY: 0,
+                fill: am5.color(0xff8c00),
+                tooltipText: "{title}"
+            });
+
+            return am5.Bullet.new(root, {
+                sprite: circle
+            });
+        });
+
+        for (var i = 0; i < data.length; i++) {
+            var city = data[i];
+            addCity(city["longitude"], city["latitude"], city["title"]);
+        }
+
+        function addCity(longitude, latitude, title) {
+            console.log(longitude, latitude, title)
+            pointSeries.data.push({
+                geometry: { type: "Point", coordinates: [longitude, latitude] },
+                title: title
+            });
+        }
+
+        // Make stuff animate on load
+        chart.appear(1000, 100);
+
+    }); // end am5.ready()
+}

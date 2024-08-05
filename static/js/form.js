@@ -7,6 +7,26 @@ management of Records Creation, Modification and Publication.
 ///////////////
 /// GENERAL ///
 ///////////////
+$(document).ready(function() {
+    var scrollToTop = $('#scrollToTop');
+    var target = $('#table-of-contents');
+    
+    // show or hide Scroll to Top button
+    $(window).on('scroll', function() {
+        var targetOffset = target.offset().top;
+        var scrollTop = $(window).scrollTop();
+        
+        if (scrollTop >= targetOffset) {
+            scrollToTop.fadeIn();
+        } else {
+            scrollToTop.fadeOut();
+        }
+    });
+
+    scrollToTop.on('click', function() {
+        $('html, body').animate({ scrollTop: 0 }, 800);
+    });
+});
 
 function checkMandatoryFields(subrecordButton=false){
     var isValid = true;
@@ -295,7 +315,6 @@ function searchCatalogueAdvanced(searchterm) {
 // search catalogue's records belonging to a desired class 
 function searchCatalogueByClass(searchterm,fieldId,singleValue) {
     // get the required class
-    console.log(fieldId)
     var resource_class = $('#'+searchterm).attr('data-class');
     var resource_classes = resource_class.split(';').map(cls => cls.trim()).filter(cls => cls !== "");
     var class_triples = resource_classes.map(cls => `?s a <${cls}> .`).join(" ");
@@ -351,7 +370,6 @@ function searchCatalogueByClass(searchterm,fieldId,singleValue) {
             headers: { Accept: 'application/sparql-results+json' },
             success: function (returnedJson) {
                 $("#searchresult").empty();
-                var url = myPublicEndpoint + '?query=' + encoded
                 // show results
                 if (!returnedJson.results.bindings.length) {
                     $("#searchresult").append("<div class='wditem noresults'>No results in catalogue</div>");
@@ -378,9 +396,10 @@ function searchCatalogueByClass(searchterm,fieldId,singleValue) {
                         var subform = $('#' + searchterm).parent().parent().parent().parent();
                         var subformHeading = subform.find('h4');
                         toggleSubform(subformHeading);
+                        subformHeading.attr('onclick','').removeClass('italic');
                         subformHeading.attr('onclick','');
                         subformHeading.html(oldLabel+"<section class='buttons-container'>\
-                        <button class='btn btn-dark delete' title='delete-subrecord' onclick='cancel_subrecord(event,"+$(this).parent()+")'>\
+                        <button class='btn btn-dark delete' title='delete-subrecord' onclick='cancelSubrecord(event,"+$(this).parent()+")'>\
                             <i class='far fa-trash-alt'></i>\
                         </button>\
                         </section>");
@@ -416,10 +435,14 @@ function searchCatalogueByClass(searchterm,fieldId,singleValue) {
                         toggleSubform(subformHeading);
                         subformHeading.attr('onclick','');
                         subformHeading.html(label+"<section class='buttons-container'>\
-                        <button class='btn btn-dark delete' title='delete-subrecord' onclick='cancel_subrecord(event,"+$(this).parent()+")'>\
+                        <button class='btn btn-dark delete' title='delete-subrecord'>\
                             <i class='far fa-trash-alt'></i>\
                         </button>\
                         </section>");
+                        subformHeading.find('.delete').on('click', function(e){
+                            e.preventDefault();
+                            cancelSubrecord($(this).parent());
+                        })
                         
                         if ($('[name="'+fieldId+'-subrecords"]').length) {
                             $('[name="'+fieldId+'-subrecords"]').val($('[name="'+fieldId+'-subrecords"]').val()+","+target+";"+label);
@@ -488,7 +511,7 @@ function searchWD(searchterm) {
             // autocomplete positioning;
         var height = $('#'+searchterm).height();
         var offset = $('#'+searchterm).offset();
-            var leftpos = offset.left+15;
+        var leftpos = offset.left+15;
         var top = offset.top + height + 15 + "px";
         var max_width = '600px';
         console.log(max_width);
@@ -917,13 +940,11 @@ function addURL(searchterm, iframe=false) {
         if ((e.which > 47 && e.which < 58) || e.which == 8 || e.which == 13) {
         $("#searchresult").show();
 
-        var position = $('#'+searchYear).position();
-        var leftpos = position.left+80;
         var offset = $('#'+searchYear).offset();
+        var leftpos = offset.left+15;
         var height = $('#'+searchYear).height();
         var width = $('#'+searchYear).width();
-        var top = offset.top + height + "px";
-        var right = offset.left + width + "px";
+        var top = offset.top + height + 15 + "px";
 
         $('#searchresult').css( {
             'position': 'absolute',

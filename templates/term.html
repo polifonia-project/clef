@@ -1,13 +1,19 @@
-$def with (user, data, count,is_git_auth,project,base,uri,name,results)
+$def with (user, data, count,is_git_auth,project,base,uri,name,results,map)
 
 $var user = user
 $var is_git_auth = is_git_auth
 $var project = project
 
+
+<!-- Resources -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 <section class="row articleBox">
 	<section class="col-md-7">
 		$if data:
-			<h2 class="articleTitle">$next((result["object"]["value"] for result in data["results"]["bindings"] if result["predicate"]["value"] == "http://www.w3.org/2000/01/rdf-schema#label"), "No label")</h2>
+			$ label = next((result["object"]["value"] for result in data["results"]["bindings"] if result["predicate"]["value"] in ["http://www.w3.org/2000/01/rdf-schema#label", "http://www.w3.org/2004/02/skos/core#prefLabel"]), "No label")
+			<h2 class="articleTitle">$label</h2>
 			$if uri == base + name:
 				<section class="info-item">
 					<h3 class="articleSubtitle">View </h3><a href="view-$name">record</a>
@@ -29,6 +35,23 @@ $var project = project
 						</section>
 					</section>
 			</section>
+			$if map:
+				<section class="info-item">
+					<h3 class="articleSubtitle">Map</h3>
+					<div id="map" style="height: 500px;"></div>
+					<script>
+						var map = L.map('map').setView([$map[0], $map[1]], 10);
+						L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+							attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+						}).addTo(map);
+
+						// Aggiungi un marker al punto specificato
+						var marker = L.marker([$map[0], $map[1]]).addTo(map); // Cambia le coordinate con quelle desiderate
+
+						// Aggiungi un popup al marker
+						marker.bindPopup("<b>$label</b>").openPopup();
+					</script>
+				</section>
 
 
 			<hr/>

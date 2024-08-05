@@ -546,7 +546,6 @@ article p {
   color: rgba(100, 23, 180, 1);
   border-bottom: solid 2px rgba(100, 23, 180, 1);
   padding: 5px;
-  margin-right: 1em;
   font-size: 25px;
 }
 
@@ -1174,6 +1173,10 @@ table.url-table i, table.extraction-table i {
   text-align: left;
 }
 
+.documentation .articleTitle {
+  font-size: 3em;
+}
+
 .articleSubtitle,
 .info-label {
   text-transform: uppercase;
@@ -1577,9 +1580,9 @@ table.url-table i, table.extraction-table i {
 }
 
 /* sliding right menu */
-#showRight {
+#showRight, #scrollToTop {
   position: fixed;
-  right: -65px;
+  right: 35px;
   transition: 0.3s;
   padding: 15px 15px 15px -15px;
   background-color: #343a40 !important;
@@ -1589,17 +1592,27 @@ table.url-table i, table.extraction-table i {
   font-weight: bold;
   border-radius: 5px 0 0 5px;
   border: none;
-  z-index: 3000;
 }
 
-#showRight:hover {
-  right: 0;
+#showRight:hover, #scrollToTop:hover {
+  cursor: pointer;
+}
+
+#scrollToTop {
+  bottom: 85px;
+  display: none;
+  transition: visibility 0.3s;
+}
+
+#showRight {
+  bottom: 35px;
 }
 
 .cbp-spmenu {
   background-color: #F5F6FA;
   position: fixed;
   overflow-y: scroll;
+  box-shadow: rgba(50, 50, 93, 0.25) -6px 6px 12px -2px, rgba(0, 0, 0, 0.3) -3px 3px 7px -3px !important;
 }
 
 .cbp-spmenu a:active {
@@ -2610,7 +2623,7 @@ button#showTemplates {
   cursor: pointer;
   border-bottom: 2px dotted black;
 }
-.add-span:nth-child(2) {
+select+.add-span:nth-child(2), .hidden.extraction-table+.add-span:nth-child(2), .add-span:first-child {
   margin-top: 3em;
 }
 
@@ -2696,7 +2709,7 @@ input[subtemplate]+.fa-plus-circle {
 }
 
 h4.subrecord-title {
-  font-size: 1.3em;
+  font-size: 1.1em;
   font-weight: 600 !important;
   color: black;
   margin-bottom: 0;

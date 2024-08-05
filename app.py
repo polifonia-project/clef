@@ -9,7 +9,7 @@ import logging
 import cgi
 from importlib import reload
 import urllib.parse
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, unquote, quote
 import requests
 import web
 from web import form
@@ -684,7 +684,7 @@ class Modify(object):
 			data = queries.getData(graphToRebuild, res_template)
 			u.log_output('START MODIFY RECORD', session['logged_in'], session['username'], recordID )
 
-			f = forms.get_form(res_template)
+			f = forms.get_form(res_template,processed_templates=[])
 
 			with open(res_template) as tpl_form:
 				fields = json.load(tpl_form)
@@ -729,7 +729,7 @@ class Modify(object):
 		if 'action' in recordData:
 			create_record(recordData)
 		else:
-			f = forms.get_form(templateID)
+			f = forms.get_form(templateID,processed_templates=[])
 			if not f.validates():
 				graphToRebuild = conf.base+name+'/'
 				recordID = name
@@ -799,7 +799,7 @@ class Review(object):
 			session['ip_address'] = str(web.ctx['ip'])
 			u.log_output('START REVIEW RECORD', session['logged_in'], session['username'], recordID )
 
-			f = forms.get_form(res_template)
+			f = forms.get_form(res_template,processed_templates=[])
 
 			with open(res_template) as tpl_form:
 				fields = json.load(tpl_form)
@@ -836,7 +836,7 @@ class Review(object):
 		actions = web.input()
 		session['ip_address'] = str(web.ctx['ip'])
 		templateID = actions.templateID if 'templateID' in actions else None
-		f = forms.get_form(templateID)
+		f = forms.get_form(templateID,processed_templates=[])
 
 		# save the new record for future publication
 		if actions.action.startswith('save'):
@@ -1015,9 +1015,17 @@ class View(object):
 				title = [lang_value for lang_value in title_field if len(lang_value) == 3][0]
 			except Exception as e:
 				title = "No title"
-			properties = {field["label"]:[field["property"], field["type"], field["view_class"]] for field in fields if 'property' in field}
-			data_labels = { field['label']:v for k,v in data.items() \
-							for field in fields if k == field['id'] and field['hidden'] == 'False' }
+			properties = {field["label"]:[field["property"], field["type"], field["view_class"], field["value"]] for field in fields if 'property' in field}
+
+			data_labels = {}
+			for k, v in data.items():  
+				for field in fields:  
+					if k == field['id']: 
+						if properties[field["label"]][3] == "URI":
+							data_labels[field['label']] = [[quote(val[0],safe=''), val[1]] for val in v]
+						else:
+							data_labels[field['label']] = v
+
 		except Exception as e:
 			pass
 
@@ -1086,6 +1094,11 @@ class Term(object):
 		name: str
 			the ID of the term, generally the last part of the URL
 		"""
+		try:
+			name = unquote(name)
+		except Exception as e:
+			name = name
+
 		web.header("Cache-Control", "no-cache, max-age=0, must-revalidate, no-store")
 		uri = mapping.getRightURIbase(name)
 		data = queries.describeTerm(uri)
@@ -1094,7 +1107,7 @@ class Term(object):
 		results_by_class = {}
 		appears_in = [ result["subject"]["value"] \
 					for result in data["results"]["bindings"] \
-					if (name in result["object"]["value"] and result["object"]["type"] == 'uri') ]
+					if (result["object"]["value"] == uri and result["object"]["type"] == 'uri') ]
 		
 
 		with open(TEMPLATE_LIST) as tpl_list:
@@ -1398,16 +1411,17 @@ class Charts(object):
 				query_results = queries.hello_blazegraph(chart["query"])["results"]["bindings"]
 				stats_result = []
 				for result in query_results:
-					geonames = result["geonames"]["value"]
-					lat, long = queries.geonames_geocoding(geonames)
-					i = 0
-					while i < int(result["count"]["value"]):
-						stats_result.append({
-							"title" : result["title"]["value"],
-							"latitude": lat,
-							"longitude": long
-						})
-						i += 1
+					if "geonames" in result:
+						geonames = result["geonames"]["value"]
+						lat, long = queries.geonames_geocoding(geonames)
+						i = 0
+						while i < int(result["count"]["value"]):
+							stats_result.append({
+								"title" : result["title"]["value"],
+								"latitude": lat,
+								"longitude": long
+							})
+							i += 1
 				chart["stats"] = json.dumps(stats_result)
 				chart["info"] = chart_id
 			elif chart["type"] == "chart":

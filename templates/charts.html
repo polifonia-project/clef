@@ -9,10 +9,15 @@ $var project = project
 </header>
 <!-- Resources -->
 <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
-<script src="https://cdn.amcharts.com/lib/5/xy.js"></script>
+<script src="https://cdn.amcharts.com/lib/5/xy.js"></script> <!-- bar charts -->
+<script src="https://cdn.amcharts.com/lib/5/percent.js"></script> <!-- pie charts -->
+<script src="https://cdn.amcharts.com/lib/5/map.js"></script> <!-- maps -->
+<script src="https://cdn.amcharts.com/lib/5/geodata/worldLow.js"></script> <!-- maps -->
 <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+
+
 <!-- Charts -->
-<section class="row articleBox">
+<section class="row articleBox chartsBox">
 	<section class="col-md-12 col-sm-12">
 	$for chart in charts["charts"]:
 		$if chart["type"] == "counter":
@@ -29,20 +34,55 @@ $var project = project
 						<p class="counterLabel">$counter["title"]</p>
 					</section>
 			</section>
-		$elif chart["type"] == "bar-chart":
+		$elif chart["type"] == "map":
 			$ info = chart["info"]
+			$ info_data = info + "_data"
 			<section class="row stats-block">
 				<section class="chart-heading">
 					<h2>$chart["title"]</h2>
 					<p>$chart["description"]</p>
 				</section>
-				<div id="$info[0]" class="col-md-6 col-sm-12" style="height:50vh"></div>
+				<div id="$info" class="col-md-6 col-sm-12" style="height:55vh"></div>
 			</section>
-			<script id="$info[0]_data" type="application/json">$:chart["stats"]</script>
-			$if chart["categorical"] == "y":
-				<script> invertedBarchart("$info[0]","$info[1]","$info[2]"); </script>
-			$else:
-				<script> barchart("$info[0]","$info[1]","$info[2]"); </script>
+			<script id="$info_data" type="application/json">$:chart["stats"]</script>
+			<script>map("$info");</script>
+		$elif chart["type"] == "chart":
+			$if chart["chart_type"] == "bar":
+				$ info = chart["info"]
+				<section class="row stats-block">
+					<section class="chart-heading">
+						<h2>$chart["title"]</h2>
+						<p>$chart["description"]</p>
+					</section>
+					<div id="$info[0]" class="col-md-6 col-sm-12" style="height:55vh"></div>
+				</section>
+				<script id="$info[0]_data" type="application/json">$:chart["stats"]</script>
+				$if chart["categorical"] == "y":
+					<script>invertedBarchart("$info[0]","$info[1]","$info[2]"); </script>
+				$else:
+					<script>barchart("$info[0]","$info[1]","$info[2]"); </script>
+			$elif chart["chart_type"] == "pie":
+				$ info = chart["info"]
+				<section class="row stats-block">
+					<section class="chart-heading">
+						<h2>$chart["title"]</h2>
+						<p>$chart["description"]</p>
+					</section>
+					<div id="$info[0]" class="col-md-12 col-sm-12" style="height:70vh"></div>
+				</section>
+				<script id="$info[0]_data" type="application/json">$:chart["stats"]</script>
+				<script>piechart("$info[0]","$info[1]","$info[2]","$chart['legend']",donut=false); </script>
+			$elif chart["chart_type"] == "donut":
+				$ info = chart["info"]
+					<section class="row stats-block">
+						<section class="chart-heading">
+							<h2>$chart["title"]</h2>
+							<p>$chart["description"]</p>
+						</section>
+						<div id="$info[0]" class="col-md-12 col-sm-12" style="height:70vh"></div>
+					</section>
+					<script id="$info[0]_data" type="application/json">$:chart["stats"]</script>
+					<script>piechart("$info[0]","$info[1]","$info[2]","$chart['legend']",donut=true); </script>
 		<hr class="charthr">	
 		
 	</section>

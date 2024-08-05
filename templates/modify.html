@@ -10,7 +10,8 @@ $if query_templates!=None:
 		const query_templates = JSON.parse(query_templates_str);
 	</script>
 <header class="row needDoc">
-	<button id="showRight">&gt; help</button>
+	<button id="showRight"><i class="far fa-lightbulb"></i> help</button>
+	<button id="scrollToTop"><i class="fas fa-arrow-up"></i> top</button>
 	<script type="text/javascript">
 		$$('#cbp-spmenu-s2').load( "./documentation #documentation", function() {
 			$$(".documentation").removeClass('col-md-7').addClass('col-md-12 col-sm-4');
@@ -22,16 +23,16 @@ $if query_templates!=None:
 	$else:
 		<h3>Modify record</h3>
 </header>
-<section class="corners row">
+<section class="corners row" style="left: -30vw">
 	<section class="col-md-12 col-lg-12 col-sm-12 homeheading">
 		<h2>Remember to save</h2>
 	</section>
 	$if template:
-		<section class="col-md-3 col-lg-3 col-sm-3 homeheading">
+		<section class="col-md-3 col-lg-3 col-sm-3 homeheading" id="table-of-contents">
 			<p class="caption">Table of contents</p>
 			<ul class="fields-list"></ul>
 		</section>
-	<section class="col-md-6 col-lg-6 col-sm-6 homeheading" >
+	<section class="col-md-8 col-lg-8 col-sm-8 homeheading"  id="form-section">
 		<form id="modifyForm" class="col-md-12 col-sm-12 col-lg-12" action="" method="POST">
 			<input type='hidden' name='recordID' value=$:pageID>
 			$if template:
@@ -40,9 +41,8 @@ $if query_templates!=None:
 				<section class="homeheading col-md-12 col-lg-12 col-sm-12">
 					$for idx,input in enumerate(record_form.inputs):
 						$ id = input.get_default_id()
-						<section class="form_row block_field">
-							$ id = input.get_default_id()
-							$if type(input) == Checkbox:
+						$if type(input) == Checkbox:
+							<section class="form_row block_field">
 								$ checked_value = 'http'+id.split('_http')[1].split(',',1)[0]
 								$ field_base = id.split('_http')[0].rsplit('-',1)[0]
 								$ field_name = id.split('_http')[0]
@@ -56,7 +56,9 @@ $if query_templates!=None:
 											$$("input[name=$field_name]").attr("checked","checked");
 										</script>
 								</section>
-							$else:
+							</section>
+						$else:
+							<section class="form_row block_field">
 								<section class="label col-12">
 									$:input.pre
 									<span class="title">$:input.description</span>
@@ -100,9 +102,9 @@ $if query_templates!=None:
 														$ lang = k_v[1]
 														$ lang_id = id+'_'+lang
 														$if input.type=="text":
-															<input type="text" value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" data-mandatory="$input.attrs['data_mandatory']"/>
+															<input type="text" value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" data-supertemplate="$input.attrs['data_supertemplate']" data-mandatory="$input.attrs['data_mandatory']"/>
 														$else:
-															<textarea value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" data-mandatory="$input.attrs['data_mandatory']">$k_v[0]</textarea>	
+															<textarea value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" data-supertemplate="$input.attrs['data_supertemplate']" data-mandatory="$input.attrs['data_mandatory']">$k_v[0]</textarea>	
 														$if len(k_v) == 3:
 															$ lang_id = id+'_mainLang'
 															<input type="hidden" value="$lang" id="$lang_id" name="$lang_id">
@@ -134,7 +136,23 @@ $if query_templates!=None:
 												$$('#$id').prepend($$('<option selected=selected value="None">Select from the list</option>'));
 											</script>
 								</section>
-						</section>
+							</section>
+							<script type="text/javascript">
+								console.log('$id')
+								var elements = $$('#$id')[0].attributes;
+								var attrsToChange = [];
+
+								$$.each(elements, function(index, attr) {
+									if (attr.name.startsWith("data_")) {
+										attrsToChange.push(attr);
+									}
+								});
+								$$.each(attrsToChange, function(index, attr) {
+									var newName = attr.name.replace("data_", "data-");
+									$$('#$id').attr(newName, attr.value);
+									$$('#$id').removeAttr(attr.name);
+								});
+							</script>
 					$if type(knowledge_extractor) == type(set()):
 						$ extractors_list = list(knowledge_extractor)
 						$ extractors_template_ids = [tpl[0] for tpl in extractors_list]

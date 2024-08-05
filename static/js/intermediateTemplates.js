@@ -34,6 +34,7 @@ function prepareSubtemplateForms(element) {
     var subtemplateFieldId = $(element).attr("id"); // id of the 'Subtemplate' field
     var oneValue = $(element).hasClass("oneValue"); // the number of accepted values for this field
     var allowDataReuse = $(element).hasClass("allowDataReuse");
+    var formId = $('.corners form').attr('id') // either 'modifyForm' or 'recordForm'
 
     // get the Label assigned to the 'Subtemplate' field and prepare a button for adding new subrecords
     var label = $(element).parent().prev().text();
@@ -42,6 +43,29 @@ function prepareSubtemplateForms(element) {
       createSubrecord(subtemplateFieldId,label,createSubrecordBtn,dataReuse=allowDataReuse)
     });
     
+    // create hidden fields to store subrecords information when loading a previously created Record (only in modify/review page)
+    if (formId === "modifyForm") {
+        var subrecords = "";
+        $('[data-input="'+subtemplateFieldId+'"').each(function() {
+            subrecords+=$(this).attr('id')+";"+$(this).text()+",";
+            var subformSection = $("<section class='subform_section col-md-12 col-sm-12' data-target='"+$(this).attr('id')+"'>\
+                <h4 class='subrecord-title closed-title'>"+$(this).text()+"\
+                    <section class='buttons-container'>\
+                            <button class='btn btn-dark delete' title='delete-subrecord'>\
+                                <i class='far fa-trash-alt'></i>\
+                            </button>\
+                    </section>\
+                </h4>\
+            </section>");
+            subformSection.find('.delete').on('click', function(e){
+                e.preventDefault();
+                cancelSubrecord($(this).parent());
+            })
+            $(this).parent().prepend(subformSection);
+            $(this).remove();
+        })
+        $('#modifyForm').append('<input type="hidden" name="'+subtemplateFieldId+'-subrecords" id="'+subtemplateFieldId+'-subrecords" value="'+subrecords.slice(0,-1)+'">');
+    }
 
     if (oneValue) {
         console.log(label)
@@ -51,11 +75,11 @@ function prepareSubtemplateForms(element) {
         let subrecordId;
         var now = new Date().valueOf();
         var timespanId = (now / 1000).toString().replace('.', '-');
+        var existingSubrecord = $(element).prev('section.subform_section');
 
-        // reuse existing Id in Modify/Review stage
-        if($(element).next('span').next('.hiddenInput').length) {
-            var existingSubform = $(element).next().next().val();
-            subrecordId = existingSubform.split(',')[0];
+        // reuse existing Id in Modify/Review stage else Timespan
+        if(existingSubrecord.length > 0) {
+            subrecordId = existingSubrecord.attr('data-target');
         } else {
             subrecordId = timespanId;
         }
@@ -64,25 +88,19 @@ function prepareSubtemplateForms(element) {
         createSubrecord(subtemplateFieldId,label,createSubrecordBtn,allowDataReuse,subrecordId,oneValue); // generate a subrecord form
         createSubrecordBtn.remove(); // remove the button to prevent users from creating new Subrecords
 
+        if (existingSubrecord.length > 0) {
+            retrieveSubrecordData(subrecordId);
+            existingSubrecord.remove();
+        }
+
         // link the subrecord id to the "Subtemplate" type field
         var hiddenSubrecordLink = $('<input type="hidden" name="'+subtemplateFieldId+'-subrecords" value="'+subrecordId+'"/>');
-        $('#modifyForm, #recordForm').append(hiddenSubrecordLink);
+        $('#recordForm').append(hiddenSubrecordLink);
     } else {
         // Unlimited subrecords
 
         // add the createSubrecordBtn for generating unlimited subrecords
         $(element).after(createSubrecordBtn);
-    }
-  
-    
-    // create hidden fields to store subrecords information when loading a previously created Record (only in modify/review page)
-    if ($('.corners form').attr('id') === "modifyForm") {
-        var subtemplateFieldId = $(element).attr('id');
-        var subrecords = "";
-        $('[data-input="'+subtemplateFieldId+'"').each(function() {
-        subrecords+=$(element).attr('id')+";"+$(element).text()+",";
-        })
-        $('#modifyForm').append('<input type="hidden" name="'+subtemplateFieldId+'-subrecords" id="'+subtemplateFieldId+'-subrecords" value="'+subrecords.slice(0,-1)+'">');
     }
 }
 
@@ -93,7 +111,6 @@ function prepareSubtemplateForms(element) {
 // Create subrecords
 function createSubrecord(subtemplateFieldId, label, el, dataReuse=false, subrecordId=null, singleValue=false ) {
     var absoluteSubtemplateFieldId = subtemplateFieldId.split("_")[0];
-    console.log("FIELD ID", subtemplateFieldId)
     // prepare a new subrecord id in case no one has been provided
     if (!subrecordId) {
       var now = new Date().valueOf();
@@ -365,30 +382,6 @@ function modifySubrecord(subId, keep) {
         var newList = subrecordsListArray.splice(idx, 1);
         subrecordsList.val(newList.join(','));
     }
-    else {
-        // recreate subrecord_section
-        var label = $('#'+subId+'-tag').parent().prev().text();
-        var el = $('#'+subId+'-tag').prevAll('.fa-plus-circle').first();
-        
-        // import data from triplestore in case the subrecord has not been loaded yet
-        if (! $('[data-subform="'+subId+'"').length) {
-            var currentUrl = window.location.href;
-            var subrecordUrl = currentUrl.replace(/(modify|review)-\d+-\d+/, `$1-${subId}`);
-            $.ajax({
-                type:'GET',
-                url:subrecordUrl,
-                dataType:"html",
-                success:function(data) {
-                    var relevantField = $(data).find('[class*="'+originalSubtemplateClass+'"]');
-                    $('#modifyForm').append(relevantField);
-                    createSubrecord(originalSubtemplateClass,label,el,subrecordId=subId);
-                }
-            });
-        } else {
-            createSubrecord(originalSubtemplateClass,label,el,subrecordId=subId);
-        }
-
-    }
 
     // remove delete/modify icons
     $('#'+subId+'-tag').next('i').remove();
@@ -418,7 +411,7 @@ function toggleSubform(element,label=null) {
 
         // delete button
         $(element).find('.delete').on('click', function(e) {
-        e.preventDefault();
+            e.preventDefault();
             cancelSubrecord($(this).parent());
         });
 
@@ -434,4 +427,21 @@ function toggleSubform(element,label=null) {
             scrollTop: $(element).parent().offset().top - 200
         }, 800);
     }
+}
+
+// retrieve data from previously created Subrecord 
+function retrieveSubrecordData(subrecordId) {
+    
+    var subrecordUrl = "/modify-" + subrecordId;
+    $.ajax({
+        type:'GET',
+        url:subrecordUrl,
+        dataType:"html",
+        success:function(data) {
+            console.log(data)
+            var relevantField = $(data).find('[class*="'+originalSubtemplateClass+'"]');
+            $('#modifyForm').append(relevantField);
+            createSubrecord(originalSubtemplateClass,label,el,subrecordId=subId);
+        }
+    });
 }

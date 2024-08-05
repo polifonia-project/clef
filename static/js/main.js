@@ -125,14 +125,16 @@ $(document).ready(function() {
   // table of contents 
   $('section.label.col-12').each(function() {
     var section = $(this);
-    var itemTitle = $(this).text();
-    var listItem = $("<li>"+itemTitle+"</li>");
-    listItem.on('click', function() {
-      $('html, body').animate({
-        scrollTop: section.parent().offset().top - 100
-      }, 800);
-    })
-    $('.fields-list').append(listItem); 
+    if (section.next('.input_or_select').find('[data-supertemplate="None"]').length > 0) {
+      var itemTitle = $(this).text();
+      var listItem = $("<li>"+itemTitle+"</li>");
+      listItem.on('click', function() {
+        $('html, body').animate({
+          scrollTop: section.parent().offset().top - 100
+        }, 800);
+      })
+      $('.fields-list').append(listItem);
+    }
   })
 
   // disable forms
@@ -305,11 +307,18 @@ $(document).ready(function() {
 	if ($('header').hasClass('needDoc')) {
 		var menuRight = document.getElementById( 'cbp-spmenu-s2' ),
 		showRight = document.getElementById( 'showRight' ),
+    tableOfContents = document.getElementById( 'table-of-contents' ),
+    formSection = document.getElementById( 'form-section' );
 		body = document.body;
 		showRight.onclick = function() {
-			classie.toggle( this, 'active' );
-			classie.toggle( menuRight, 'cbp-spmenu-open' );
-		};
+      classie.toggle(menuRight, 'cbp-spmenu-open');
+      var isOpen = $(menuRight).hasClass('cbp-spmenu-open');
+      $(showRight).html(isOpen ? '<i class="fas fa-times"></i> help' : '<i class="far fa-lightbulb"></i> help');
+      var distance = isOpen ? '-=25.5vw' : '+=25.5vw';
+      $(tableOfContents).animate({ left: distance }, 300);
+      $(formSection).animate({ left: distance }, 300);
+      $(showRight).animate({ left: (isOpen ? '-=365px' : '+=365px') }, 50);
+    };
 	};
 
   // hide lookup when creating a record
@@ -893,23 +902,34 @@ function visualize_subrecord(el) {
 }
 
 function visualize_subrecord_literals(el) {
+  // retrieve the Record Main Language and the Language of the current value
+  var recordMainLang = $('h2.articleTitle').attr('xml:lang')
   var lang = $(el).attr('xml:lang');
-  const language_item = $('<a class="lang-item">'+lang.toUpperCase()+'</a>');
+
+  // create a language Tag to select this language
+  const languageTag = $('<a class="lang-item">'+lang.toUpperCase()+'</a>');
   if ($(el).prev('p').length != 1) {
-    const languages_list = $('<div class="info-language"></div>');
-    language_item.addClass('selected-lang');
-    $(el).before(languages_list.append(language_item));
+    const languagesList = $('<div class="info-language"></div>');
+    languageTag.addClass('selected-lang');
+    $(el).before(languagesList.append(languageTag));
   } else {
-    $(el).parent().find('.info-language').append(language_item);
+    $(el).parent().find('.info-language').append(languageTag);
     $(el).hide();
   }
-  language_item.on('click', function() {
-    var new_lang = $(this).text().toLowerCase();
+
+  // show Value (based on language) on click
+  languageTag.on('click', function() {
+    var newLang = $(this).text().toLowerCase();
     $(this).parent().parent().find('p').hide();
-    $(this).parent().parent().find('p[xml\\:lang="'+new_lang+'"]').show();
+    $(this).parent().parent().find('p[xml\\:lang="'+newLang+'"]').show();
     $(this).parent().find('.selected-lang').removeClass('selected-lang');
     $(this).addClass('selected-lang');
   });
+
+  // try to activate Main Language
+  if (recordMainLang === lang) {
+    languageTag.trigger('click'); // Simulate click event
+  }
 }
 
 //////////////

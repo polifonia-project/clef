@@ -9,7 +9,6 @@ $var project = project
 <script src='static/js/yasqe.bundled.min.js'></script>
 <script src="static/js/sparql.js"></script>
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="static/js/charts.js"></script>
 
 <!-- Header -->
 <header class="row">
@@ -29,11 +28,12 @@ $var project = project
                             <section class="block_field">
                                 <!-- TYPE -->
                                 <section class="row">
-                                    <label class="col-md-3">CHART TYPE</label>
+                                    <label class="col-md-3">TYPE</label>
                                     <select onchange="changeChart(this)" class="col-md-8 custom-select" name="type__$id" id="type__$id">
                                         <option value="None">Select</option>
                                         <option value="counter">Counter</option>
-                                        <option value="bar-chart">Bar chart</option>
+                                        <option value="chart">Chart</option>
+                                        <option value="map">Map</option>
                                     </select>
                                 </section>
                                 <script>
@@ -64,10 +64,10 @@ $var project = project
                                             </ul>
                                         </section>
                                     </section>
-                                $else:
+                                $elif type == "map":
                                     <!-- QUERY -->
                                     <section class="row">
-                                        <label class="col-md-3">QUERY<br><span class="comment">set a SPARQL query to retrieve data</span></label>
+                                        <label class="col-md-3">QUERY<br><span class="comment">set a SPARQL query to retrieve data (two variables required)</span></label>
                                         <section class="col-md-8 align-self-start">
                                             <div id="yasqe-$id" class="col-md-12 charts-yasqe"></div>
                                         </section>
@@ -75,71 +75,84 @@ $var project = project
                                     <script type="text/javascript">
                                         generateYASQE("yasqe-$id", `$chart['query']`);
                                     </script>
-                                    <!-- X-Axis -->
+                                $elif type == "chart":
+                                    $ chart_type = chart["chart_type"]
+                                    <!-- CHART TYPE -->
                                     <section class="row">
-                                        <label class="col-md-3">X-AXIS<br><span class="comment">set the SPARQL variable to be shown in the X-Axis</span></label>
-                                        <section class="col-md-3">
-                                            <label class="inner-label">SPARQL variable</label>
-                                            <input type="text" id="x-var__$id" name="x-var__$id" value="$chart['x-axis'].split(',',1)[0]"/>
-                                        </section>
-                                        <section class="col-md-3">
-                                            <label class="inner-label">Display name</label>
-                                            <input type="text" id="x-name__$id" name="x-name__$id" value="$chart['x-axis'].split(',',1)[1]"/>
-                                        </section>
-                                        <section class="col-md-2 center-checkbox">
-                                            <label class="inner-label">Sort by X</label>
-                                            <input type="checkbox" id="x-sort__$id" name="x-sort__$id" onclick="sortChart('$id')"/>
+                                        <label class="col-md-3">CHART TYPE</label>
+                                        <select onchange="changeChartType(this)" class="col-md-8 custom-select" name="chart__$id" id="chart__$id">
+                                            <option value="None">Select</option>
+                                            <option value="bar">Bar Chart</option>
+                                            <option value="pie">Pie Chart</option>
+                                            <option value="donut">Donut Chart</option>
+                                        </select>
+                                    </section>
+                                    <script>
+                                        $$("#chart__$id option[value='$chart_type']").attr("selected","selected");
+                                    </script>
+                                    <!-- QUERY -->
+                                    <section class="row">
+                                        <label class="col-md-3">QUERY<br><span class="comment">set a SPARQL query to retrieve data (two variables required)</span></label>
+                                        <section class="col-md-8 align-self-start">
+                                            <div id="yasqe-$id" class="col-md-12 charts-yasqe"></div>
                                         </section>
                                     </section>
-                                    <!-- Y-Axis -->
+                                    <script type="text/javascript">
+                                        generateYASQE("yasqe-$id", `$chart['query']`);
+                                    </script>
+                                    $if chart_type == "bar":
+                                        <!-- X-AXIS -->
+                                        <section class="row">
+                                            <label class="col-md-3">X-AXIS<br><span class="comment">set the SPARQL variable to be shown in the X-Axis</span></label>
+                                            <section class="col-md-3">
+                                                <label class="inner-label">SPARQL variable</label>
+                                                <input type="text" id="x-var__$id" name="x-var__$id" value="$chart['x-axis'].split(',',1)[0]"/>
+                                            </section>
+                                            <section class="col-md-3">
+                                                <label class="inner-label">Display name</label>
+                                                <input type="text" id="x-name__$id" name="x-name__$id" value="$chart['x-axis'].split(',',1)[1]"/>
+                                            </section>
+                                            <section class="col-md-2 center-checkbox">
+                                                <label class="inner-label">Sort by X</label>
+                                                <input type="checkbox" id="x-sort__$id" name="x-sort__$id" onclick="sortChart('$id')"/>
+                                            </section>
+                                        </section>
+                                        <!-- Y-AXIS -->
+                                        <section class="row">
+                                            <label class="col-md-3">Y-AXIS<br><span class="comment">set the SPARQL variable to be shown in the Y-Axis</span></label>
+                                            <section class="col-md-3">
+                                                <label class="inner-label">SPARQL variable</label>
+                                                <input type="text" id="y-var__$id" name="y-var__$id" value="$chart['y-axis'].split(',',1)[0]"/>
+                                            </section>
+                                            <section class="col-md-3">
+                                                <label class="inner-label">Display name</label>
+                                                <input type="text" id="y-name__$id" name="y-name__$id" value="$chart['y-axis'].split(',',1)[1]"/>
+                                            </section>
+                                            <section class="col-md-2 center-checkbox">
+                                                <label class="inner-label">Sort by Y</label>
+                                                <input type="checkbox" id="y-sort__$id" name="y-sort__$id" onclick="sortChart('$id')"/>
+                                            </section>
+                                        </section>
+                                    <!-- LEGEND -->
                                     <section class="row">
-                                        <label class="col-md-3">Y-AXIS<br><span class="comment">set the SPARQL variable to be shown in the Y-Axis</span></label>
-                                        <section class="col-md-3">
-                                            <label class="inner-label">SPARQL variable</label>
-                                            <input type="text" id="y-var__$id" name="y-var__$id" value="$chart['y-axis'].split(',',1)[0]"/>
-                                        </section>
-                                        <section class="col-md-3">
-                                            <label class="inner-label">Display name</label>
-                                            <input type="text" id="y-name__$id" name="y-name__$id" value="$chart['y-axis'].split(',',1)[1]"/>
-                                        </section>
-                                        <section class="col-md-2 center-checkbox">
-                                            <label class="inner-label">Sort by Y</label>
-                                            <input type="checkbox" id="y-sort__$id" name="y-sort__$id" onclick="sortChart('$id')"/>
-                                        </section>
-                                    </section>
-                                    <!-- VARIABLES -->
-                                    <section class="row">
-                                        <label class="col-md-3">VARIABLES TYPE<br><span class="comment">specify the type variable</span></label>
-                                        <section class="col-md-3">
-                                            <label class="inner-label">X-axis variable</label>
-                                            <label>Categorical</label>
-                                            <input type="radio" id="x-categorical__$id" name="x-categorical__$id"/>
-                                            <br>
-                                            <label>Quantitative</label>
-                                            <input type="radio" id="x-quantitative__$id" name="x-quantitative__$id"/>
-                                        </section>
-                                        <section class="col-md-3">
-                                            <label class="inner-label">Y-axis variable</label>
-                                            <label>Categorical</label>
-                                            <input type="radio" id="y-categorical__$id" name="y-categorical__$id"/>
-                                            <br>
-                                            <label>Quantitative</label>
-                                            <input type="radio" id="y-quantitative__$id" name="y-quantitative__$id"/>
-                                        </section>
-                                    </section>
-                                    $if "sorted" in chart:
-                                        <script type="text/javascript">
-                                            $$("#$chart['sorted']"+"-sort__$id").attr('checked', 'checked');
-                                        </script>
+										$ legend = "checked=checked" if "legend" in chart and chart["legend"] == "True" else ""
+										<label class="left col-md-11 col-sm-6" for="legend__$id">Show legend</label>
+										<input $legend type="checkbox" id="legend__$id" name="legend__$id">
+									</section>
                                 <!-- ARROW + DELETE BUTTONS -->
                                 <a href="#" class="up"><i class="fas fa-arrow-up"></i></a> <a href="#" class="down"><i class="fas fa-arrow-down"></i></a>
                                 <a href="#" class="trash"><i class="far fa-trash-alt"></i></a>
                             </section>
                 </section>
+                <!-- Add Charts buttons -->
+                <section class="add_fields homeheading col-md-12 col-lg-12 col-sm-12">
+                    <a class="link_btn" onclick="addChart('counter')" name="add_counter">Add Counter</a>
+                    <a class="link_btn" onclick="addChart('chart')" name="add_chart">Add Chart</a>
+                    <a class="link_btn" onclick="addChart('map')" name="add_map">Add Map</a>
+                </section>
             </section>
             <!-- Buttons section -->
             <section class="buttonsSection">
-                <button id="addChart" name="action" value="addChart" class="btn btn-dark" type="submit">Add New Chart</button>
 				<button id="updateTemplate" name="action" value="updateTemplate" class="btn btn-dark" type="submit">Save Charts</button>
 				<button class="btn btn-dark delete_template" data-toggle="modal" data-target="#popup" name="action" value="deleteTemplate" type="submit" title="delete">Reset Charts <i class="far fa-trash-alt"></i></button>
 			</section>

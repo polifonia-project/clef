@@ -557,7 +557,8 @@ def has_extractor(res_template, record_name=None):
 			if 'import_subtemplate' in field and field['import_subtemplate'] != []:
 				subrecords = queries.get_subrecords(field['property'],record_name)
 				for subrecord in subrecords:
-					result.extend(has_extractor(field['import_subtemplate'],subrecord.rsplit('/',1)[1]))
+					for imported_template in field['import_subtemplate']:
+						result.extend(has_extractor(imported_template,subrecord.rsplit('/',1)[1]))
 					
 		return result
 	else:

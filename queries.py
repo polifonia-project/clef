@@ -10,6 +10,8 @@ import utils as u
 import urllib.parse
 import re
 import requests
+import time
+import mapping
 
 u.reload_config()
 
@@ -412,7 +414,6 @@ def get_subrecords(rdf_property,record_name):
 	subrecords_list = [subrecord['subrecord']['value'] for subrecord in results['results']['bindings']]
 	return subrecords_list
 
-
 def retrieve_extractions(res_uri_list, view=False):
 	"""Return a dictionary of Extractions given a list of tuples: [(named_graph_uri, extraction_rdf_property, extraction_field_name)]'
 	
@@ -558,14 +559,78 @@ def get_records_from_object(graph_uri):
 	print(results)
 	return results
 
+# DATA EXTRACTION form SERVICES
+
+def entity_reconciliation(uri,service):
+
+	# set query params
+	base_url = ""
+	params = {}
+	if service == "wd":
+		base_url = "https://wikidata.org/w/api.php" 
+		params = {
+			"action": "wbsearchentities",
+			"search": uri,
+			"format": "json",
+			"language": "it"
+		}
+	elif service == "viaf":
+		base_url = "https://www.viaf.org/viaf/AutoSuggest"
+		params = {
+			"query": uri
+		}
+	elif service == "geonames":
+		base_url = "http://api.geonames.org/searchJSON"
+		params = {
+            "q": uri,
+            "username": "palread", 
+            "maxRows": 1
+        }
+	
+	# execute the query and retrieve the URI
+	try:
+		response = requests.get(base_url, params=params)
+		response.raise_for_status()  # Check if the request was successful
+		data = response.json()  # Parse the JSON response
+		print(data)
+		if service == "wd":
+			new_uri = data["search"][0]["concepturi"]
+		elif service == "viaf" and data["result"] != None: 
+			new_uri = mapping.VIAF + data["result"][0]["viafid"]
+		elif service == "geonames" and len(data["geonames"]) > 0:
+			new_uri = mapping.GEO + str(data["geonames"][0]["geonameId"])
+		else:
+			new_uri = conf.base+str(time.time()).replace('.','-')
+		return new_uri
+	
+	except requests.exceptions.HTTPError as http_err:
+		print(f"HTTP error occurred: {http_err}")
+	except Exception as err:
+		print(f"Other error occurred: {err}")
+
 # GET LATITUDE AND LONGITUDE GIVEN A GEONAMES URI
 def geonames_geocoding(geonames_uri):
 	uri_id = geonames_uri.replace("https://sws.geonames.org/","")
 	search_url = f'http://api.geonames.org/getJSON?geonameId={uri_id}&username=palread'
-	print(search_url)
 	response = requests.get(search_url)
 	data = response.json()
-	print("RESP:", data)
 	latitude = data['lat']
 	longitude = data['lng']
 	return latitude, longitude
+
+
+def SPARQLAnything(query_str):
+	sparql = SPARQLWrapper(conf.sparqlAnythingEndpoint)
+	query = """PREFIX xyz: <http://sparql.xyz/facade-x/data/>
+	PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+	PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+	PREFIX sa: <http://w3id.org/sparql-anything#>
+	PREFIX ex: <http://example.org/>
+	"""+query_str.replace("&lt;", "<").replace("&gt;", ">")
+
+	print(query)
+	# Retrieve all results so that user can verify them
+	sparql.setQuery(query)
+	sparql.setReturnFormat(JSON)
+	results = sparql.query().convert()
+	return results

@@ -1230,66 +1230,69 @@ function addMultimedia(searchterm) {
 /* Knowledge Extraction input field handling */
 
 // generate extraction input field (during form loading)
-function generateExtractionField(resId, subtemplate=null) {
+function generateExtractionField(res, recordId, subtemplate=null) {
     // retrieve field's description and name
-    var resIndex = extractorsArray.indexOf(resId);
-    resIndex = resIndex === -1 ? 0 : resIndex;
-    var fieldName = extractorsNames[resIndex];
-    var fieldDescription = extractorsPrepend[resIndex];
+    extractorsArray.forEach((element, index) => {
+        if (element === res) {
+            var resIndex = index === -1 ? 0 : index;
+            var resId = extractorsIds[resIndex];
+            var fieldName = extractorsNames[resIndex];
+            var fieldDescription = extractorsPrepend[resIndex];
+            var fieldService = extractorsService[resIndex];
 
-    // predefined HTML node (extraction input field)
-    var extractionRow = $('<section class="form_row block_field import-form">\
-    <section class="label col-12">\
-        <span class="tip" data-toggle="tooltip" data-placement="bottom" title="" data-original-title="'+fieldDescription+'"><i class="fas fa-info-circle"></i></span>\
-        <span class="title">'+fieldName+'</span>\
-    </section>\
-    <section class="col-md-12 col-sm-12 col-lg-12" style="padding-left:3.2em;padding-right: 3.2em;">\
-        <table class="hidden extraction-table">\
-        <thead>\
-            <tr>\
-            <th>Extractions</th>\
-            <th>Actions</th>\
-            </tr>\
-        </thead>\
-        <tbody></tbody>\
-        </table>\
-        <span class="imported_graphs add-span" id="imported-graphs-'+resId+'" onclick="generateExtractor(\'imported-graphs-'+resId+'\')"><i class="material-icons">playlist_add</i><span> Extract Entities</span></span>\
-    </section>\
-    </section>');
+            // predefined HTML node (extraction input field)
+            var extractionRow = $('<section class="form_row block_field import-form">\
+            <section class="label col-12">\
+                <span class="tip" data-toggle="tooltip" data-placement="bottom" title="" data-original-title="'+fieldDescription+'"><i class="fas fa-info-circle"></i></span>\
+                <span class="title">'+fieldName+'</span>\
+            </section>\
+            <section class="col-md-12 col-sm-12 col-lg-12" style="padding-left:3.2em;padding-right: 3.2em;">\
+                <table class="hidden extraction-table">\
+                <thead>\
+                    <tr>\
+                    <th>Extractions</th>\
+                    <th>Actions</th>\
+                    </tr>\
+                </thead>\
+                <tbody></tbody>\
+                </table>\
+                <span class="imported_graphs add-span" id="imported-graphs-'+resId+'" data-reconciliation="'+fieldService+'" onclick="generateExtractor(\'imported-graphs-'+resId+'\', \''+recordId+'\')"><i class="material-icons">playlist_add</i><span> Extract Entities</span></span>\
+            </section>\
+            </section>');
 
-    // add the extraction node to the form
-    if (subtemplate===null) {
-        subtemplate = $('#recordForm .homeheading, #modifyForm .homeheading');
-    }
-    console.log(subtemplate)
-    subtemplate.append(extractionRow);
+            // add the extraction node to the form
+            if (subtemplate===null) {
+                subtemplate = $('#recordForm .homeheading, #modifyForm .homeheading');
+            }
+            subtemplate.append(extractionRow);
 
-    // retrieve previously generated extraction graphs
-    if (resId in extractionsObj) {
-        for (let i=0; i<extractionsObj[resId].length; i++) {
-            var extractionId = extractionsObj[resId][i].internalId;
-            var extractionResults = extractionsObj[resId][i].metadata.output;
-            if (extractionResults.length > 0) {
-                generateExtractionTagList(subtemplate,resId, extractionResults, resId+'-'+extractionId);
+            // retrieve previously generated extraction graphs
+            if (resId in extractionsObj) {
+                for (let i=0; i<extractionsObj[resId].length; i++) {
+                    var extractionId = extractionsObj[resId][i].internalId;
+                    var extractionResults = extractionsObj[resId][i].metadata.output;
+                    if (extractionResults.length > 0) {
+                        generateExtractionTagList(subtemplate,resId, extractionResults, resId+'-'+extractionId);
+                    }
+                }
             }
         }
-    }
+    });
 }
 
 // generate tags from previously extracted URI-label pairs
-function generateExtractionTagList(subtemplate,recordId,results,id) {
+function generateExtractionTagList(subtemplate,extractorId,recordId,results,id) {
     // delete previously retrieved entities if any
     $("#graph-"+id).remove();
     // if new results exist, create a new list item to collect each retrieved URI,label pair in the form of a tag (containing an hidden input)
-    const table = $(subtemplate).find('#imported-graphs-'+recordId).prev('table');
+    const table = $(subtemplate).find('#imported-graphs-'+extractorId).prev('table');
     table.find('tbody').append($("<tr>\
         <td id='graph-"+id+"'></td>\
         <td>\
-        <button class='btn btn-dark delete' title='delete-extraction' onclick='deleteExtractor(\""+id+"\")'><i class='far fa-trash-alt'></i></button>\
-        <button class='btn btn-dark' title='modify-extraction' onclick='modifyExtractor(event,\""+recordId+"\", \""+id+"\")'><i class='far fa-edit'></i></button>\
+        <button class='btn btn-dark delete' title='delete-extraction' onclick='deleteExtractor(event,\""+id+"\")'><i class='far fa-trash-alt'></i></button>\
+        <button class='btn btn-dark' title='modify-extraction' onclick='modifyExtractor(event,\""+extractorId+"\", \""+id+"\")'><i class='far fa-edit'></i></button>\
         </td>\
     </tr>"));
-
 
     for (let idx = 0; idx < results.length; idx++) {
         for (const key in results[idx]) {
@@ -1300,7 +1303,7 @@ function generateExtractionTagList(subtemplate,recordId,results,id) {
                 var uri = results[idx][key].value;
             }
         }
-        table.find("#graph-" + id).append("<span class='tag' data-id='" + uri + "'>" + label + "</span><input type='hidden' name='keyword_"+id+"_"+label+"' value='"+encodeURIComponent(uri)+"'/>");
+        table.find("#graph-" + id).append("<span class='tag' data-id='" + uri + "'>" + label + "</span><input type='hidden' name='keyword_"+recordId+"_"+id+"_"+label+"' value='"+encodeURIComponent(uri)+"'/>");
     }
     table.removeClass('hidden');
 }
@@ -1308,32 +1311,38 @@ function generateExtractionTagList(subtemplate,recordId,results,id) {
 /* Generate, Delete, Modify extraction module */ 
 
 // generate the extraction form within the extraction input field
-function generateExtractor(ul,modifyId=null) {
+function generateExtractor(ul,recordId,modifyId=null) {
     // update the extraction count within the extractions Object
     var extractorId = ul.replace('imported-graphs-','');
     let extractionInternalId;
 
     if (modifyId === null) {
+
+        // set a new Object to store record-related extractions
+        if (!(recordId in extractionsObj)) {
+            extractionsObj[recordId] = {};
+        }
+
         // generate new internal Id (sequential numbering) for the extraction
-        if (extractorId in extractionsObj) {
+        if (extractorId in extractionsObj[recordId]) {
 
-        // get the number of extractions
-        var extractionArray = extractionsObj[extractorId];
-        var extractionLength = extractionArray.length;
-        var lastExtractionInternalId = extractionArray[extractionLength-1].internalId;
-        extractionInternalId = parseInt(lastExtractionInternalId) + 1;
+            // get the number of extractions
+            var extractionArray = extractionsObj[recordId][extractorId];
+            var extractionLength = extractionArray.length;
+            var lastExtractionInternalId = extractionArray[extractionLength-1].internalId;
+            extractionInternalId = parseInt(lastExtractionInternalId) + 1;
 
-        // initialiaze a new sub-Object to store information about the novel extraction
-        const newExtractionObj = { "internalId": extractionInternalId };
-        newExtractionObj["metadata"] = {}; 
+            // initialiaze a new sub-Object to store information about the novel extraction
+            const newExtractionObj = { "internalId": extractionInternalId };
+            newExtractionObj["metadata"] = {}; 
 
-        // append the sub-Object to the extractions Array
-        extractionsObj[extractorId].push(newExtractionObj);
+            // append the sub-Object to the extractions Array
+            extractionsObj[recordId][extractorId].push(newExtractionObj);
 
         } else {
             // initialize an Array of extractions Objects within the main extractionsObject
             extractionInternalId = 1;
-            extractionsObj[extractorId] = [{"internalId": extractionInternalId, "metadata": {}}];
+            extractionsObj[recordId][extractorId] = [{"internalId": extractionInternalId, "metadata": {}}];
         }
     } else {
         // reuse the existing internal id when modifying an extraction
@@ -1343,25 +1352,27 @@ function generateExtractor(ul,modifyId=null) {
     // create a select element containing the options to perform the extraction
     var extractor = $("<section class='block_field col-md-12'>\
         <section class='row'>\
-        <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>EXTRACTOR TYPE</label>\
-        <select onchange='addExtractionForm(this,\""+extractorId+"\",\""+extractionInternalId+"\")'class='custom-select' id='extractor' name='extractor'>\
-            <option value='None'>Select</option>\
-            <option value='api'>API</option>\
-            <option value='sparql'>SPARQL</option>\
-            <option value='file'>Static File</option>\
-        </select>\
+            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>EXTRACTOR TYPE</label>\
+            <select onchange='addExtractionForm(this,\""+recordId+"\",\""+extractorId+"\",\""+extractionInternalId+"\")'class='custom-select' id='extractor' name='extractor'>\
+                <option value='None'>Select</option>\
+                <option value='api'>API</option>\
+                <option value='sparql'>SPARQL</option>\
+                <option value='file'>Static File</option>\
+            </select>\
         </section>\
         <section class='row extractor-0'>\
-        <input id='sparql-back0' class='btn btn-dark extractor-0' style='margin-left:20px' value='Back' onClick='prevExtractor(\"block_field\", \"form_row\", true,\""+extractorId+'-'+extractionInternalId+"\")'>\
+            <input id='sparql-back0' class='btn btn-dark extractor-0' style='margin-left:20px' value='Back' onClick='prevExtractor(\"block_field\", \"form_row\", true,\""+extractorId+'-'+extractionInternalId+"\")'>\
         </section>\
     </section>");
-    $('.import-form .col-md-12').append(extractor);
+    $('#'+ul).after(extractor);
     console.log(extractor)
     $('#'+ul).hide();
 };
 
 // remove all the information related to the deleted extraction graph
-function deleteExtractor(id) {
+function deleteExtractor(event,id) {
+    event.preventDefault();
+
     // remove key entities (hidden input fields) from DOM
     var hiddenInput = $("#recordForm, #modifyForm").find('[type="hidden"][name*="'+id+'-"]');
     hiddenInput.remove();
@@ -1372,7 +1383,7 @@ function deleteExtractor(id) {
     var recordId = splitId[0]+"-"+splitId[1]
     var extractionNum = splitId[2]
     extractionsObj[recordId] = extractionsObj[recordId].filter(obj => obj.internalId != parseInt(extractionNum));
-    }
+}
 
 // recover extraction information to modify it
 function modifyExtractor(event,record,id) {
@@ -1441,59 +1452,80 @@ function modifyExtractor(event,record,id) {
 /* Extraction Form */
 
 // create a new form based on the selected option (API, SPARQL, static file)
-function addExtractionForm(element,extractorId,extractionInternalId) {
-    if ($('.block_field.col-md-12').length > 0) {
-        $('.block_field.col-md-12 section').not(":first").remove();
-    }
+function addExtractionForm(element,recordId,extractorId,extractionInternalId) {
+    $(element).parent().parent().parent().find('.block_field.col-md-12 section').not(":first").remove();
     var extractionId = extractorId+'-'+extractionInternalId.toString(); // it will be used to create hidden inputs later
     var extractionType = $(element).find(":selected").val(); // selected option (API, SPARQL, or static file)
 
-    $('.block_field .extractor-1, .block_field hr').remove() // remove previously created forms (in case the user changes the selected option)
+    $(element).parent().parent().find(".extractor-1, hr").remove() // remove previously created forms (in case the user changes the selected option)
     if (extractionType == 'api') {
         var form = $("<hr><section class='row extractor-1'>\
-        <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>API access point<br><span class='comment'>url of the API</span></label>\
-        <input type='text' id='ApiUrl' placeholder='e.g.: https://exampleApi.org/search'></input>\
+            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>API access point<br><span class='comment'>url of the API</span></label>\
+            <input type='text' id='ApiUrl' placeholder='e.g.: https://exampleApi.org/search'></input>\
         </section>\
         <section class='row extractor-1'>\
-        <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY PARAMETERS<br><span class='comment'>write one value per row</span></label>\
-        <div class='extraction-form-div'>\
-            <span class='extraction-form-label'>KEY</span><span class='extraction-form-label'>VALUE</span>\
-        </div>\
-        <p class='extractor-comment'>No parameters available: add a new one</p><span class='add-parameter'>Add new <i class='fas fa-plus'></i></span>\
+            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY PARAMETERS<br><span class='comment'>write one value per row</span></label>\
+            <div class='extraction-form-div'>\
+                <span class='extraction-form-label'>KEY</span><span class='extraction-form-label'>VALUE</span>\
+            </div>\
+            <p class='extractor-comment'>No parameters available: add a new one</p><span class='add-parameter'>Add new <i class='fas fa-plus'></i></span>\
         </section>\
         <section class='row extractor-1'>\
-        <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>RESULT DICTIONARY<br><span class='comment'>write one value per row</span></label>\
-        <div class='extraction-form-div'>\
-            <span class='extraction-form-label'>KEY</span><span class='extraction-form-label'>VALUE</span>\
-        </div>\
-        <div class='extraction-form-div api-results-parameter'>\
-            <input type='text' class='extraction-form-input' value='Array'><input type='text' class='extraction-form-input'>\
-        </div>\
-        <div class='extraction-form-div api-results-parameter'>\
-            <input type='text' class='extraction-form-input' value='URI'><input type='text' class='extraction-form-input'>\
-        </div>\
-        <div class='extraction-form-div api-results-parameter'>\
-            <input type='text' class='extraction-form-input' value='Label'><input type='text' class='extraction-form-input'>\
-        </div>\
+            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>RESULT DICTIONARY<br><span class='comment'>write one value per row</span></label>\
+            <div class='extraction-form-div'>\
+                <span class='extraction-form-label'>KEY</span><span class='extraction-form-label'>VALUE</span>\
+            </div>\
+            <div class='extraction-form-div api-results-parameter'>\
+                <input type='text' class='extraction-form-input' value='Array'><input type='text' class='extraction-form-input'>\
+            </div>\
+            <div class='extraction-form-div api-results-parameter'>\
+                <input type='text' class='extraction-form-input' value='URI'><input type='text' class='extraction-form-input'>\
+            </div>\
+            <div class='extraction-form-div api-results-parameter'>\
+                <input type='text' class='extraction-form-input' value='Label'><input type='text' class='extraction-form-input'>\
+            </div>\
         </section>\
         ")
     } else if (extractionType == 'sparql') {
         var form = $("<hr><section class='row extractor-1'>\
-        <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>SPARQL endpoint<br><span class='comment'>url of the endpoint</span></label>\
-        <input type='text' id='SparqlUrl' placeholder='e.g.: https://exampleSparql.org/sparql'></input>\
+            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>SPARQL endpoint<br><span class='comment'>url of the endpoint</span></label>\
+            <input type='text' id='SparqlUrl' placeholder='e.g.: https://exampleSparql.org/sparql'></input>\
         </section>\
-        <section class='row extractor-1'>\
-        <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY<br><span class='comment'>a sparql query to be performed</span></label>\
-        <div id='yasqe' class='col-md-12' data-id='"+extractionId+"'>\
+            <section class='row extractor-1'>\
+            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY<br><span class='comment'>a sparql query to be performed</span></label>\
+            <div id='yasqe' class='col-md-12' data-id='"+extractionId+"'>\
         </section>");
     } else if (extractionType == 'file') {
         var form = $("<hr><section class='row extractor-1'>\
-        <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>FILE URL<br><span class='comment'>a URL to an external resource (a .json or .csv file)</span></label>\
-        <input type='text' id='FileUrl' placeholder='http://externalResource.csv'></input>\
+            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>FILE URL<br><span class='comment'>a URL to an external resource (.json, .csv, and .xml formats allowed)</span></label>\
+            <input type='text' id='FileUrl' placeholder='http://externalResource.csv'></input>\
         </section>\
         <section class='row extractor-1'>\
-        <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY<br><span class='comment'>a sparql query to be performed</span></label>\
-        <div id='yasqe' class='col-md-12' data-id='"+extractionId+"'>\
+            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY METHOD<br><span class='comment'>how to access your data</span></label>\
+            <select onchange='fileExtractionType(this)' class='custom-select' name='extractor' id='ExtractionType'>\
+                <option value='None'>Select</option>\
+                <option value='manual'>MANUAL (parse the file and build a query)</option>\
+                <option value='sparql'>SPARQL</option>\
+            </select>\
+        </section>\
+        <section class='row extractor-1 manual-extraction' style='display: none;'>\
+            <input id='parse-file' class='btn btn-dark extractor-1' style='margin-left:20px;' value='Parse File' onClick='parseFile(this)'>\
+        </section>\
+        <section class='row extractor-1 sparql-extraction' style='display: none;'>\
+            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY<br><span class='comment'>a sparql query to be performed</span></label>\
+            <div id='yasqe' class='col-md-12' data-id='"+extractionId+"'>\
+        </section>\
+        <section class='row extractor-1 manual-query' style='display: none;'>\
+            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>KEYS<br><span class='comment'>the set of keys to be retrieved</span></label>\
+            <input type='text' id='file-keys' placeholder='firstName'></input>\
+            <div class='tags-extraction'></div>\
+        </section>\
+        <section class='row extractor-1 manual-query' style='display: none;'>\
+            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>FILTERS<br><span class='comment'>filter your keys</span></label>\
+            <div class='extraction-form-div'>\
+                <span class='extraction-form-label'>TYPE</span><span class='extraction-form-label'>VALUE</span>\
+            </div>\
+            <p class='extractor-comment'>No filter available: add a new one</p><span class='add-parameter'>Add new <i class='fas fa-plus'></i></span>\
         </section>");
     } else {
         var form = "";
@@ -1501,22 +1533,26 @@ function addExtractionForm(element,extractorId,extractionInternalId) {
 
     // navigation button
     var buttons = $("<section class='row extractor-1'>\
-        <input id='"+extractionType+"-back-1' class='btn btn-dark extractor-1' style='margin-left:20px' value='Back' onClick='prevExtractor(\"extractor-1\", \"form_row\", true,\""+extractionId+"\")'>\
-        <input id='"+extractionType+"-next-1' class='btn btn-dark extractor-1' style='margin-left:20px' value='Next' onClick='nextExtractor(this, \""+extractionId+"\", \""+extractionType+"\")'>\
+        <input id='"+extractionType+"-back-1' class='btn btn-dark extractor-1' style='margin-left:20px' value='Back' onClick='prevExtractor(\"extractor-1\", \"form_row\", true,\""+recordId+"\",\""+extractionId+"\")'>\
+        <input id='"+extractionType+"-next-1' class='btn btn-dark extractor-1' style='margin-left:20px' value='Next' onClick='nextExtractor(this, \""+recordId+"\", \""+extractionId+"\", \""+extractionType+"\")'>\
     </section>");
 
     // add event listener to form buttons
     form.find('.add-parameter').on('click', function() {
-        generateExtractionParameter(this);
+        if (extractionType === 'api') {         
+            generateExtractionParameter(this); 
+        } else if (extractionType === 'file')  {
+            generateExtractionFilter(this);
+        }
     });
 
     // add the new form to the webpage and show YASQE editor when needed
     $(element).closest('.row').after(buttons).after(form);
     if (extractionType == 'sparql' || extractionType == 'file') {
         var yasqe = YASQE(document.getElementById("yasqe"), {
-        sparql: {
-            showQueryButton: false,
-        }
+            sparql: {
+                showQueryButton: false,
+            }
         });
     }
 
@@ -1525,12 +1561,69 @@ function addExtractionForm(element,extractorId,extractionInternalId) {
     $('.extraction_documentation_'+extractionType).show();
 }
 
+/* Manual - Static File Extraction Form */
+// modify the form based on selected option
+function fileExtractionType(element) {
+    var extractionType = $(element).val();
+    $(element).parent().parent().find("section[class*='-extraction']").hide();
+    $(element).parent().parent().find("section."+extractionType+"-extraction").show();
+}
+
+// parse the static file 
+function parseFile(element) {
+    var fileUrl = $(element).parent().parent().find("#FileUrl").val();
+    if (fileUrl !== "" && (fileUrl.endsWith(".xml") || fileUrl.endsWith(".csv") || fileUrl.endsWith(".json"))) {
+        var encoded = encodeURIComponent(fileUrl);
+        showLoadingPopup("We are parsing your file:", fileUrl);
+        $.ajax({
+            type: 'GET',
+            url: '/sparqlanything?action=searchclasses&q=' + encoded,
+            success: function(resultsJsonObject) {
+                $(".manual-query").show();
+                parsedFile = resultsJsonObject;
+                hidePopup();
+                $(".manual-query").find('input#file-keys').on('click', function () {
+                    $(this).off('keyup').on('keyup', function() {
+                        $("#searchresult").show();
+                        var key = $(this).val();
+                        var identifier = $(this).attr("id");
+                        setSearchResult(identifier);
+                        parsedFile.forEach(function(element,index) {
+                            if (element.includes(key)) {
+                                $("#searchresult").append("<div class='viafitem'><a class='blue' data-id='" + index + "'>" + element + "</a></div>")
+                        
+                                // add tag if the user chooses an item
+                                $('a[data-id="' + index + '"]').each(function () {
+                                    $(this).bind('click', function (e) {
+                                        e.preventDefault();
+                                        $('#' + identifier).next('div').append("<span class='tag' data-input='" + identifier + "'>" + element + "</span><input type='hidden' class='hiddenInput' name='" + element + "' value=\"" + element + "," + encodeURIComponent(element) + "\"/>");
+                                        $("#searchresult").hide();
+                                        $('#' + identifier).val('');
+                                    });
+                                });
+                            }
+                        })
+                    });
+                })
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                hidePopup();
+                console.error('Error:', textStatus, errorThrown);
+            }
+        });
+    } else {
+        showErrorPopup("Invalid format:", "Make sure your URL ends with an allowed format (.csv, .json, .xml)")
+    }
+}
+
+
 // parse the extraction parameters and send requests
-function nextExtractor(element, id, type) {
+function nextExtractor(element, recordId, id, type) {
     // retrieve extractor Id and extraction count
     var splitId = id.split('-');
-    var extractionCount = parseInt(splitId[2]);
-    var extractorId = splitId[0]+'-'+splitId[1];
+    var extractionCount = parseInt(splitId[1]);
+    var extractorId = splitId[0];
+    console.log(recordId,id,extractorId);
 
     // retrieve YASQE query (type=='file'/'sparql')
     let query = "";
@@ -1569,7 +1662,14 @@ function nextExtractor(element, id, type) {
     } else if (type == "file") {
         objectItem["type"] = "file";
         objectItem["url"] = $('#FileUrl').val();
-        objectItem["query"] = query;
+        var extractionType = $('#ExtractionType').val();
+        objectItem["extractionType"] = extractionType;
+        if (extractionType === "sparql") {
+            objectItem["query"] = query;
+        } else if (extractionType === "manual") {
+            var manualQuery = buildQuery($('#FileUrl').val(), $('.tags-extraction').find('input'));
+            objectItem["query"] = manualQuery;
+        }
     }
 
     if (type == "api") {
@@ -1577,18 +1677,18 @@ function nextExtractor(element, id, type) {
         $.getJSON(objectItem["url"], objectItem["query"],
             function(data) {
             // show the query results in a table
-            var bindings = showExtractionResult(data,type,id,objectItem);
+            var bindings = showExtractionResult(data,type,id,recordId,objectItem);
             objectItem["output"] = bindings;
         }).error(function(jqXHR, textStatus, errorThrown) {
             alert(("error: check your parameters"))
         })
     } else if (type == "file" || type == 'sparql') {
         // FILE QUERY and SPARQL QUERY:
-        objecItem = callSparqlanything(objectItem,id,type);
+        objecItem = callSparqlanything(objectItem,id,recordId,type);
     }
 
     // add the extraction information, including the results, to the Extractions Object
-    var metadataObj = extractionsObj[extractorId].find(obj => obj.internalId == extractionCount);
+    var metadataObj = extractionsObj[recordId][extractorId].find(obj => obj.internalId == extractionCount);
     metadataObj["metadata"] = objectItem;
 
     // scroll top
@@ -1598,49 +1698,51 @@ function nextExtractor(element, id, type) {
 }
 
 // go back to the previous Extraction page to modify query parameters / hide the Extraction form
-function prevExtractor(toHide, toShow, remove=false, id=null) {
+function prevExtractor(toHide, toShow, remove=false, id=null, recordId=null) {
     $('.'+toHide).hide();
     $('.'+toShow).filter(function() {
         return $(this).find('.original-subtemplate').length === 0;
     }).show();
+
     if (remove) {
 
         // find the Extractions List and access the results dict inside the Extractions Object
-        const extractionListId = id.split('-').slice(0, 2).join('-');
-        const extractionNumber = parseInt(id.split('-')[2]);
-        const extractionItem = extractionsObj[extractionListId].find(obj => obj.internalId == extractionNumber)
+        const extractionListId = id.split('-')[0];
+        const extractionNumber = parseInt(id.split('-')[1]);
+        const extractionItem = extractionsObj[recordId][extractionListId].find(obj => obj.internalId == extractionNumber)
         if ('output' in extractionItem.metadata) {
-        var results = extractionItem.metadata.output;
+            var results = extractionItem.metadata.output;
 
-        // if results exist, create a new list item to collect each retrieved URI,label pair in the form of a tag (containing an hidden input)
-        if (results.length>0) {
-            generateExtractionTagList($('#imported-graphs-'+extractionListId).parent(),extractionListId,results,id);
-        }
+            // if results exist, create a new list item to collect each retrieved URI,label pair in the form of a tag (containing an hidden input)
+            if (results.length>0) {
+                generateExtractionTagList($('#imported-graphs-'+extractionListId).parent(),extractionListId,recordId,results,id);
+            }
         }
 
         console.log("c",extractionListId)
         // hide the Extraction documentation and the Extraction form, then show the list of Extractions
         $('.extraction_documentation').hide();
         $('#imported-graphs-'+extractionListId).next().remove();
-        $('#imported-graphs-'+extractionListId).parent().parent().next('.block_field').hide();
         $('#imported-graphs-'+extractionListId).show();
+        $('#imported-graphs-'+extractionListId).css({'margin-top': '3.5em'})
     }  
 }
 
 /* API */
 
 // generate a couple of input fields to add a query parameter
-function generateExtractionParameter(element, label=null) {
+function generateExtractionParameter(element) {
     // hide the comment "no paramaters available"
     if ($(element).prev('.extractor-comment').length>0) {
         $(element).prev('.extractor-comment').hide();
     }
+
     // add a new couple (key,value) of input fields 
     var newParameterDiv = $("<div class='extraction-form-div api-query-parameter'>\
-        <input type='text' class='extraction-form-input'><input type='text' class='extraction-form-input'>\
+        <input type='text' class='extraction-form-input' id='"+ new Date().valueOf() +"'>\
+        <input type='text' class='extraction-form-input'>\
         <i class='fas fa-times' onclick='removeExtractionParameter(this)'></i>\
     </div>");
-
     $(element).before(newParameterDiv);
 }
 
@@ -1687,9 +1789,11 @@ function getExtractionParameters(type,element) {
 /* SPARQL, File */
 
 // call back-end API to perform SPARQL.Anything queries
-function callSparqlanything(objecItem, id, type) {
-    var q = objecItem.query;
-    var endpoint = objecItem.url;
+function callSparqlanything(objectItem, id, recordId, type) {
+    var q = objectItem.query;
+    var endpoint = objectItem.url;
+    var service = $("#imported-graphs-"+id.split("-")[0]).data("reconciliation");
+    console.log(service, id.split("-")[0])
 
     // modify the query to make it ready for SPARQL.Anything
     var encoded;
@@ -1702,22 +1806,78 @@ function callSparqlanything(objecItem, id, type) {
     // send the query to the back-end API and parse the results
     $.ajax({
         type: 'GET',
-        url: '/sparqlanything?q=' + encoded,
+        url: '/sparqlanything?action=searchentities&q=' + encoded + '&service=' + service,
         success: function(resultsJsonObject) {
-        // show results inside a table
-        var bindings = showExtractionResult(resultsJsonObject,type,id);
-        objecItem['output'] = resultsJsonObject.results.bindings
-        return objecItem;
+            // show results inside a table
+            var bindings = showExtractionResult(resultsJsonObject,type,id,recordId);
+            objectItem['output'] = resultsJsonObject.results.bindings
+            return objectItem;
         },
         error: function() {
-        alert(("error: check your parameters"))
+            alert(("error: check your parameters"))
         }
     });
 }
 
+/* FILE */
+
+// add filters for manual queries
+function generateExtractionFilter(element) {
+    // hide the comment "no filter available"
+    if ($(element).prev('.extractor-comment').length>0) {
+        $(element).prev('.extractor-comment').hide();
+    }
+
+    // add a new couple (type,value) of input fields 
+    var newParameterDiv = $("<div class='extraction-form-div file-query-parameter'>\
+        <select class='custom-select extraction-form-input' id='extractor-filter' name='extractor-filter'>\
+            <option value='None'>Select</option>\
+            <option value='tag'>Direct child of Tag</option>\
+            <option value='attribute'>Direct child of Attribute</option>\
+            <option value='regex'>Regex</option>\
+            <option value='counter'>Min. count</option>\
+        </select>\
+        <input type='text' class='extraction-form-input'>\
+        <i class='fas fa-times' onclick='removeExtractionParameter(this)'></i>\
+    </div>");
+    $(element).before(newParameterDiv);
+}
+
+// build SPARQL query from manual paramaters
+function buildQuery(fileURL, keys) {
+    console.log(keys);
+    // retrieve the file format
+    var fileFormat = fileURL.split(".")[fileURL.split(".").length - 1];
+    let query = "";
+
+    // handle keys depending on format 
+    if (fileFormat === "xml") {
+        keys.each(function(index,element) {
+            var $element = $(element);
+            var keyClass = $element.attr("name");
+
+            query = `PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+            SELECT DISTINCT (GROUP_CONCAT(?namePart; separator=" ") AS ?label) WHERE { 
+            SERVICE <x-sparql-anything:${fileURL}> {
+                ?name a <${keyClass}> .
+                ?name (rdf:_1|rdf:_2|<http://www.w3.org/1999/02/22-rdf-syntax-ns#nodeID>)* ?descendantNode .
+                ?descendantNode rdf:_1 ?namePart .
+                
+                FILTER(isLiteral(?namePart) && datatype(?namePart) = xsd:string)
+                }
+            } GROUP BY ?name
+            LIMIT 10`;
+        });
+        
+    }
+
+    return query
+}
+
+
 /* Results handling */
 
-function showExtractionResult(jsonData,type,id,objectItem=null) {
+function showExtractionResult(jsonData,type,id,recordId,objectItem=null) {
     // base module
     let bindings = [];
     const resultSection = $("<section class='extractor-2'></section");
@@ -1732,32 +1892,32 @@ function showExtractionResult(jsonData,type,id,objectItem=null) {
         var mainPath = jsonResults.array.split(".");
         let resultsArray = jsonData;
         mainPath.forEach(key => {
-        resultsArray = resultsArray[key];
+            resultsArray = resultsArray[key];
         });
         
         resultsArray.forEach(function(res) {
-        // extract a label for each term
-        let labelPath = jsonResults.label.split(".");
-        let label = res;
-        labelPath.forEach(key => {
-            label = label[key];
-        });
-        // extract the URI value for each term
-        let uriPath = jsonResults.uri.split(".");
-        let uri = res;
-        uriPath.forEach(key => {
-            uri = uri[key];
-        });
-        
-        // create a new table row, append it to the table, and store each term information
-        var resultTableRow = $('<tr><td>' + label + '</td><td>' + uri + '</td></tr>');
-        resultTable.append(resultTableRow);
-        bindings.push({"uri": {'value':uri, 'type':'uri'}, 'label': {'value':label, 'type':'literal'}});
+            // extract a label for each term
+            let labelPath = jsonResults.label.split(".");
+            let label = res;
+            labelPath.forEach(key => {
+                label = label[key];
+            });
+            // extract the URI value for each term
+            let uriPath = jsonResults.uri.split(".");
+            let uri = res;
+            uriPath.forEach(key => {
+                uri = uri[key];
+            });
+            
+            // create a new table row, append it to the table, and store each term information
+            var resultTableRow = $('<tr><td><span>' + label + '</span><i class="far fa-edit"></i></td><td><a href="' + uri + '">' + uri + '</a><i class="far fa-edit"></i></td></tr>');
+            resultTable.append(resultTableRow);
+            bindings.push({"uri": {'value':uri, 'type':'uri'}, 'label': {'value':label, 'type':'literal'}});
         });
 
     } else if (type==='sparql' || type==='file') {
 
-        var labels = jsonData.head.vars
+        var labels = ["label", "uri"]
         var tr = $('<tr></tr>');
         for (var i = 0; i < labels.length; i++) {
             var th = $('<th>' + labels[i] + '</th>');
@@ -1776,7 +1936,7 @@ function showExtractionResult(jsonData,type,id,objectItem=null) {
                 if (result[label].value.startsWith("https://") || result[label].value.startsWith("http://")) {
                     var item = "<a href='"+result[label].value+"' target='_blank'>"+result[label].value+"</a>";
                 } else {
-                    var item = result[label].value;
+                    var item = "<span>" + result[label].value + "</span>";
                 }
 
                 var td = $('<td>' + item + '</td>')
@@ -1786,11 +1946,20 @@ function showExtractionResult(jsonData,type,id,objectItem=null) {
         }
     }
     resultSection.append(resultTable);
+    resultSection.find('i.fa-edit').each(function(index, element) {
+        $(element).on('click', function() {
+            var string = $(this).prev();
+            var val = string.text();
+            string.replaceWith($("<input type='text' data-index='"+index+"' data-modify='"+encodeURIComponent(val)+"'>").val(val));
+            $(this).attr('class', 'far fa-check-circle');
+        });
+    });
+    
 
     // manage navigation buttons 
     var buttonList = "<section class='row extractor-2'>\
         <input id='api-back2' class='btn btn-dark extractor-2' style='margin-left:20px' value='Back' onClick='prevExtractor(\"extractor-2\", \"extractor-1\")'>\
-        <input id='api-next2' class='btn btn-dark extractor-2' style='margin-left:20px' value='Import' onClick='prevExtractor(\"extractor-2\", \"form_row\", true,\""+ id+"\")'>\
+        <input id='api-next2' class='btn btn-dark extractor-2' style='margin-left:20px' value='Import' onClick='prevExtractor(\"extractor-2\", \"form_row\", true,\""+ id+"\",\""+recordId+"\")'>\
     </section>";
     $('.extractor-1').hide();
     $('.import-form.block_field .block_field').append(resultSection);
@@ -1799,7 +1968,7 @@ function showExtractionResult(jsonData,type,id,objectItem=null) {
     // manage results pagination
     if (bindings.length > 25) {extractorPagination(bindings)};
         return bindings
-    }
+}
 
 function extractorPagination(results) {
     var length = results.length;

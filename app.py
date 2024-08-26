@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
-import json
+import json, csv
 import datetime
 import time
 import sys
@@ -18,6 +18,7 @@ from spacy import displacy
 from SPARQLWrapper import SPARQLWrapper, JSON
 from rdflib import Graph
 from rdflib.namespace import OWL, DC , DCTERMS, RDF , RDFS
+from io import StringIO
 #import subprocess
 
 import forms, mapping, conf, queries , vocabs  , github_sync
@@ -615,6 +616,7 @@ class Record(object):
 					f = forms.get_form(recordData.res_name,processed_templates=[])
 					query_templates = u.get_query_templates(recordData.res_name)
 					extractor = u.has_extractor(recordData.res_name)
+					print("Extractors:", extractor)
 					return render.record(record_form=f, pageID=name, user=user, alert=block_user,
 									limit=limit, is_git_auth=is_git_auth,invalid=False,
 									project=conf.myProject,template=recordData.res_name,
@@ -1122,7 +1124,7 @@ class Term(object):
 
 		count = len(appears_in)
 		map_coordinates = (queries.geonames_geocoding(uri)) if uri.startswith("https://sws.geonames.org/") else None
-
+		
 		return render.term(user=session['username'], data=data, count=count,
 						is_git_auth=is_git_auth,project=conf.myProject,base=conf.base,
 						uri=uri,name=name,results=results_by_class,map=map_coordinates)
@@ -1327,45 +1329,36 @@ class Sparqlanything(object):
 		except Exception as e:
 			query_str_decoded = query_string.q.strip()
 		
-		sparql = SPARQLWrapper(conf.sparqlAnythingEndpoint)
-		query_str_decoded = """PREFIX xyz: <http://sparql.xyz/facade-x/data/>
-		PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-		PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-		PREFIX sa: <http://w3id.org/sparql-anything#>
-		PREFIX ex: <http://example.org/>
-		"""+query_str_decoded.replace("&lt;", "<").replace("&gt;", ">")
-
-		# Retrieve all results so that user can verify them
-		sparql.setQuery(query_str_decoded)
-		sparql.setReturnFormat(JSON)
-		results = sparql.query().convert()
-
-		for result in results["results"]["bindings"]:
-			uri = result["uri"]["value"]
-			if not (uri.startswith("http://") or uri.startswith("https://")):
-				print(uri)
-				term = uri
-				base_url = "https://wikidata.org/w/api.php"
-				params = {
-					"action": "wbsearchentities",
-					"search": term,
-					"format": "json",
-					"language": "it"
-				}
-				
-				try:
-					response = requests.get(base_url, params=params)
-					response.raise_for_status()  # Check if the request was successful
-					data = response.json()  # Parse the JSON response
-					new_uri = data["search"][0]["concepturi"] if len(data["search"]) > 0 else conf.base+str(time.time()).replace('.','-')
-					result["uri"]["value"] = new_uri
-
-				except requests.exceptions.HTTPError as http_err:
-					print(f"HTTP error occurred: {http_err}")
-				except Exception as err:
-					print(f"Other error occurred: {err}")
-				
-		return json.dumps(results)
+		action = query_string.action
+		
+		if action == "searchclasses":
+			if query_str_decoded.endswith(".xml"):
+				classes_query = "SELECT DISTINCT ?class WHERE { SERVICE <x-sparql-anything:"+query_str_decoded+"> { ?subj a ?class } }"
+				temp_results = queries.SPARQLAnything(classes_query)
+				results = [binding['class']['value'] for binding in temp_results['results']['bindings'] if "class" in binding]
+			elif query_str_decoded.endswith(".json"):
+				classes_query = "SELECT DISTINCT ?pred WHERE { SERVICE <x-sparql-anything:"+query_str_decoded+"> { ?subj ?pred ?obj . FILTER(STRSTARTS(STR(?pred), STR(xyz:))) } }"
+				temp_results = queries.SPARQLAnything(classes_query)
+				results = [binding['class']['value'] for binding in temp_results['results']['bindings'] if "class" in binding]
+			elif query_str_decoded.endswith(".csv"):
+				response = requests.get(query_str_decoded)
+				if response.status_code == 200:
+					csv_content = StringIO(response.text)
+					reader = csv.reader(csv_content)
+					results = next(reader)
+			return json.dumps(results)
+		
+		elif action == "searchentities":
+			service = query_string.service
+			results = queries.SPARQLAnything(query_str_decoded)
+			for result in results["results"]["bindings"]:
+				if "uri" not in result:
+					result["uri"] = {"value": result["label"]["value"], "type": "uri"}
+				uri = result["uri"]["value"] 
+				if not (uri.startswith("http://") or uri.startswith("https://")):
+					result["uri"]["value"] = queries.entity_reconciliation(uri,service)
+			print(results)
+			return json.dumps(results)
 	
 class Wikidata(object):
 	def GET(self):

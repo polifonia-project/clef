@@ -61,6 +61,17 @@ $var project = project
 					<script>invertedBarchart("$info[0]","$info[1]","$info[2]"); </script>
 				$else:
 					<script>barchart("$info[0]","$info[1]","$info[2]"); </script>
+			$elif chart["chart_type"] == "line":
+				$ info = chart["info"]
+				<section class="row stats-block">
+					<section class="chart-heading">
+						<h2>$chart["title"]</h2>
+						<p>$chart["description"]</p>
+					</section>
+					<div id="$info[0]" class="col-md-6 col-sm-12" style="width: 100%; height: 500px;"></div>
+				</section>
+				<script id="$info[0]_data" type="application/json">$:chart["stats"]</script>
+				<script>linechart("$info[0]","$info[1]","$info[2]"); </script>
 			$elif chart["chart_type"] == "pie":
 				$ info = chart["info"]
 				<section class="row stats-block">
@@ -68,7 +79,7 @@ $var project = project
 						<h2>$chart["title"]</h2>
 						<p>$chart["description"]</p>
 					</section>
-					<div id="$info[0]" class="col-md-12 col-sm-12" style="height:70vh"></div>
+					<div id="$info[0]" class="col-md-6 col-sm-12" style="height:70vh"></div>
 				</section>
 				<script id="$info[0]_data" type="application/json">$:chart["stats"]</script>
 				<script>piechart("$info[0]","$info[1]","$info[2]","$chart['legend']",donut=false); </script>
@@ -79,7 +90,7 @@ $var project = project
 							<h2>$chart["title"]</h2>
 							<p>$chart["description"]</p>
 						</section>
-						<div id="$info[0]" class="col-md-12 col-sm-12" style="height:70vh"></div>
+						<div id="$info[0]" class="col-md-6 col-sm-12" style="height:70vh"></div>
 					</section>
 					<script id="$info[0]_data" type="application/json">$:chart["stats"]</script>
 					<script>piechart("$info[0]","$info[1]","$info[2]","$chart['legend']",donut=true); </script>

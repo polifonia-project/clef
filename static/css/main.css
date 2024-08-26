@@ -868,6 +868,10 @@ span[class^='tag Q']:hover {
   left: 0.4em;
 }
 
+.tags-extraction {
+  margin-left: 20px;
+}
+
 .hide-container {
   position: absolute;
   right: 18.5%;
@@ -1110,6 +1114,22 @@ table.url-table {
   margin-top: 0.5em;
 }
 
+.extractor-2 table th, .extractor-2 table td {
+  padding: 10px 8px;
+}
+.extractor-2 span, .extractor-2 a {
+  display: inline-block;
+  max-width: 90%;
+}
+.extractor-2 i {
+  float: right;
+}
+.block_field:not(.form_row) .extractor-2 table input[type='text'] {
+  margin: 0 !important;
+  padding: 0 0 0.5em 0 !important;
+  width: 90% !important;
+}
+
 table.extraction-table {
   width: 100%;
   margin-top: 2em;
@@ -1121,9 +1141,10 @@ table.extraction-table + span + .block_field {
 
 table.url-table th, table.url-table td, table.extraction-table th, table.extraction-table td {
   border: 1px solid black;
-  padding: 8px;
   text-align: left;
+  padding: 10px 8px;
 }
+
 table.url-table th:nth-child(1), table.url-table td:nth-child(1),
 table.extraction-table th:nth-child(1), table.extraction-table td:nth-child(1) {
   width: 75%;
@@ -1141,7 +1162,6 @@ table.url-table span {
 table.url-table i, table.extraction-table i {
   color: white !important;
 }
-
 
 
 /* about */
@@ -2552,11 +2572,6 @@ button#showTemplates {
   margin-left: 10px;
 }
 
-.import-form + .block_field .btn {
-  max-width: 35%;
-  float: right;
-}
-
 /* new Knowledge Extraction code */
 
 .extraction-form-div {
@@ -2579,6 +2594,7 @@ button#showTemplates {
   font-size: 0.9em;
   cursor: pointer;
 }
+
 .extraction-form-label:nth-child(2) {
   margin-left: 3% !important;
 }
@@ -2588,7 +2604,13 @@ button#showTemplates {
   display: inline-block;
 }
 
-.block_field input[type="text"].extraction-form-input:first-of-type {
+.import-form input.extraction-form-input,
+.import-form select.extraction-form-input {
+  margin-top: 0.1em !important;
+}
+
+.block_field input[type="text"].extraction-form-input:first-child,
+.block_field select.extraction-form-input:first-child {
   margin-left: 0px !important;
 }
 
@@ -2739,7 +2761,7 @@ h4.subrecord-title.closed-title {
   border-bottom: none;
 }
 
-.form_row .fa-edit, .import-form .fa-edit, .form_row .fa-trash-alt {
+.form_row .fa-edit, .import-form .fa-edit, .form_row .fa-trash-alt, .fa-check-circle {
   color: rgba(100,23,180,1); 
   cursor: pointer;
 }

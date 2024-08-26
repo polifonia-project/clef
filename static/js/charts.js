@@ -393,3 +393,62 @@ function map(elid) {
 
     }); // end am5.ready()
 }
+
+
+function linechart(elid, data_x, data_y) {
+    var data = JSON.parse(document.getElementById(elid + '_data').textContent);
+    console.log("Data loaded:", data); // Debug per verificare i dati caricati
+
+    am5.ready(function() {
+
+        var root = am5.Root.new(elid);
+        root.setThemes([
+            am5themes_Animated.new(root)
+        ]);
+
+        var chart = root.container.children.push(am5xy.XYChart.new(root, {
+            panX: true,
+            panY: true,
+            wheelX: "panX",
+            wheelY: "zoomX",
+            pinchZoomX: true
+        }));
+
+        var cursor = chart.set("cursor", am5xy.XYCursor.new(root, {
+            behavior: "none"
+        }));
+        cursor.lineY.set("visible", false);
+
+        // Utilizza CategoryAxis per l'asse X (per gli anni come categorie)
+        var xAxis = chart.xAxes.push(am5xy.CategoryAxis.new(root, {
+            categoryField: data_x,
+            renderer: am5xy.AxisRendererX.new(root, {
+                minGridDistance: 30
+            })
+        }));
+
+        var yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, {
+            renderer: am5xy.AxisRendererY.new(root, {})
+        }));
+
+        var series = chart.series.push(am5xy.LineSeries.new(root, {
+            name: "Creations",
+            xAxis: xAxis,
+            yAxis: yAxis,
+            valueYField: data_y,
+            categoryXField: data_x,
+            tooltip: am5.Tooltip.new(root, {
+                labelText: "{valueY}"
+            })
+        }));
+
+        // Imposta i dati per la serie
+        series.data.setAll(data);
+
+        // Effetti di animazione
+        series.appear(1000);
+        chart.appear(1000, 100);
+    }); 
+}
+
+

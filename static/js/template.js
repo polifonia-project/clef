@@ -314,10 +314,6 @@ function add_field(field, res_type, backend_file=null) {
     else if (field =='WebsitePreview') { contents += field_placeholder + field_mandatory + field_hide; }
     else if (field =='Subtemplate') { contents = field_type + field_name + field_prepend + field_property + field_subtemplate_import + field_subtemplate_name + field_subtemplate_class + field_check_subtemplate + field_cardinality + field_data_inheritance + field_mandatory + field_hide + field_browse + open_addons; }
     else if (field =='KnowledgeExtractor') {
-        if ($("select option:selected[value='KnowledgeExtractor']").length > 0) {
-        alert("Max. 1 Knowledge Extraction field allowed");
-        return;
-        }
         contents = field_type + field_name + field_prepend + field_property + open_addons;
     }
     else {contents += field_values + field_mandatory + field_hide + field_browse; };

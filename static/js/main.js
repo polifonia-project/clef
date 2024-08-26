@@ -122,7 +122,7 @@ $(document).ready(function() {
     setTimeout(function() { document.getElementById('templateForm').submit();}, 500);
   });
 
-  // table of contents 
+  // table of contents: input fields
   $('section.label.col-12').each(function() {
     var section = $(this);
     if (section.next('.input_or_select').find('[data-supertemplate="None"]').length > 0) {
@@ -135,7 +135,19 @@ $(document).ready(function() {
       })
       $('.fields-list').append(listItem);
     }
-  })
+  });
+  // table of contents: Knowledge Extraction
+  $('.import-form > section.label.col-12').each(function() {
+    var section = $(this);
+    var itemTitle = $(this).text();
+    var listItem = $("<li>"+itemTitle+"</li>");
+    listItem.on('click', function() {
+      $('html, body').animate({
+        scrollTop: section.parent().offset().top - 100
+      }, 800);
+    })
+    $('.fields-list').append(listItem);
+  });
 
   // disable forms
   $(".disabled").attr("disabled","disabled");
@@ -1445,3 +1457,28 @@ function getRecordsByPropValue(el, resElem, elemClass='', typeProp=false) {
         }
   });
 };
+
+
+// Alerts
+
+function showLoadingPopup(title, text) {
+  Swal.fire({ 
+    title: title,
+    text: text,
+    didOpen: () => {
+      Swal.showLoading();
+    }
+  });
+}
+
+function showErrorPopup(title, text) {
+  Swal.fire({ 
+    title: title,
+    text: text,
+    icon: "error"
+  });
+}
+
+function hidePopup() {
+  Swal.close();
+}

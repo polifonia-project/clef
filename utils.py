@@ -527,7 +527,7 @@ def update_skos_vocabs(d, skos):
 
 # KNOWLEDGE EXTRACTION
 def has_extractor(res_template, record_name=None):
-	"""Return a set of Knowledge Extraction input fields (if record_name == None) 
+	"""Return a list of Knowledge Extraction input fields (if record_name == None) 
 	or a list of named graphs that may contain extractions (if record_name != None)
 
 	Parameters
@@ -551,7 +551,7 @@ def has_extractor(res_template, record_name=None):
 
 			#check whether the Graph may contain any Extraction
 			if 'knowledgeExtractor' in field and field['knowledgeExtractor'] == 'True':
-				result.append((graph_uri, field['property'], field['label']))
+				result.append((graph_uri, field['property'], field['label'], field['id']))
 
 			#check whether the Graph may contain any sub-Record
 			if 'import_subtemplate' in field and field['import_subtemplate'] != []:
@@ -564,7 +564,7 @@ def has_extractor(res_template, record_name=None):
 	else:
 
 		# checks whether a template allows some knowledge extraction
-		result = set()
+		result = []
 		with open(res_template,'r') as tpl_file:
 			data = json.load(tpl_file)
 
@@ -573,14 +573,16 @@ def has_extractor(res_template, record_name=None):
 				if 'knowledgeExtractor' in field and field['knowledgeExtractor'] == 'True':
 					label = field['label'] if 'label' in field else ""
 					pre = field['prepend'] if 'prepend' in field else ""
+					field_id = field['id'] if 'id' in field else ""
+					service = field['service'] if 'service' in field else ""
 
 					# store the extractor details as a tuple
-					result.add((res_template, label, pre))
+					result.append((res_template, label, pre, field_id, service))
 
 				elif 'import_subtemplate' in field and field['import_subtemplate'] != []:
 					# iterate over sub-templates
 					for imported_template in field['import_subtemplate']:
-						result.update(has_extractor(imported_template, record_name=None))
+						result.extend(has_extractor(imported_template, record_name=None))
 
 		return result
 

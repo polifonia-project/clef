@@ -219,7 +219,8 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 			# process extraction parameters
 			extractions_dict = json.loads(urllib.parse.unquote(recordData["extractions-dict"]))
 			extractions_array_unfiltered = extractions_dict[recordID] if recordID in extractions_dict else []
-			extractions_array = [extraction for extraction in extractions_array_unfiltered if 'metadata' in extraction and 'type' in extraction['metadata']]
+			extractions_array_by_property = extractions_array_unfiltered[field['id']] if field['id'] in extractions_array_unfiltered else {}
+			extractions_array = [extraction for extraction in extractions_array_by_property if 'metadata' in extraction and 'type' in extraction['metadata']]
 
 			for extraction in extractions_array:
 				extraction_num = str(extraction['internalId'])
@@ -249,10 +250,11 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 
 				
 				# process extracted keywords
-				extracted_keywords = [item for item in recordData if item.startswith("keyword_"+recordID+"-"+extraction_num)]
+				extracted_keywords = [item for item in recordData if item.startswith("keyword_"+recordID+"_"+field['id']+"-"+extraction_num)]
+				print(field["id"], extracted_keywords)
 				if len(extracted_keywords) > 0:
 					# link the extraction graph to main Record graph
-					extraction_graph_name = graph_name + "/extraction-" + extraction_num
+					extraction_graph_name = graph_name + "/extraction-" +field["id"]+"-"+ extraction_num
 					wd.add(( URIRef(base+graph_name+'/'), URIRef(field['property']), URIRef(base+extraction_graph_name+'/') ))
 
 					# store the extraction metadata
@@ -267,12 +269,12 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 					
 					# store the extraction output
 					for keyword in extracted_keywords:
-						label = keyword.replace("keyword_"+recordID+"-"+extraction_num+"_","")
+						label = keyword.replace("keyword_"+recordID+"_"+field['id']+"-"+extraction_num+"_","")
 						wd_extraction.add(( URIRef(urllib.parse.unquote(recordData[keyword])), RDFS.label,  Literal(label)))
 					
 					# save the extraction graph
-					wd_extraction.serialize(destination='records/'+recordID+"-extraction-"+extraction_num+'.ttl', format='ttl', encoding='utf-8')
-					server.update('load <file:///'+dir_path+'/records/'+recordID+"-extraction-"+extraction_num+'.ttl> into graph <'+base+extraction_graph_name+'/>')
+					wd_extraction.serialize(destination='records/'+recordID+"-extraction-"+field["id"]+"-"+extraction_num+'.ttl', format='ttl', encoding='utf-8')
+					server.update('load <file:///'+dir_path+'/records/'+recordID+"-extraction-"+field["id"]+"-"+extraction_num+'.ttl> into graph <'+base+extraction_graph_name+'/>')
 		# SUBTEMPLATE
 		elif field['type']=="Subtemplate" and field['id'] in recordData:
 			if type(recordData[field['id']]) != type([]) and field['id']+"-subrecords" in recordData:

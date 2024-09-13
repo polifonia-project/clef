@@ -1337,7 +1337,7 @@ class Sparqlanything(object):
 				temp_results = queries.SPARQLAnything(classes_query)
 				results = [binding['class']['value'] for binding in temp_results['results']['bindings'] if "class" in binding]
 			elif query_str_decoded.endswith(".json"):
-				classes_query = "SELECT DISTINCT ?pred WHERE { SERVICE <x-sparql-anything:"+query_str_decoded+"> { ?subj ?pred ?obj . FILTER(STRSTARTS(STR(?pred), STR(xyz:))) } }"
+				classes_query = "SELECT DISTINCT (STRAFTER(STR(?propertyName), STR(xyz:)) AS ?class) WHERE { SERVICE <x-sparql-anything:"+query_str_decoded+"> { ?subj ?propertyName ?obj . FILTER(STRSTARTS(STR(?propertyName), STR(xyz:))) } }"
 				temp_results = queries.SPARQLAnything(classes_query)
 				results = [binding['class']['value'] for binding in temp_results['results']['bindings'] if "class" in binding]
 			elif query_str_decoded.endswith(".csv"):
@@ -1354,7 +1354,7 @@ class Sparqlanything(object):
 			for result in results["results"]["bindings"]:
 				if "uri" not in result:
 					result["uri"] = {"value": result["label"]["value"], "type": "uri"}
-				uri = result["uri"]["value"] 
+				uri = result["uri"]["value"]
 				if not (uri.startswith("http://") or uri.startswith("https://")):
 					result["uri"]["value"] = queries.entity_reconciliation(uri,service)
 			print(results)

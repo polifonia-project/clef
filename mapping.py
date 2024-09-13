@@ -26,6 +26,7 @@ ULAN = Namespace("http://vocab.getty.edu/ulan/")
 AAT = Namespace("http://vocab.getty.edu/aat/")
 PROV = Namespace("http://www.w3.org/ns/prov#")
 GEO = Namespace("https://sws.geonames.org/")
+
 # CHANGE remove
 SCHEMA = Namespace("https://schema.org/")
 base = conf.base
@@ -100,7 +101,15 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 	with open(TEMPLATE_LIST) as tpl_file:
 		tpl_list = json.load(tpl_file)
 
-	resource_class = [t["type"] for t in tpl_list if t["template"] == tpl_form][0]
+	resource_class = next(t["type"] for t in tpl_list if t["template"] == tpl_form)
+	resource_subclass_field = next(f["id"] for f in fields if f["subclass"] == "True")
+	resource_subclass = urllib.parse.quote(getRightURIbase(recordData[resource_subclass_field]),safe='')
+	fields = [input_field for input_field in fields if input_field['hidden'] == 'False' and \
+			input_field["restricted"] in ["None",resource_subclass]]
+	
+	print(resource_subclass)
+	print("-------------")
+
 	# CREATE/MODIFY A NAMED GRAPH for each new record
 
 	recordID = recordData.recordID
@@ -153,15 +162,14 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 	if len(is_any_disambiguate) == 0:
 		wd.add(( URIRef(base+graph_name+'/'), RDFS.label, Literal("no title") ))
 
-	fields = [input_field for input_field in fields if input_field['hidden'] == 'False']
 	for field in fields:
 		if field['type'] not in ['KnowledgeExtractor', 'Subtemplate']:
 			# URI, Textarea (only text at this stage), Literals
 			value = getValuesFromFields(field['id'], recordData, fields=fields) if 'value' in field and field['value'] in ['URI','Place'] \
 					else getValuesFromFields(field['id'], recordData, field_type=field['value']) if 'value' in field and field['value'] == 'URL' \
 					else getLiteralValuesFromFields(field['id'], recordData) if 'value' in field and field['value'] == 'Literal' else recordData[field['id']]
+			
 			# TODO disambiguate as URI, value
-			print("VALUE:", value)
 			if field["disambiguate"] == 'True': # use the key 'disambiguate' as title of the graph
 				main_lang = value['mainLang']
 				main_value = [label for label in value['results'] if label[1] == main_lang]
@@ -170,7 +178,6 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 				wd.add(( URIRef(base+graph_name+'/'), URIRef(field['property']), Literal(main_label, lang=main_lang) ))
 				wd.add(( URIRef(base+graph_name), RDFS.label, Literal(main_label, lang=main_lang) ))
 				wd.add(( URIRef(base+graph_name+'/'), RDFS.label, Literal(main_label, lang=main_lang) ))
-
 			# the main entity has the same URI of the graph but the final /
 
 			if isinstance(value,str) and len(value) >= 1: # data properties
@@ -189,8 +196,7 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(value)))
 				else:
 					wd.add(( URIRef(base+graph_name), URIRef(field['property']), Literal(value) ))
-			# multiple-values fields
-			elif isinstance(value,dict):
+			elif isinstance(value,dict): # multiple-values fields
 				if value['type'] == 'URL': #url
 					for URL in value['results']:
 						if URL[1] != "":
@@ -202,11 +208,14 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 						entityURI = getRightURIbase(entity[0]) # Wikidata or new entity 
 						wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(entityURI) ))
 						wd.add(( URIRef( entityURI ), rdf_property, Literal(entity[1].lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
+						if "subclass" in field and field["subclass"] != "False": # Subclass
+							wd.add(( URIRef(base+graph_name), DCTERMS.type, URIRef(entityURI) ))
 				elif value['type'] == 'Literal': #multi-language Literals
 					for literal in value['results']:
 						val, lang = literal
 						val = val.replace('\n','').replace('\r','')
 						wd.add(( URIRef(base+graph_name), URIRef(field['property']), Literal(val, lang=lang)))
+			
 			# now get also the entities associated to textareas (record creation)
 			if field['type'] == 'Textarea':
 				nlp_keywords = getValuesFromFields(field['id'], recordData, field_type='Textarea')
@@ -214,6 +223,7 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 					entityURI = getRightURIbase(entity[0])
 					wd.add(( URIRef(base+graph_name), SCHEMA.keywords, URIRef(entityURI) ))
 					wd.add(( URIRef( entityURI ), RDFS.label, Literal(entity[1].lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
+		
 		# KNOWLEDGE EXTRACTION
 		elif field['type']=="KnowledgeExtractor" and "extractions-dict" in recordData:
 			# process extraction parameters

@@ -593,9 +593,9 @@ def entity_reconciliation(uri,service):
 		response.raise_for_status()  # Check if the request was successful
 		data = response.json()  # Parse the JSON response
 		print(data)
-		if service == "wd":
+		if service == "wd" and len(data["search"]) > 0:
 			new_uri = data["search"][0]["concepturi"]
-		elif service == "viaf" and data["result"] != None: 
+		elif service == "viaf" and data["result"] != None:
 			new_uri = mapping.VIAF + data["result"][0]["viafid"]
 		elif service == "geonames" and len(data["geonames"]) > 0:
 			new_uri = mapping.GEO + str(data["geonames"][0]["geonameId"])
@@ -621,7 +621,8 @@ def geonames_geocoding(geonames_uri):
 
 def SPARQLAnything(query_str):
 	sparql = SPARQLWrapper(conf.sparqlAnythingEndpoint)
-	query = """PREFIX xyz: <http://sparql.xyz/facade-x/data/>
+	query = """PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+	PREFIX xyz: <http://sparql.xyz/facade-x/data/>
 	PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 	PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 	PREFIX sa: <http://w3id.org/sparql-anything#>

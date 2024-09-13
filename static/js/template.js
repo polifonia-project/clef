@@ -130,9 +130,9 @@ function is_selected(st, field) {
 function add_field(field, res_type, backend_file=null) {
     // backend_file argument is currently used to load the information about the available SKOS vocabularies
 
-    console.log(field);
     var contents = "";
     var temp_id = Date.now().toString(); // to be replaced with label id before submitting
+    console.log(temp_id)
 
     var field_type = "<section class='row'>\
         <label class='col-md-3'>FIELD TYPE</label>\
@@ -239,17 +239,22 @@ function add_field(field, res_type, backend_file=null) {
     </section>";
 
     var field_browse = "<section class='row'>\
-        <label class='col-md-11 col-sm-6' for='browse__"+temp_id+"'>use this value as a filter in <em>Explore</em> page</label>\
+        <label class='col-md-11 col-sm-6' for='browse__"+temp_id+"'>Use this value as a filter in <em>Explore</em> page</label>\
         <input type='checkbox' id='browse__"+temp_id+"' name='browse__"+temp_id+"'>\
     </section>";
 
+    var field_subclass = "<section class='row'>\
+        <label class='col-md-11 col-sm-6' for='subclass__"+temp_id+"'>Use this value as <em>Subclass</em></label>\
+        <input type='checkbox' onClick='disable_other_subclass_dropdown(this)' id='subclass__"+temp_id+"' name='subclass__"+temp_id+"'>\
+    </section>"
+
     var field_mandatory = "<section class='row'>\
-        <label class='col-md-11 col-sm-6' for='mandatory__"+temp_id+"'>make this value mandatory</label>\
+        <label class='col-md-11 col-sm-6' for='mandatory__"+temp_id+"'>Make this value mandatory</label>\
         <input type='checkbox' id='mandatory__"+temp_id+"' name='mandatory__"+temp_id+"'>\
     </section>";
 
     var field_hide = "<section class='row'>\
-        <label class='col-md-11 col-sm-6' for='hidden__"+temp_id+"'>hide this field from the front-end view</label>\
+        <label class='col-md-11 col-sm-6' for='hidden__"+temp_id+"'>Hide this field from the front-end view</label>\
         <input type='checkbox' id='hidden__"+temp_id+"' name='hidden__"+temp_id+"' onclick='hide_field(this)'>\
     </section>";
 
@@ -307,6 +312,7 @@ function add_field(field, res_type, backend_file=null) {
 
     contents += field_type + field_name + field_prepend + field_property + open_addons;
     if (field =='Textbox') { contents += field_value + field_placeholder + field_mandatory + field_hide; }
+    else if (field =='Dropdown') { contents += field_values + field_mandatory + field_hide + field_subclass + field_browse }
     else if (field =='Textarea') { contents += field_placeholder + field_mandatory + field_hide; }
     else if (field =='Date') { contents += field_calendar + field_mandatory + field_hide + field_browse ; }
     else if (field =='Skos') { contents += field_available_vocabularies + accepted_values_vocabularies + field_placeholder + field_mandatory + field_hide + field_browse ; }
@@ -318,7 +324,7 @@ function add_field(field, res_type, backend_file=null) {
     }
     else {contents += field_values + field_mandatory + field_hide + field_browse; };
     contents += close_addons + up_down;
-    $(".sortable").append("<section class='block_field'>"+contents+"</section>");
+    $(".sortable").append("<section class='block_field' data-id='"+temp_id+"'>"+contents+"</section>");
     updateindex();
     moveUpAndDown() ;
 
@@ -404,12 +410,12 @@ function change_fields(sel) {
 // if value == literal add disambiguate checkbox
 function add_disambiguate(temp_id, el) {
     var field_disambiguate = "<section class='row'>\
-      <label class='left col-md-11 col-sm-6' for='disambiguate__"+temp_id+"'>use this value as primary label (e.g. book title)</label>\
+      <label class='left col-md-11 col-sm-6' for='disambiguate__"+temp_id+"'>Use this value as primary label (e.g. book title)</label>\
       <input class='disambiguate' onClick='disable_other_cb(this)' type='checkbox' id='disambiguate__"+temp_id+"' name='disambiguate__"+temp_id+"'>\
       </section>";
   
     var field_browse = "<section class='row'>\
-      <label class='col-md-11 col-sm-6' for='browse__"+temp_id+"'>use this value as a filter in <em>Explore</em> page</label>\
+      <label class='col-md-11 col-sm-6' for='browse__"+temp_id+"'>Use this value as a filter in <em>Explore</em> page</label>\
       <input type='checkbox' id='browse__"+temp_id+"' name='browse__"+temp_id+"'>\
     </section>";
   
@@ -478,6 +484,55 @@ function disable_other_cb(ckType) {
     console.log(mandatory_checkbox_id)
     $('#'+mandatory_checkbox_id).prop('checked', true); 
 };
+
+// if one subclass drodpown is checked, disable others
+function disable_other_subclass_dropdown(ckType) {
+
+    var isChecked = $(ckType).prop("checked");
+    $("input[type='checkbox'][id*=__subclass__]").prop("checked",false);
+    $(".subclass-dropdown.row").remove();
+
+    // activate field-subclass dropdowns
+    if ($(".block_field").length > 1 && isChecked === true) {
+        $(ckType).prop("checked",true);
+
+        // prepare the dropdown
+        var raw_subclasses = $(ckType).closest(".block_field").find("textarea[id*='__values__']").val();
+        var subclasses_array = raw_subclasses.split("\n").map(function(element) {
+            return element.trim();
+        });
+        var field_subclass_dropdown = $("<section class='subclass-dropdown row'>\
+            <label class='col-md-3'>SUBCLASS RESTRICTED <br><span class='comment'>make this field available once a subclass has been selected</span></label>\
+            <select class='custom-select col-md-8'>\
+                <option value='None'>Select a subclass</option>\
+            </select>\
+        </section>");
+        subclasses_array.forEach(element => {
+            var subclass_parts = element.split(",");
+            if (subclass_parts.length >= 2) { 
+                var value = encodeURIComponent(subclass_parts[0].trim());
+                var label = subclass_parts[1].trim();
+                field_subclass_dropdown.find("select").append(
+                    $("<option></option>").attr("value", value).text(label)
+                );
+            }
+        });
+        
+        // append it to each input field
+        var index = $(ckType).closest(".block_field").data("index");
+        $(".block_field").each(function() {
+            if ($(this).data("index") !== index) {
+                var lastInputField = $(this).find(".col-md-3:first-child").last();
+                var lastInputRow = lastInputField.closest(".row");
+                var reusableDropdown = field_subclass_dropdown.clone(true, true);
+                var newId = $(this).data("index")+"__restricted__"+$(this).data("id");
+                reusableDropdown.find("select").attr("name", newId);
+                reusableDropdown.find("select").attr("id", newId);
+                lastInputRow.after(reusableDropdown);
+            }
+        })
+    }
+}
 
 // make hidden fields recognisable
 function hide_field(el) { 

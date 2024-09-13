@@ -524,10 +524,6 @@ article p {
   padding: 4em !important;
 }
 
-.corners.row .homeheading:nth-child(2) {
-  padding-right: 0.5em !important;
-}
-
 .corners.row .homeheading:nth-child(3) {
   padding-top: 0.35em !important;
   padding-left: 0.5em !important;
@@ -678,6 +674,10 @@ th {
 }
 
 /* create record */
+#recordForm .row > section, #modifyForm .row > section {
+  padding: 2em 2em 0em 4em
+}
+
 .form_row {
   padding-bottom: 0.7em;
 }
@@ -759,7 +759,7 @@ th {
 
 .buttonsSection {
   margin: 0 !important;
-  padding-left: 5.2% !important;
+  padding-left: 5.2%;
   padding-top: 3% !important;
 }
 
@@ -1075,6 +1075,7 @@ i.fa-exclamation-triangle {
 }
 
 i.fa-info-circle {
+  padding-left: 0.15em;
   color: rgba(100, 23, 180, 1);
 }
 
@@ -1912,7 +1913,12 @@ select-selected.select-arrow-active:after {
 }
 
 .block_field:not(.form_row) input[type='checkbox'] {
-  margin-right: 1em;
+  right: 1em;
+  position: relative;
+}
+
+.block_field:not(.form_row) label input[type='checkbox'] {
+  right: 0;
 }
 
 .block_field input[type='url'] {
@@ -2084,6 +2090,10 @@ button#showTemplates {
 
 .homeheading a.link_btn {
   margin-right: 1% !important;
+}
+
+.homeheading #table-of-contents {
+  padding-right: 0.5em !important;
 }
 
 .homeheading .fields-list {
@@ -2761,7 +2771,7 @@ h4.subrecord-title.closed-title {
   border-bottom: none;
 }
 
-.form_row .fa-edit, .import-form .fa-edit, .form_row .fa-trash-alt, .fa-check-circle {
+.form_row .fa-edit, .import-form .fa-edit, .form_row .fa-trash-alt, td > .fa-check-circle {
   color: rgba(100,23,180,1); 
   cursor: pointer;
 }
@@ -2887,7 +2897,7 @@ h4.subrecord-title.closed-title {
 #lang-form:after {
   content: " ";
   position: absolute;
-  left: 12px;
+  right: 30px;
   top: -10px;
   border-top: none;
   border-right: 10px solid transparent;

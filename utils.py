@@ -185,7 +185,6 @@ def fields_to_json(data, json_file, skos_file):
 	with open(TEMPLATE_LIST, 'r') as file:
 		tpls = json.load(file)
 
-	print(tpls)
 	# Modifica il contenuto
 	for tpl in tpls:
 		if tpl['template'] == json_file:
@@ -204,7 +203,9 @@ def fields_to_json(data, json_file, skos_file):
 		d["disambiguate"] = "True" if 'disambiguate' in d else "False"
 		d["browse"] = "True" if 'browse' in d else "False"
 		d["mandatory"] = "True" if 'mandatory' in d else "False" # add mandatory fields
-		d['hidden'] = "True" if 'hidden' in d else "False" # add hidden fields
+		d["hidden"] = "True" if 'hidden' in d else "False" # add hidden fields
+		d["subclass"] = "True" if "subclass" in d else "False" # add subclass drodpown
+		d["resitrcted"] == "None" if d["subclass"] == "True" else d["resitrcted"] # do not restrict the subclass field
 		# default if missing
 		if d["type"] == "None":
 			d["type"] = "Textbox" if "values" not in d else "Dropdown"

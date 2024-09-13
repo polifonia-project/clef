@@ -83,6 +83,9 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 			autocomplete = field['cache_autocomplete'] if 'cache_autocomplete' in field and len(field['cache_autocomplete']) > 0 else ''
 			rdf_property = field['property'] if 'property' in field else ''
 			mandatory = field['mandatory'] if 'mandatory' in field and field['mandatory'] == 'True' else 'False'
+			# subclass restriction
+			subclass_restriction = field['restricted'] if 'restricted' in field and field['restricted'] != "None" else ''
+			is_subclass_field = field['subclass'] if 'subclass' in field else ''
 
 			# text box
 			placeholder = field['placeholder'] if 'placeholder' in field else None
@@ -91,6 +94,7 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 			dropdown_values = [(k,v) for k,v in field['values'].items()] if 'values' in field else None
 			# subtemplate
 			data_supertemplate = 'True' if supertemplate else 'None'
+
 
 			# Text box
 			if field['type'] == 'Textbox' and field['value'] == 'Literal':
@@ -122,6 +126,7 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 					data_property = rdf_property,
 					data_mandatory = mandatory,
 					data_class=res_class,
+					data_subclass=subclass_restriction,
 					data_supertemplate=data_supertemplate), )
 
 			# Entities, SKOS thesauri, links
@@ -136,6 +141,7 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 					data_property = rdf_property,
 					data_mandatory = mandatory,
 					data_class=res_class,
+					data_subclass=subclass_restriction,
 					data_supertemplate=data_supertemplate), )
 				
 			# Multimedia Link
@@ -150,6 +156,7 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 				data_property = rdf_property,
 				data_mandatory = mandatory,
 				data_class=res_class,
+				data_subclass=subclass_restriction,
 				data_supertemplate=data_supertemplate) , )
 
 			# Text box
@@ -165,6 +172,7 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 				data_property = rdf_property,
 				data_mandatory = mandatory,
 				data_class=res_class,
+				data_subclass=subclass_restriction,
 				data_supertemplate=data_supertemplate), )
 
 			if field['type'] == 'Date':
@@ -177,6 +185,7 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 					data_property = rdf_property,
 					data_mandatory = mandatory,
 					data_class=res_class,
+					data_subclass=subclass_restriction,
 					data_supertemplate=data_supertemplate), )
 				elif field['calendar'] == 'Day':
 					params = params + (form.Date(myid,
@@ -187,6 +196,7 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 					data_property = rdf_property,
 					data_mandatory = mandatory,
 					data_class=res_class,
+					data_subclass=subclass_restriction,
 					data_supertemplate=data_supertemplate), )
 				elif field['calendar'] == 'Year':
 					params = params + (form.Textbox(myid,
@@ -198,6 +208,7 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 					data_property = rdf_property,
 					data_mandatory = mandatory,
 					data_class=res_class,
+					data_subclass=subclass_restriction,
 					data_supertemplate=data_supertemplate), )
 
 			if field['type'] == 'Dropdown':
@@ -211,6 +222,8 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 				data_property = rdf_property,
 				data_mandatory = mandatory,
 				data_class=res_class,
+				data_subclass=subclass_restriction,
+				data_subclassdropdown = is_subclass_field,
 				data_supertemplate=data_supertemplate), )
 
 			if field['type'] == 'Checkbox':
@@ -226,6 +239,7 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 				data_property = rdf_property,
 				data_mandatory = mandatory,
 				data_class=res_class,
+				data_subclass=subclass_restriction,
 				data_supertemplate=data_supertemplate), )
 
 				for value in dropdown_values[1:]:
@@ -240,6 +254,7 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 					data_property = rdf_property,
 					data_mandatory = mandatory,
 					data_class=res_class,
+					data_subclass=subclass_restriction,
 					data_supertemplate=data_supertemplate), )
 
 			# Subtemplate
@@ -262,6 +277,7 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 				data_property = rdf_property,
 				data_mandatory = mandatory,
 				data_class=res_class,
+				data_subclass=subclass_restriction,
 				data_subtemplate=myid,
 				data_supertemplate=data_supertemplate), )
 

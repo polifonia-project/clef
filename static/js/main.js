@@ -122,33 +122,6 @@ $(document).ready(function() {
     setTimeout(function() { document.getElementById('templateForm').submit();}, 500);
   });
 
-  // table of contents: input fields
-  $('section.label.col-12').each(function() {
-    var section = $(this);
-    if (section.next('.input_or_select').find('[data-supertemplate="None"]').length > 0) {
-      var itemTitle = $(this).text();
-      var listItem = $("<li>"+itemTitle+"</li>");
-      listItem.on('click', function() {
-        $('html, body').animate({
-          scrollTop: section.parent().offset().top - 100
-        }, 800);
-      })
-      $('.fields-list').append(listItem);
-    }
-  });
-  // table of contents: Knowledge Extraction
-  $('.import-form > section.label.col-12').each(function() {
-    var section = $(this);
-    var itemTitle = $(this).text();
-    var listItem = $("<li>"+itemTitle+"</li>");
-    listItem.on('click', function() {
-      $('html, body').animate({
-        scrollTop: section.parent().offset().top - 100
-      }, 800);
-    })
-    $('.fields-list').append(listItem);
-  });
-
   // disable forms
   $(".disabled").attr("disabled","disabled");
 
@@ -352,7 +325,6 @@ $(document).ready(function() {
   </label>'))
   // generate input fields for Entities manual definition
   $('input~.autocompletion-container .switch').on('click', function() {
-    console.log($(this).parent().prev())
     $(this).parent().prev('div').toggleClass('active');
     if (! $(this).find('input').prop('checked')) {
       var inputField = $(this).parent().prev().prev('.searchWikidata');
@@ -360,7 +332,13 @@ $(document).ready(function() {
       inputField.hide();
       inputField.after($('<span class="manual-entity" data-target="'+id+'">URI</span><input class="col-md-12 manual-entity" id="'+id+'_uri" name="'+id+'_uri" type="text" value="" data-class="'+inputField.attr('data-class')+'" placeholder="https://www.wikidata.org/wiki/Q123">'));
       inputField.next().next().after($('<span class="manual-entity" data-target="'+id+'">Label</span><input class="col-md-12 manual-entity" id="'+id+'_label" name="'+id+'_label" type="text" value="" data-class="'+inputField.attr('data-class')+'" placeholder="September">'));
-
+      inputField.parent().find("input[type='text']").on('keyup keypress', function(e) {
+        var keyCode = e.keyCode || e.which;
+        if (keyCode === 13) {
+          e.preventDefault();
+          return false;
+        }
+      });
     } else {
       var inputField = $(this).parent().parent().find('.searchWikidata');
       var id = inputField.attr('id');
@@ -627,7 +605,7 @@ function language_form(el) {
     $('#lang-form').remove()
   } else {
     var height = $(el).offset().top + 32 + "px";
-    var left = $(el).offset().left - 13 +"px";
+    var left = $(el).offset().left - 348 +"px";
     var current_lang = $(el).parent().next().find('.selected-lang').text().toLowerCase();
     var input = $(el).parent().next().find('textarea, input').filter(':visible');
     var field_id = input.attr('id');

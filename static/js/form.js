@@ -8,24 +8,98 @@ management of Records Creation, Modification and Publication.
 /// GENERAL ///
 ///////////////
 $(document).ready(function() {
-    var scrollToTop = $('#scrollToTop');
-    var target = $('#table-of-contents');
+
+    // TEMPLATE SELECTION
+    $("select.template-select").closest(".row").children("section").first().css({'padding': '1em 10em 0em 0em'});
+    $("select.template-select").closest(".row").next(".buttonsSection").css({'padding-left': '0'});
     
-    // show or hide Scroll to Top button
-    $(window).on('scroll', function() {
-        var targetOffset = target.offset().top;
-        var scrollTop = $(window).scrollTop();
-        
-        if (scrollTop >= targetOffset) {
-            scrollToTop.fadeIn();
-        } else {
-            scrollToTop.fadeOut();
-        }
+    // SCROLL TO TOP
+    if ($('#scrollToTop').length > 0) {
+        var scrollToTop = $('#scrollToTop');
+        var target = $('#table-of-contents');
+
+        // show or hide Scroll to Top button
+        $(window).on('scroll', function() {
+            var targetOffset = target.offset().top;
+            var scrollTop = $(window).scrollTop();
+            
+            if (scrollTop >= targetOffset) {
+                scrollToTop.fadeIn();
+            } else {
+                scrollToTop.fadeOut();
+            }
+        });
+        scrollToTop.on('click', function() {
+            $('html, body').animate({ scrollTop: 0 }, 800);
+        });
+    }
+
+    // SUBCLASS RESTRICTED FIELD
+    $("[data-subclass]:not([data-subclass=''])").each(function() {
+        $(this).closest("section.form_row.block_field").hide();
     });
 
-    scrollToTop.on('click', function() {
-        $('html, body').animate({ scrollTop: 0 }, 800);
+    $("[data-subclassdropdown='True']").on("change", function() {
+        var selectedValue = $(this).val();
+        var subclass = encodeURIComponent(selectedValue.trim());
+        var supertemplate = $(this).data("supertemplate"); // warning: check whether this must be changed to data("subrecord");
+
+        // hide unrequired fields
+        $("[data-subclass][data-supertemplate='"+supertemplate+"']:not([data-subclass='"+subclass+"']):not([data-subclass=''])").closest("section.form_row.block_field").each(function() {
+            $(this).fadeOut(400);
+            var inputId = $(this).find("input, textarea, select").first().attr("id");
+            $("li[data-id='"+inputId+"']").fadeOut(400);
+        })
+
+        // show required fields
+        $("[data-supertemplate='"+supertemplate+"'][data-subclass='"+subclass+"']").closest("section.form_row.block_field").each(function() {
+            $(this).fadeIn(400);
+            var inputId = $(this).find("input, textarea, select").first().attr("id");
+            $("li[data-id='"+inputId+"'").fadeIn(400);
+        });
+        
+        
+    })
+
+
+    // TABLE OF CONTENTS
+    // table of contents: input fields
+    $('section.label.col-12').each(function() {
+        var section = $(this);
+        if (section.next('.input_or_select').find('[data-supertemplate="None"]').length > 0) {
+            var itemTitle = $(this).find(".title").contents().filter(function() {
+                return this.nodeType === 3;
+            }).text().trim();
+            var itemId = section.next('.input_or_select').find("input, textarea, select").first().attr("id");
+            var listItem = $("<li data-id='"+itemId+"'>"+itemTitle+"</li>");
+            listItem.on('click', function() {
+                $('html, body').animate({
+                    scrollTop: section.parent().offset().top - 100
+                }, 800);
+            })
+            if (!section.is(":visible")) {
+                listItem.hide();
+            }
+            $('.fields-list').append(listItem);
+        }
     });
+    
+    // table of contents: Knowledge Extraction
+    $('.import-form > section.label.col-12').each(function() {
+        var section = $(this);
+        var itemTitle = $(this).find(".title").text();
+        var listItem = $("<li>"+itemTitle+"</li>");
+        listItem.on('click', function() {
+            $('html, body').animate({
+                scrollTop: section.parent().offset().top - 100
+            }, 800);
+        })
+        if (!section.is(":visible")) {
+            listItem.hide();
+        }
+        $('.fields-list').append(listItem);
+    });
+
 });
 
 function checkMandatoryFields(subrecordButton=false){
@@ -34,13 +108,13 @@ function checkMandatoryFields(subrecordButton=false){
     if (subrecordButton) { var fields = $(subrecordButton).parent().parent().find('[data-mandatory="True"]:visible'); } else { var fields = $('[data-mandatory="True"]:visible'); }
     fields.each(function() {
         if ($(this).val() === '' && !$('[data-input="'+$(this).attr('id')+'"]').length) {
-        console.log($(this));
-        /* in principle, the header could be changed through the back-end application. 
-        However, this would cause the loss of all inserted values. */
-        if (subrecordButton) { alert("Check Mandatory Fields!")}
-        else { $('header').find('h3').eq(0).text("The form is not valid, please check mandatory fields") }
-        window.scrollTo(0, 0);
-        isValid = false;
+            console.log($(this));
+            /* in principle, the header could be changed through the back-end application. 
+            However, this would cause the loss of all inserted values. */
+            if (subrecordButton) { alert("Check Mandatory Fields!")}
+            else { $('header').find('h3').eq(0).text("The form is not valid, please check mandatory fields") }
+            window.scrollTo(0, 0);
+            isValid = false;
         }
     })
 
@@ -77,11 +151,12 @@ function makeSPARQLQuery( endpointUrl, sparqlQuery, doneCallback ) {
 }
 
 // Ancillary function: set #searchresult div position (css)
-function setSearchResult(searchterm){
-    var offset = $('#'+searchterm).offset();
+function setSearchResult(searchtermId,searchtermElement=null){
+    var element = searchtermId !== null ? $("#"+searchtermId) : $(searchtermElement);
+    var offset = element.offset();
     var leftpos = offset.left+15;
-    var height = $('#'+searchterm).height();
-    var width = $('#'+searchterm).width();
+    var height = element.height();
+    var width = element.width();
     var top = offset.top + height + 15 + "px";
 
     $('#searchresult').css( {
@@ -818,26 +893,20 @@ function searchWDCatalogueAdvanced(searchterm){
 // add a manually defined entity
 function addManualEntity(searchterm) {
     var baseId = searchterm.replace('_uri','').replace('_label','');
-    console.log(baseId)
 
+    $('#'+searchterm).off('keyup').on('keyup', function(e) {
+        if(e.which == 13) {
+            var uri = $("#"+baseId+'_uri').val();
+            var label = $("#"+baseId+'_label').val();
 
-    $('#'+searchterm).keypress(function(e) {
-        console.log(e.which)
-        console.log(uri, label)
-        var uri = $("#"+baseId+'_uri').val()
-        var label = $("#"+baseId+'_label').val()
-        if (e.which == 13 && uri != '' && label != '') {
-        console.log(uri, label)
-        
-        e.preventDefault();
-        console.log("ciao")
-        console.log($("#"+baseId+'_label').next())
-        $("#"+baseId+'_label').next().append($("<span class='tag " + label + "' data-input='" + baseId + "' data-id='" + label + "'>" + label + "</span><input type='hidden' class='hiddenInput " + label + "' name='" + baseId + "_" + uri + "' value=\" " + uri + "," + encodeURIComponent(label) + "\"/>"))
-        } else if (e.which == 13 && (uri == '' || label == '')) {
-        alert('Please, provide a label and a URI')
+            if (uri !== '' && label !== '') {
+                $("#"+baseId+'_label').next().append($("<span class='tag' data-input='" + baseId + "' data-id='" + label + "'>" + label + "</span><input type='hidden' class='hiddenInput " + label + "' name='" + baseId + "_" + uri + "' value=\" " + uri + "," + encodeURIComponent(label) + "\"/>"));
+            } else if (uri == '' || label == '') {
+                showErrorPopup('Please, provide a label and a URI');
+            }
         }
     });
-    }
+}
 
 // addURL:URL value in textbox field + create iframe previews
 function addURL(searchterm, iframe=false) {
@@ -1233,6 +1302,7 @@ function addMultimedia(searchterm) {
 function generateExtractionField(res, recordId, subtemplate=null) {
     // retrieve field's description and name
     extractorsArray.forEach((element, index) => {
+
         if (element === res) {
             var resIndex = index === -1 ? 0 : index;
             var resId = extractorsIds[resIndex];
@@ -1259,11 +1329,14 @@ function generateExtractionField(res, recordId, subtemplate=null) {
                 <span class="imported_graphs add-span" id="imported-graphs-'+resId+'" data-reconciliation="'+fieldService+'" onclick="generateExtractor(\'imported-graphs-'+resId+'\', \''+recordId+'\')"><i class="material-icons">playlist_add</i><span> Extract Entities</span></span>\
             </section>\
             </section>');
+            console.log(extractionRow)
 
             // add the extraction node to the form
             if (subtemplate===null) {
-                subtemplate = $('#recordForm .homeheading, #modifyForm .homeheading');
+                subtemplate = $('#recordForm > section.row > section , #modifyForm > section.row > section');
             }
+            console.log(subtemplate)
+
             subtemplate.append(extractionRow);
 
             // retrieve previously generated extraction graphs
@@ -1361,7 +1434,7 @@ function generateExtractor(ul,recordId,modifyId=null) {
             </select>\
         </section>\
         <section class='row extractor-0'>\
-            <input id='sparql-back0' class='btn btn-dark extractor-0' style='margin-left:20px' value='Back' onClick='prevExtractor(\"block_field\", \"form_row\", true,\""+extractorId+'-'+extractionInternalId+"\")'>\
+            <input id='sparql-back0' class='btn btn-dark extractor-0' style='margin-left:20px' value='Back' onClick='prevExtractor(this, \"block_field\", \"form_row\", true,\""+extractorId+'-'+extractionInternalId+"\")'>\
         </section>\
     </section>");
     $('#'+ul).after(extractor);
@@ -1533,7 +1606,7 @@ function addExtractionForm(element,recordId,extractorId,extractionInternalId) {
 
     // navigation button
     var buttons = $("<section class='row extractor-1'>\
-        <input id='"+extractionType+"-back-1' class='btn btn-dark extractor-1' style='margin-left:20px' value='Back' onClick='prevExtractor(\"extractor-1\", \"form_row\", true,\""+recordId+"\",\""+extractionId+"\")'>\
+        <input id='"+extractionType+"-back-1' class='btn btn-dark extractor-1' style='margin-left:20px' value='Back' onClick='prevExtractor(this, \"extractor-1\", \"form_row\", true,\""+recordId+"\",\""+extractionId+"\")'>\
         <input id='"+extractionType+"-next-1' class='btn btn-dark extractor-1' style='margin-left:20px' value='Next' onClick='nextExtractor(this, \""+recordId+"\", \""+extractionId+"\", \""+extractionType+"\")'>\
     </section>");
 
@@ -1571,7 +1644,8 @@ function fileExtractionType(element) {
 
 // parse the static file 
 function parseFile(element) {
-    var fileUrl = $(element).parent().parent().find("#FileUrl").val();
+    var extractionBlockField = $(element).parent().parent();
+    var fileUrl = extractionBlockField.find("#FileUrl").val();
     if (fileUrl !== "" && (fileUrl.endsWith(".xml") || fileUrl.endsWith(".csv") || fileUrl.endsWith(".json"))) {
         var encoded = encodeURIComponent(fileUrl);
         showLoadingPopup("We are parsing your file:", fileUrl);
@@ -1579,15 +1653,15 @@ function parseFile(element) {
             type: 'GET',
             url: '/sparqlanything?action=searchclasses&q=' + encoded,
             success: function(resultsJsonObject) {
-                $(".manual-query").show();
+                extractionBlockField.find(".manual-query").show();
                 parsedFile = resultsJsonObject;
                 hidePopup();
-                $(".manual-query").find('input#file-keys').on('click', function () {
+                extractionBlockField.find(".manual-query input#file-keys").on('click', function () {
                     $(this).off('keyup').on('keyup', function() {
                         $("#searchresult").show();
-                        var key = $(this).val();
-                        var identifier = $(this).attr("id");
-                        setSearchResult(identifier);
+                        var keysInputField = $(this);
+                        var key = keysInputField.val();
+                        setSearchResult(null,searchtermElement=$(this));
                         parsedFile.forEach(function(element,index) {
                             if (element.includes(key)) {
                                 $("#searchresult").append("<div class='viafitem'><a class='blue' data-id='" + index + "'>" + element + "</a></div>")
@@ -1596,9 +1670,10 @@ function parseFile(element) {
                                 $('a[data-id="' + index + '"]').each(function () {
                                     $(this).bind('click', function (e) {
                                         e.preventDefault();
-                                        $('#' + identifier).next('div').append("<span class='tag' data-input='" + identifier + "'>" + element + "</span><input type='hidden' class='hiddenInput' name='" + element + "' value=\"" + element + "," + encodeURIComponent(element) + "\"/>");
+                                        var keyValue = fileUrl.endsWith(".csv") ? index + 1 : element
+                                        keysInputField.next('div').append("<span class='tag'>" + element + "</span><input type='hidden' class='hiddenInput' name='" + element + "' value=\"" + encodeURIComponent(keyValue) + "\"/>");
                                         $("#searchresult").hide();
-                                        $('#' + identifier).val('');
+                                        keysInputField.val('');
                                     });
                                 });
                             }
@@ -1623,12 +1698,12 @@ function nextExtractor(element, recordId, id, type) {
     var splitId = id.split('-');
     var extractionCount = parseInt(splitId[1]);
     var extractorId = splitId[0];
-    console.log(recordId,id,extractorId);
+    var extractionBlockField = $(element).closest(".block_field");
 
     // retrieve YASQE query (type=='file'/'sparql')
     let query = "";
     let newLine = "";
-    var yasqeQueryRows = $('[data-id="'+id+'"]').find('.CodeMirror-code>div');
+    var yasqeQueryRows = extractionBlockField.find('[data-id="'+id+'"] .CodeMirror-code>div');
     yasqeQueryRows.each(function() {
         var tokens = $(this).find('pre span span');
         query+=newLine
@@ -1640,10 +1715,10 @@ function nextExtractor(element, recordId, id, type) {
     });
 
     // collect all the query information and store it into an Object
-    const objectItem = {};
+    let objectItem = {};
     if (type == "api") {
         objectItem["type"] = "api";
-        objectItem["url"] = $('#ApiUrl').val();
+        objectItem["url"] = extractionBlockField.find('#ApiUrl').val();
         var queryParameters = getExtractionParameters('query',element);
         var resultsParameters = getExtractionParameters('results',element);
 
@@ -1657,21 +1732,33 @@ function nextExtractor(element, recordId, id, type) {
         console.log(objectItem);
     } else if (type == "sparql") {
         objectItem["type"] = "sparql";
-        objectItem["url"] = $('#SparqlUrl').val();
+        objectItem["url"] = extractionBlockField.find('#SparqlUrl').val();
         objectItem["query"] = query;
     } else if (type == "file") {
         objectItem["type"] = "file";
-        objectItem["url"] = $('#FileUrl').val();
-        var extractionType = $('#ExtractionType').val();
+        objectItem["url"] = extractionBlockField.find('#FileUrl').val();
+        var extractionType = extractionBlockField.find('#ExtractionType').val();
         objectItem["extractionType"] = extractionType;
+
+        // manual query or sparql.anything query 
         if (extractionType === "sparql") {
             objectItem["query"] = query;
         } else if (extractionType === "manual") {
-            var manualQuery = buildQuery($('#FileUrl').val(), $('.tags-extraction').find('input'));
+            // retrieve parameters elements
+            var fileUrl = extractionBlockField.find('#FileUrl').val();
+            var rawKeys = extractionBlockField.find('.tags-extraction input');
+            var rawFilters = extractionBlockField.find('.manual-query .file-query-parameter')
+
+            var manualQuery, keysArray, filtersArray;
+            [manualQuery, keysArray, filtersArray] = buildQuery(fileUrl,rawKeys,rawFilters);
             objectItem["query"] = manualQuery;
+            objectItem["keys"] = keysArray;
+            objectItem["filters"] = filtersArray
         }
     }
 
+
+    // extract data with provided queries
     if (type == "api") {
         // API QUERY:
         $.getJSON(objectItem["url"], objectItem["query"],
@@ -1680,11 +1767,13 @@ function nextExtractor(element, recordId, id, type) {
             var bindings = showExtractionResult(data,type,id,recordId,objectItem);
             objectItem["output"] = bindings;
         }).error(function(jqXHR, textStatus, errorThrown) {
-            alert(("error: check your parameters"))
+            showErrorPopup(("error: check your parameters"))
         })
     } else if (type == "file" || type == 'sparql') {
         // FILE QUERY and SPARQL QUERY:
-        objecItem = callSparqlanything(objectItem,id,recordId,type);
+        console.log(objectItem)
+        callSparqlanything(objectItem,id,recordId,type);
+        console.log(objectItem)
     }
 
     // add the extraction information, including the results, to the Extractions Object
@@ -1698,9 +1787,10 @@ function nextExtractor(element, recordId, id, type) {
 }
 
 // go back to the previous Extraction page to modify query parameters / hide the Extraction form
-function prevExtractor(toHide, toShow, remove=false, id=null, recordId=null) {
-    $('.'+toHide).hide();
-    $('.'+toShow).filter(function() {
+function prevExtractor(element, toHide, toShow, remove=false, id=null, recordId=null) {
+    var extractionBlockField = $(element).closest('.block_field');
+    extractionBlockField.find('.'+toHide).hide();
+    extractionBlockField.find('.'+toShow).filter(function() {
         return $(this).find('.original-subtemplate').length === 0;
     }).show();
 
@@ -1719,7 +1809,6 @@ function prevExtractor(toHide, toShow, remove=false, id=null, recordId=null) {
             }
         }
 
-        console.log("c",extractionListId)
         // hide the Extraction documentation and the Extraction form, then show the list of Extractions
         $('.extraction_documentation').hide();
         $('#imported-graphs-'+extractionListId).next().remove();
@@ -1790,10 +1879,10 @@ function getExtractionParameters(type,element) {
 
 // call back-end API to perform SPARQL.Anything queries
 function callSparqlanything(objectItem, id, recordId, type) {
+    console.log(objectItem)
     var q = objectItem.query;
     var endpoint = objectItem.url;
     var service = $("#imported-graphs-"+id.split("-")[0]).data("reconciliation");
-    console.log(service, id.split("-")[0])
 
     // modify the query to make it ready for SPARQL.Anything
     var encoded;
@@ -1810,7 +1899,7 @@ function callSparqlanything(objectItem, id, recordId, type) {
         success: function(resultsJsonObject) {
             // show results inside a table
             var bindings = showExtractionResult(resultsJsonObject,type,id,recordId);
-            objectItem['output'] = resultsJsonObject.results.bindings
+            objectItem['output'] = bindings
             return objectItem;
         },
         error: function() {
@@ -1844,40 +1933,106 @@ function generateExtractionFilter(element) {
 }
 
 // build SPARQL query from manual paramaters
-function buildQuery(fileURL, keys) {
-    console.log(keys);
+function buildQuery(fileURL, keys, queryFilters) {
+    // this function first create the main query then add filters
+
     // retrieve the file format
     var fileFormat = fileURL.split(".")[fileURL.split(".").length - 1];
     let query = "";
+    let filtersArray = []; // to be filled with optional filters
+    var keysArray = keys.map(function(index, element) {
+        return { [$(element).attr('name')]: decodeURIComponent($(element).val()) };
+    }).get();
+    
 
     // handle keys depending on format 
     if (fileFormat === "xml") {
-        keys.each(function(index,element) {
-            var $element = $(element);
-            var keyClass = $element.attr("name");
+        var keyClasses = keys.map(function(index, element) {
+            return '<' + decodeURIComponent($(element).val()) + '>';
+        }).get().join(' ');
+        var valuesClause = `VALUES ?keyClass { ${keyClasses} }`;
 
-            query = `PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-            SELECT DISTINCT (GROUP_CONCAT(?namePart; separator=" ") AS ?label) WHERE { 
+        query = `SELECT DISTINCT (GROUP_CONCAT(?namePart; separator=" ") AS ?label) WHERE { 
             SERVICE <x-sparql-anything:${fileURL}> {
-                ?name a <${keyClass}> .
+                ?name a ?keyClass .
+                ${valuesClause} .
                 ?name (rdf:_1|rdf:_2|<http://www.w3.org/1999/02/22-rdf-syntax-ns#nodeID>)* ?descendantNode .
                 ?descendantNode rdf:_1 ?namePart .
                 
                 FILTER(isLiteral(?namePart) && datatype(?namePart) = xsd:string)
                 }
-            } GROUP BY ?name
-            LIMIT 10`;
-        });
+            } GROUP BY ?name`;
+    } else if (fileFormat === "csv") {
+        var keyProperties = keys.map(function(index, element) {
+            return 'rdf:_' + decodeURIComponent($(element).val()) + '';
+        }).get().join(' ');
+        var valuesClause = `VALUES ?keyProperties { ${keyProperties} }`;
+
+        query = `SELECT DISTINCT ?label WHERE { 
+            SERVICE <x-sparql-anything:${fileURL}> {
+                ?node ?keyProperties ?label .
+                ${valuesClause} .
+                
+                FILTER(isLiteral(?label) && datatype(?label) = xsd:string)
+                }
+            }`;
+    } else if (fileFormat === "json") {
+        var keyProperties = keys.map(function(index, element) {
+            return 'xyz:' + decodeURIComponent($(element).val()) + '';
+        }).get();
+        var valuesClause = `VALUES ?keyProperties { ${keyProperties.join(" ")} }`;
+        var innerProperties = parsedFile.map(function(element) {
+            return 'xyz:' + decodeURIComponent(element) + '';
+        }).join('|');
         
+        query = `SELECT DISTINCT ?label WHERE { 
+            SERVICE <x-sparql-anything:${fileURL}> {
+                {
+                        ?name ${keyProperties.join('|')} ?label .
+                        FILTER(isLiteral(?label) && datatype(?label) = xsd:string)
+                    }
+                    UNION {
+                        ?name ?keyProperties ?node .
+                        ${valuesClause} .
+                        ?node (${innerProperties}|rdf:_1|rdf:_2|rdf:_3|rdf:_4|rdf:_5|rdf:_6|rdf:_7|rdf:_8|rdf:_9|rdf:_10)* ?descendantNode .
+                        ?descendantNode ?labelProperty ?label .
+                        
+                        FILTER(isLiteral(?label) && datatype(?label) = xsd:string)
+                    }
+                    
+                }
+            }`;
+        /* WARNING: when retrieving Array's items, the max. amount of retrievable items is set to 10.
+        To get a higher number of values, further rdf:_n properties must included within the query */
     }
 
-    return query
+    // add query filters
+    if (queryFilters.length > 0) {
+        query = `SELECT ?label WHERE { {` + query.replace("SELECT DISTINCT ","SELECT ") + `}` ;
+        queryFilters.each(function(index, element) {
+            var filterType = $(element).find('select').val();
+            var filterValue = $(element).find('input').val();
+            filtersArray.push({filterType: filterValue})
+
+            if (filterType === "regex") {
+                query+= `FILTER(REGEX(?label, "${filterValue}", "i"))`
+            }
+            else if (filterType === "counter") {
+                query+= `}
+                GROUP BY ?label
+                HAVING (COUNT(?label) >= ${filterValue})`;
+            }
+        });
+    }
+
+    return [query, keysArray, filtersArray]
 }
 
 
 /* Results handling */
 
-function showExtractionResult(jsonData,type,id,recordId,objectItem=null) {
+function showExtractionResult(jsonData,type,extractionId,recordId,objectItem=null) {
+    console.log(extractionId, recordId);
     // base module
     let bindings = [];
     const resultSection = $("<section class='extractor-2'></section");
@@ -1934,9 +2089,9 @@ function showExtractionResult(jsonData,type,id,recordId,objectItem=null) {
                 var label = labels[i];
 
                 if (result[label].value.startsWith("https://") || result[label].value.startsWith("http://")) {
-                    var item = "<a href='"+result[label].value+"' target='_blank'>"+result[label].value+"</a>";
+                    var item = "<a href='"+result[label].value+"' target='_blank'>"+result[label].value+"</a><i class='far fa-edit'></i>";
                 } else {
-                    var item = "<span>" + result[label].value + "</span>";
+                    var item = "<span>" + result[label].value + "</span><i class='far fa-edit'></i>";
                 }
 
                 var td = $('<td>' + item + '</td>')
@@ -1948,18 +2103,14 @@ function showExtractionResult(jsonData,type,id,recordId,objectItem=null) {
     resultSection.append(resultTable);
     resultSection.find('i.fa-edit').each(function(index, element) {
         $(element).on('click', function() {
-            var string = $(this).prev();
-            var val = string.text();
-            string.replaceWith($("<input type='text' data-index='"+index+"' data-modify='"+encodeURIComponent(val)+"'>").val(val));
-            $(this).attr('class', 'far fa-check-circle');
+            modifyExtractionResult($(this),index,extractionId,recordId);
         });
     });
-    
 
     // manage navigation buttons 
     var buttonList = "<section class='row extractor-2'>\
-        <input id='api-back2' class='btn btn-dark extractor-2' style='margin-left:20px' value='Back' onClick='prevExtractor(\"extractor-2\", \"extractor-1\")'>\
-        <input id='api-next2' class='btn btn-dark extractor-2' style='margin-left:20px' value='Import' onClick='prevExtractor(\"extractor-2\", \"form_row\", true,\""+ id+"\",\""+recordId+"\")'>\
+        <input id='api-back2' class='btn btn-dark extractor-2' style='margin-left:20px' value='Back' onClick='prevExtractor(this, \"extractor-2\", \"extractor-1\")'>\
+        <input id='api-next2' class='btn btn-dark extractor-2' style='margin-left:20px' value='Import' onClick='prevExtractor(this, \"extractor-2\", \"form_row\", true,\""+extractionId+"\",\""+recordId+"\")'>\
     </section>";
     $('.extractor-1').hide();
     $('.import-form.block_field .block_field').append(resultSection);
@@ -1967,7 +2118,54 @@ function showExtractionResult(jsonData,type,id,recordId,objectItem=null) {
 
     // manage results pagination
     if (bindings.length > 25) {extractorPagination(bindings)};
-        return bindings
+
+    return bindings
+}
+
+function modifyExtractionResult(icon,index,extractionId,recordId) {
+
+    const [extractorId, extractionCountStr] = extractionId.split('-');
+    const extractionCount = parseInt(extractionCountStr);
+
+    // remove previous Event Listeners on click and get the Element to be modified
+    $(icon).off("click");
+    var stringElement = $(icon).prev();
+
+    // replace the Element with a new one
+    if (icon.hasClass("fa-check-circle")) {
+
+        // Input to Span
+        var val = stringElement.val() !== "" ? stringElement.val() : stringElement.data("modify");
+        var modifyStringSpan = $("<span>"+decodeURIComponent(val)+"</span>");
+        stringElement.replaceWith(modifyStringSpan);
+
+        // modify results
+        extractionObj = extractionsObj[recordId][extractorId].find(obj => obj.internalId == extractionCount);
+        outputObj = extractionObj.metadata.output[index];
+
+        console.log(modifyStringSpan.closest("td").index())
+        if (modifyStringSpan.closest("td").index() === 0) {
+            outputObj.label.value = decodeURIComponent(val);
+        } else {
+            outputObj.uri.value = decodeURIComponent(val);
+        }
+
+    } else if (icon.hasClass("fa-edit")) {
+
+        // Span to Input
+        var val = stringElement.text();
+        var modifyStringInput = $("<input type='text' data-index='"+index+"' data-modify='"+encodeURIComponent(val)+"'>").val(val);
+        stringElement.replaceWith(modifyStringInput);
+        modifyStringInput.focus();
+
+    }
+
+    // set the icon button for next modifications
+    $(icon).toggleClass("fa-check-circle fa-edit")
+    $(icon).on("click", function() {
+        modifyExtractionResult($(this),index,extractionId,recordId);
+    });
+
 }
 
 function extractorPagination(results) {

@@ -11,148 +11,148 @@ $var is_git_auth = is_git_auth
 $var project = project
 
 <header class="row">
-  $ user_welcome = " "+user if user != 'anonymous' else ""
-  <h3 class="col-md-12 col-lg-12 col-sm-12">Welcome$user_welcome!</h3>
+    $ user_welcome = " "+user if user != 'anonymous' else ""
+    <h3 class="col-md-12 col-lg-12 col-sm-12">Welcome$user_welcome!</h3>
 </header>
 <section class="corners d-flex flex-row filters">
     <section class="p-12 index_menu">
-      <form class='p-3' action='' method='POST'>
-        <button class="menu_btn" name="action" value="filterNew" type="submit">not reviewed ($notreviewed)</button>
-      </form>
-      <form class='p-3' action='' method='POST'>
-        <button class="menu_btn" name="action" value="filterReviewed" type="submit">under review ($underreview)</button>
-      </form>
-      <form class='p-3' action='' method='POST'>
-        <button class="menu_btn" name="action" value="filterPublished" type="submit">published ($published)</button>
-      </form>
-      <form class='p-3' action='' method='POST'>
-        <button class="menu_btn" name="action" value="filterAll" type="submit">all ($alll)</button>
-      </form>
-      <hr/>
-      <form class='p-2' action='' method='POST' id="create_form">
-        <button class="btn btn-dark" name="action" value="createRecord$varIDpage" type="submit">Create a new record</button>
-      </form>
-      <button onclick="window.location.href='setup'" title="setup" class="menu_btn">Setup <i class="fas fa-cogs"></i></button>
-      <section class="btn-group">
-        <button id="showTemplates" title="form template" class="menu_btn dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Templates</button>
-        <section class="dropdown-menu gradient_dropbox" aria-labelledby="showTemplates" role="menu">
-          $if len(templates) == 0:
-            <p class="res_class_small">there are no templates yet</p>
-          $else:
-            $for t in templates:
-              $if 'status' not in t:
-                <p><a href="template-$t['short_name']">$t["name"]</a></p>
-        </section>
-      </section>
-      <section class="btn-group">
-        <button id="selectTemplateClassButton" title="create a new template" class="menu_btn">Create a new template <i class="fas fa-plus"></i></button>
-      </section>
-    </section>
-</section>
+      	<form class='p-3' action='' method='POST'>
+          	<button class="menu_btn" name="action" value="filterNew" type="submit">not reviewed ($notreviewed)</button>
+      	</form>
+      	<form class='p-3' action='' method='POST'>
+        	<button class="menu_btn" name="action" value="filterReviewed" type="submit">under review ($underreview)</button>
+      	</form>
+		<form class='p-3' action='' method='POST'>
+			<button class="menu_btn" name="action" value="filterPublished" type="submit">published ($published)</button>
+		</form>
+		<form class='p-3' action='' method='POST'>
+			<button class="menu_btn" name="action" value="filterAll" type="submit">all ($alll)</button>
+		</form>
+		<hr/>
+		<form class='p-2' action='' method='POST' id="create_form">
+			<button class="btn btn-dark" name="action" value="createRecord$varIDpage" type="submit">Create a new record</button>
+		</form>
+		<button onclick="window.location.href='setup'" title="setup" class="menu_btn">Setup <i class="fas fa-cogs"></i></button>
+		<section class="btn-group">
+			<button id="showTemplates" title="form template" class="menu_btn dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Templates</button>
+			<section class="dropdown-menu gradient_dropbox" aria-labelledby="showTemplates" role="menu">
+			$if len(templates) == 0:
+				<p class="res_class_small">there are no templates yet</p>
+			$else:
+				$for t in templates:
+				$if 'status' not in t:
+					<p><a href="template-$t['short_name']">$t["name"]</a></p>
+			</section>
+		</section>
+		<section class="btn-group">
+			<button id="selectTemplateClassButton" title="create a new template" class="menu_btn">Create a new template <i class="fas fa-plus"></i></button>
+		</section>
+		</section>
+	</section>
 <section id="selectTemplateClassModal" aria-labelledby="selectTemplateClassButton" role="menu">
-  <form id="selectTemplateClass" name="selectTemplateClass" class="" method="POST">
-    <section>
-      <span>New Template  <i class='fas fa-times'></i></span>
-    </section>
-    <section class="modal-input">
-      <span class="label">Name</span><br><span class="comment">choose a name for this template</span>
-      <input type="text" name="class_name" value="" placeholder="e.g.: Work of art">
-    </section>
-    <section class="modal-input">
-      <span class="label">Class</span><br><span class="comment">choose one or multiple OWL classes</span>
-      <input type="text" name="class_uri" value="" placeholder="e.g.: crm:E22_Man-made-object">
-      <section id="uri-container"></section>
-    </section>
-    <section class="modal-input-button">
-      <input type="hidden" class="hiddenInput" name="action" value="createTemplate">
-      <button class="btn btn-dark" name="action" value="createTemplate" type="submit">Create</button>
-      <button class="btn btn-dark discard" value="cancelTemplate" type="submit">Cancel</button>
-    </section>
-  </form>
+	<form id="selectTemplateClass" name="selectTemplateClass" class="" method="POST">
+		<section>
+			<span>New Template  <i class='fas fa-times'></i></span>
+		</section>
+			<section class="modal-input">
+			<span class="label">Name</span><br><span class="comment">choose a name for this template</span>
+			<input type="text" name="class_name" value="" placeholder="e.g.: Work of art">
+		</section>
+		<section class="modal-input">
+			<span class="label">Class</span><br><span class="comment">choose one or multiple OWL classes</span>
+			<input type="text" name="class_uri" value="" placeholder="e.g.: crm:E22_Man-made-object">
+			<section id="uri-container"></section>
+		</section>
+		<section class="modal-input-button">
+			<input type="hidden" class="hiddenInput" name="action" value="createTemplate">
+			<button class="btn btn-dark" name="action" value="createTemplate" type="submit">Create</button>
+			<button class="btn btn-dark discard" value="cancelTemplate" type="submit">Cancel</button>
+		</section>
+	</form>
 </section>
 <script type="text/javascript">
-  $$("button[value='$filterName']").addClass("active");
-  const templatesObject = JSON.parse("$templates".replace(/&#39;/g, '"'));
+  	$$("button[value='$filterName']").addClass("active");
+  	const templatesObject = JSON.parse("$templates".replace(/&#39;/g, '"'));
 </script>
 <section class="col-md-12 col-sm-12">
 
-  <article>
-    <h3>Records</h3>
-    $if len(wikilist) > 0:
-      <table id="recordsList">
-        <tr>
-          <th>Record</th>
-          <th>Created by</th>
-          <th>Modified by</th>
-          <th>Last modified</th>
-          <th>Stage</th>
-          <th>Actions</th>
-        </tr>
-        $for result in wikilist:
-          $ modified = 'modified' if result[5] == 'modified' else ''
-          $ result[6].sort()
-          $ type = [t["name"] for t in templates if t["type"] == result[6]]
-          <tr class="$modified">
-            <td>$result[1] <p class="res_class_small">$type[0]</p></td>
-            <td>$result[2]</td>
-            <td>$result[3]</td>
-            <td>$result[4][:10]<p class="res_class_small">$result[4][11:-1]</p></td>
-            <td class="stage">$result[5]</td>
-            <td>
-              $if result[5] == 'not modified' or result[5] == 'modified' or result[5] == '-':
-                <form id="modified" action="" method='POST'>
-                  <button class="btn btn-dark delete" data-toggle="modal" data-target="#popup" name="action" value="deleteRecord$:result[0] __$filter" type="submit" title="delete"><i class="far fa-trash-alt"></i></button>
-                  <button class="btn btn-dark" name="action" value="modifyRecord$:result[0]" type="submit" title="modify"><i class="far fa-edit"></i></button>
-                  <button class="btn btn-dark" name="action" value="reviewRecord$:result[0]" type="submit" title="review and publish"><i class="far fa-check-circle"></i></button>
-                </form>
-              $elif result[5] == 'in review':
-                <form id="review" action="" method='POST'>
-                  <button class="btn btn-dark delete" data-toggle="modal" data-target="#popup" name="action" value="deleteRecord$:result[0] __$filter" type="submit" title="delete"><i class="far fa-trash-alt"></i></button>
-                  <button class="btn btn-dark" name="action" value="modifyRecord$:result[0]" type="submit" title="modify"><i class="far fa-edit"></i></button>
-                  <button class="btn btn-dark" name="action" value="reviewRecord$:result[0]" type="submit" title="review and publish"><i class="far fa-check-circle"></i></button>
-                </form>
-              $elif result[5] == 'published':
-                <form id="published" action="" method='POST'>
-                  <button class="btn btn-dark delete" data-toggle="modal" data-target="#popup" name="action" value="deleteRecord$:result[0] __$filter" type="submit" title="delete"><i class="far fa-trash-alt"></i></button>
-                  <button class="btn btn-dark" name="action" value="modifyRecord$:result[0]" type="submit" title="modify"><i class="far fa-edit"></i></button>
-                </form>
-              $else:
-                <span>unknown</span>
-            </td>
-          </tr>
-      </table>
-      <section class="pagination justify-content-md-center justify-content-lg-center">
-        $ total = int(all)//int(pagination)
-        $ remainder = int(all) % int(pagination)
-        $if remainder > 0:
-          $ total = total + 1
-        <form id="paginate" action="" method='POST'>
-          $for n in range(0,total):
-            $ n = n + 1
-            $ strn = str(n)
-            <button class="btn btn-dark" name="action" value="changepage-$strn __$filter" type="submit">$strn</button>
-        </form>
-      </section>
-    $else:
-      <h4>There are no records to show!</h4>
-      <p>If this looks like a mistake, control your <a href="setup">setup</a> configuration - e.g. the endpoint URL or the base URL.</p>
-  </article>
-  <!-- <h2>Search</h2>
+  	<article>
+		<h3>Records</h3>
+		$if len(wikilist) > 0:
+			<table id="recordsList">
+				<tr>
+					<th>Record</th>
+					<th>Created by</th>
+					<th>Modified by</th>
+					<th>Last modified</th>
+					<th>Stage</th>
+					<th>Actions</th>
+				</tr>
+				$for result in wikilist:
+					$ modified = 'modified' if result[5] == 'modified' else ''
+					$ result[6].sort()
+					$ type = [t["name"] for t in templates if t["type"] == result[6]]
+					<tr class="$modified">
+						<td>$result[1] <p class="res_class_small">$type[0]</p></td>
+						<td>$result[2]</td>
+						<td>$result[3]</td>
+						<td>$result[4][:10]<p class="res_class_small">$result[4][11:-1]</p></td>
+						<td class="stage">$result[5]</td>
+						<td>
+						$if result[5] == 'not modified' or result[5] == 'modified' or result[5] == '-':
+							<form id="modified" action="" method='POST'>
+							<button class="btn btn-dark delete" data-toggle="modal" data-target="#popup" name="action" value="deleteRecord$:result[0] __$filter" type="submit" title="delete"><i class="far fa-trash-alt"></i></button>
+							<button class="btn btn-dark" name="action" value="modifyRecord$:result[0]" type="submit" title="modify"><i class="far fa-edit"></i></button>
+							<button class="btn btn-dark" name="action" value="reviewRecord$:result[0]" type="submit" title="review and publish"><i class="far fa-check-circle"></i></button>
+							</form>
+						$elif result[5] == 'in review':
+							<form id="review" action="" method='POST'>
+							<button class="btn btn-dark delete" data-toggle="modal" data-target="#popup" name="action" value="deleteRecord$:result[0] __$filter" type="submit" title="delete"><i class="far fa-trash-alt"></i></button>
+							<button class="btn btn-dark" name="action" value="modifyRecord$:result[0]" type="submit" title="modify"><i class="far fa-edit"></i></button>
+							<button class="btn btn-dark" name="action" value="reviewRecord$:result[0]" type="submit" title="review and publish"><i class="far fa-check-circle"></i></button>
+							</form>
+						$elif result[5] == 'published':
+							<form id="published" action="" method='POST'>
+							<button class="btn btn-dark delete" data-toggle="modal" data-target="#popup" name="action" value="deleteRecord$:result[0] __$filter" type="submit" title="delete"><i class="far fa-trash-alt"></i></button>
+							<button class="btn btn-dark" name="action" value="modifyRecord$:result[0]" type="submit" title="modify"><i class="far fa-edit"></i></button>
+							</form>
+						$else:
+							<span>unknown</span>
+						</td>
+					</tr>
+			</table>
+			<section class="pagination justify-content-md-center justify-content-lg-center">
+				$ total = int(all)//int(pagination)
+				$ remainder = int(all) % int(pagination)
+				$if remainder > 0:
+				$ total = total + 1
+				<form id="paginate" action="" method='POST'>
+				$for n in range(0,total):
+					$ n = n + 1
+					$ strn = str(n)
+					<button class="btn btn-dark" name="action" value="changepage-$strn __$filter" type="submit">$strn</button>
+				</form>
+			</section>
+		$else:
+			<h4>There are no records to show!</h4>
+			<p>If this looks like a mistake, control your <a href="setup">setup</a> configuration - e.g. the endpoint URL or the base URL.</p>
+  	</article>
+	<!-- <h2>Search</h2>
 
-  <div class="input-group">
-     <input type="text" class="form-control searchterm" placeholder="Search term in Wikidata" id="searchterm"/>
-  </div>
+	<div class="input-group">
+		<input type="text" class="form-control searchterm" placeholder="Search term in Wikidata" id="searchterm"/>
+	</div>
 
-  <div id="searchresult"></div> -->
-<!--  <div id="popup" class="modal fade bd-example-modal-sm" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
-      <div class="modal-body">
-        <label for="confirm">Do you really want to delete the record?</label>
-      </div>
-      <div class="modal-footer">
-          <button type="button" class="btn btn-primary" id="delConfirm">Delete</button>
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        </div>
-    </div>
-  </div> -->
+	<div id="searchresult"></div> -->
+	<!--  <div id="popup" class="modal fade bd-example-modal-sm" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-sm">
+		<div class="modal-body">
+			<label for="confirm">Do you really want to delete the record?</label>
+		</div>
+		<div class="modal-footer">
+			<button type="button" class="btn btn-primary" id="delConfirm">Delete</button>
+			<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div> -->
 </section>

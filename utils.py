@@ -204,8 +204,9 @@ def fields_to_json(data, json_file, skos_file):
 		d["browse"] = "True" if 'browse' in d else "False"
 		d["mandatory"] = "True" if 'mandatory' in d else "False" # add mandatory fields
 		d["hidden"] = "True" if 'hidden' in d else "False" # add hidden fields
+		print(d)
 		d["subclass"] = "True" if "subclass" in d else "False" # add subclass drodpown
-		d["resitrcted"] == "None" if d["subclass"] == "True" else d["resitrcted"] # do not restrict the subclass field
+		d["restricted"] = "None" if d["subclass"] == "True" else d["restricted"] # do not restrict the subclass field
 		# default if missing
 		if d["type"] == "None":
 			d["type"] = "Textbox" if "values" not in d else "Dropdown"

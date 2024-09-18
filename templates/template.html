@@ -6,11 +6,13 @@ $var project = project
 <!-- Subtemplates list -->
 $if templates:
 	<script type="text/javascript">
-		var importableTemplates = JSON.parse('$templates'.replace(/&#39;/g, '"'));
+		var templatesObject = JSON.parse('$templates'.replace(/&#39;/g, '"'));
+		var subclasses = {};
 	</script>
 $else:
 	<script type="text/javascript">
-		var importableTemplates = {};
+		var templatesObject = {};
+		var subclasses = {};
 	</script>
 
 <header class="row">
@@ -23,16 +25,18 @@ $else:
 	</p>
 </header>
 <section class="corners row set_template_field">
-	<section class="col-md-8 col-lg-8 col-sm-8">
 
+	<!-- TEMPLATE FORM -->
+	<section class="col-md-8 col-lg-8 col-sm-8">
 		<form id="templateForm" class="col-md-12 col-sm-12 col-lg-12" action="" method="POST">
 			<section class="row">
 				<section class="sortable homeheading col-md-12 col-lg-12 col-sm-12">
 					$if f:
+						$ subclass_field = next((field for field in f if "subclass" in field and field["subclass"] == "True"), None)
 						$for field in f:
-							$ hidden_style = "style=opacity:0.6" if 'hidden' in field and field["hidden"] == "True" else ""
-							<section class="block_field" $hidden_style>
-								$ id = field["id"]
+							$ hidden_style = "style=opacity:0.6" if "hidden" in field and field["hidden"] == "True" else ""
+							$ id = field["id"]
+							<section class="block_field" data-id="$id" $hidden_style>
 								<!-- TYPE -->
 								<section class="row">
 									<label class='col-md-3'>FIELD TYPE</label>
@@ -205,7 +209,7 @@ $else:
 									$elif field['type'] == 'Subtemplate':
 										<section class='row'>
 											<label class='col-md-3'>IMPORT TEMPLATE<br><span class='comment'>end-users can use templates among selected ones</span></label>
-											<section class="col-md-8" id="import-$id"></section>
+											<section class="col-md-8 import-section" id="import-$id"></section>
 										</section>
 										<section class='row'>
 											<label class='col-md-3'>CARDINALITY <br><span class='comment'>the number of expected values</span></label>
@@ -258,7 +262,7 @@ $else:
 												$$("#service__$id option[value$$=$field['service']]").attr("selected","selected");
 											</script>
 										</section>
-									$else:
+									$elif field['type'] == 'Dropdown':
 										<!-- VALUES -->
 										<section class="row">
 											<label class='col-md-3'>VALUES <br><span class="comment">write one pair uri, label (comma separated) per row</span></label>
@@ -268,31 +272,70 @@ $else:
 												$uri.strip(), $:lab.strip()
 											</textarea>
 										</section>
-
+									$elif field['type'] == 'Checkbox':
+										<!-- VALUES -->
+										<section class="row">
+											<label class='col-md-3'>VALUES <br><span class="comment">write one pair uri, label (comma separated) per row</span></label>
+											$ num_rows = len(field["values"])*2
+											<textarea id='values__$id' class='col-md-8 values_area' name='values__$id' rows="$num_rows">
+											$for uri,lab in field["values"].items():
+												$uri.strip(), $:lab.strip()
+											</textarea>
+										</section>
+									$if subclass_field and ("id" in subclass_field and subclass_field["id"] != id):
+										<!-- SUBCLASS RESTRICTION -->
+										<section class="row subclass-dropdown">
+											<label class='col-md-3'>SUBCLASS RESTRICTED <br><span class="comment">make this field available once a subclass has been selected</span></label>
+											<select id='restricted__$id' name='restricted__$id' class='custom-select col-md-8'>
+												<option value='None'>Select a subclass</option>
+											</select>
+										</section>
+										<script type="text/javascript">
+											subclasses = JSON.parse('$subclass_field["values"]'.replace(/&#39;/g, '"'));
+											var selectedSubclass = '$field["restricted"]';
+											$$.each(subclasses, function(uri, label) {
+												var encodedURI = encodeURIComponent(uri)
+												var option = $$("<option></option>").attr("value", encodedURI).text(label);
+												if (selectedSubclass === encodedURI) {
+													option.attr("selected","selected");
+												}
+												$$('#restricted__$id').append(option);
+											});
+										</script>
+									$if field['type'] == 'Dropdown':
+										<!-- SUBCLASS BUTTON -->
+										<section class="row">
+											<label class='col-md-11 col-sm-6' for='subclass__$id'>Use this value as <em>Subclass</em></label>\
+											<input type='checkbox' onClick='disable_other_subclass_dropdown(this)' id='subclass__$id' name='subclass__$id'>\
+										</section>
+										$if 'subclass' in field and field['subclass'] == 'True':
+											<script type="text/javascript">
+												$$("#subclass__$id").prop("checked",true);
+											</script>
 									$if 'value' in field and field['value'] == 'URI':
 										<!-- BROWSE -->
 										<section class="row">
 											$ checked_browse = "checked=checked" if 'browse'in field and field["browse"] == "True" else ""
-											<label class="left col-md-11 col-sm-6" for="browse__$id">use this value as a filter in <em>Explore</em> page</label>
+											<label class="left col-md-11 col-sm-6" for="browse__$id">Use this value as a filter in <em>Explore</em> page</label>
 											<input $checked_browse type="checkbox" id="browse__$id" name="browse__$id">
 										</section>
 									$if 'value' in field and field['value'] == 'Literal' and field['type'] == 'Textbox':
 										$ checked_disambiguate = "checked=checked" if 'disambiguate'in field and field["disambiguate"] == "True" else ""
 										<!-- DISAMBIGUATE -->
 										<section class="row">
-											<label class="left col-md-11 col-sm-6" for="disambiguate__$id">use this value as primary label (e.g. book title)</label>
+											<label class="left col-md-11 col-sm-6" for="disambiguate__$id">Use this value as primary label (e.g. book title)</label>
 											<input $checked_disambiguate class='disambiguate' onClick='disable_other_cb(this)' type="checkbox" id="disambiguate__$id" name="disambiguate__$id">
 										</section>
 									<!-- mandatory fields -->
 									<section class="row">
 										$ checked_mandatory = "checked=checked" if 'mandatory' in field and field["mandatory"] == "True" else ""
-										<label class="left col-md-11 col-sm-6" for="mandatory__$id">make this value mandatory</label>
+										<label class="left col-md-11 col-sm-6" for="mandatory__$id">Make this value mandatory</label>
 										<input $checked_mandatory type="checkbox" id="mandatory__$id" name="mandatory__$id">
 									</section>
 									<!-- hidden fields -->
 									<section class="row">
 										$ checked_hidden = "checked=checked" if 'hidden' in field and field["hidden"] == "True" else ""
-										<label class="left col-md-11 col-sm-6" for="hidden__$id">hide this field from the front-end view</label>
+										<label class="left col-md-11 col-sm-6" for="hidden__$id">Hide this field from the front-end view</label>
 										<input $checked_hidden type="checkbox" id="hidden__$id" name="hidden__$id" onclick="hide_field(this)">
 									</section>
 								</section>
@@ -334,6 +377,8 @@ $else:
 				</script>
 		</form>
 	</section>
+
+	<!-- TIPS SECTION -->
 	<section class="homeheading col-md-4 col-sm-4 col-lg-4">
 		<p class="caption">Tips</p>
 		<p>You can create your template for data entry in few easy steps! Select the appearance of your field (text box, dropdown, checkbox), name it and provide a short description.</p>
@@ -376,6 +421,30 @@ $else:
 		<h5>Knowledge Extraction</h5>
 		<p>Automatic extraction of Key Entities through queries (API, SPARQL, Static Files)</p>
 	</section>
+
+	<!-- CREATE SUBTEMPLATE FORM -->
+	<section id="selectTemplateClassModal" aria-labelledby="selectTemplateClassButton" role="menu">
+		<form id="selectTemplateClass" name="selectTemplateClass" class="">
+			<section>
+				<span>New Template  <i class='fas fa-times'></i></span>
+			</section>
+			<section class="modal-input">
+				<span class="label">Name</span><br><span class="comment">choose a name for this template</span>
+				<input type="text" name="class_name" value="" placeholder="e.g.: Work of art">
+			</section>
+			<section class="modal-input">
+				<span class="label">Class</span><br><span class="comment">choose one or multiple OWL classes</span>
+				<input type="text" name="class_uri" value="" placeholder="e.g.: crm:E22_Man-made-object">
+				<section id="uri-container"></section>
+			</section>
+			<section class="modal-input-button">
+				<input type="hidden" class="hiddenInput" name="action" value="createTemplate">
+				<button class="btn btn-dark" name="action" value="createTemplate" type="submit">Create</button>
+				<button class="btn btn-dark discard" value="cancelTemplate" type="submit">Cancel</button>
+			</section>
+		</form>
+	</section>
+	<!-- END CREATE SUBTEMPLATE FORM -->
 
 </section>
 <link rel="stylesheet" type="text/css" href="./static/css/yasgui.css">

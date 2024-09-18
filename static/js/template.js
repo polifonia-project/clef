@@ -130,6 +130,7 @@ function is_selected(st, field) {
 function add_field(field, res_type, backend_file=null) {
     // backend_file argument is currently used to load the information about the available SKOS vocabularies
 
+    var is_subclass_active = Object.keys(subclasses).length === 0 ? false : true; 
     var contents = "";
     var temp_id = Date.now().toString(); // to be replaced with label id before submitting
     console.log(temp_id)
@@ -258,25 +259,11 @@ function add_field(field, res_type, backend_file=null) {
         <input type='checkbox' id='hidden__"+temp_id+"' name='hidden__"+temp_id+"' onclick='hide_field(this)'>\
     </section>";
 
-    var field_subtemplate_name = "<section class='row' style='display:none'>\
-        <label class='col-md-3' for='subtemplate_name__"+temp_id+"'>TEMPLATE NAME</label>\
-        <input type='text' id='subtemplate_name__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_name__"+temp_id+"' disabled>\
-    </section>";
-
-    var field_subtemplate_class = "<section class='row' style='display:none'>\
-        <label class='col-md-3' for='subtemplate_class__"+temp_id+"'>OWL CLASS</label>\
-        <input type='text' id='subtemplate_class__"+temp_id+"' class='col-md-8 align-self-start' name='subtemplate_class__"+temp_id+"' disabled>\
-    </section>";
 
     var field_subtemplate_import = "<section class='row'>\
         <label class='col-md-3'>IMPORT TEMPLATES<br><span class='comment'>end-users can use templates among selected ones</span></label>\
-        <section class='col-md-8 import-section'>"+generateCheckboxes(importableTemplates, temp_id)+"</section>\
+        <section class='col-md-8 import-section'>"+generateCheckboxes(templatesObject, temp_id)+"</section>\
     </section>";
-
-    var field_check_subtemplate = "<section class='row' style='display:none'>\
-        <label class='col-md-3'></label>\
-        <input type='button' class='("+res_type+") btn btn-dark check_subtemplate' value='Open subtemplate' onclick='edit_subtemplate(this)'></input>\
-    </section>"
 
     var field_cardinality = "<section class='row'>\
         <label class='col-md-3'>CARDINALITY <br><span class='comment'>expected values</span></label>\
@@ -306,23 +293,35 @@ function add_field(field, res_type, backend_file=null) {
         </section>\
     </section>";
 
+    var field_subclass_restriction = "";
+    if (is_subclass_active) {
+        field_subclass_restriction = `<section class='subclass-dropdown row'>
+                <label class='col-md-3'>SUBCLASS RESTRICTED <br><span class='comment'>make this field available once a subclass has been selected</span></label>
+                <select class='custom-select col-md-8' id='restricted__${temp_id}' name='restricted__${temp_id}'>
+                    <option value='None'>Select a subclass</option>
+                    ${Object.entries(subclasses).map(([uri, label]) => `
+                        <option value='${encodeURIComponent(uri)}'>${label}</option>
+                    `).join('')}
+                </select>
+            </section>
+        `;
+    }
+
     var open_addons = "<section id='addons__"+temp_id+"'>";
     var close_addons = "</section>";
     var up_down = '<a href="#" class="up"><i class="fas fa-arrow-up"></i></a> <a href="#" class="down"><i class="fas fa-arrow-down"></i></a><a href="#" class="trash"><i class="far fa-trash-alt"></i></a>';
 
     contents += field_type + field_name + field_prepend + field_property + open_addons;
-    if (field =='Textbox') { contents += field_value + field_placeholder + field_mandatory + field_hide; }
-    else if (field =='Dropdown') { contents += field_values + field_mandatory + field_hide + field_subclass + field_browse }
-    else if (field =='Textarea') { contents += field_placeholder + field_mandatory + field_hide; }
-    else if (field =='Date') { contents += field_calendar + field_mandatory + field_hide + field_browse ; }
-    else if (field =='Skos') { contents += field_available_vocabularies + accepted_values_vocabularies + field_placeholder + field_mandatory + field_hide + field_browse ; }
-    else if (field =='Multimedia') { contents += field_multimedia + field_placeholder + field_mandatory + field_hide; }
-    else if (field =='WebsitePreview') { contents += field_placeholder + field_mandatory + field_hide; }
-    else if (field =='Subtemplate') { contents = field_type + field_name + field_prepend + field_property + field_subtemplate_import + field_subtemplate_name + field_subtemplate_class + field_check_subtemplate + field_cardinality + field_data_inheritance + field_mandatory + field_hide + field_browse + open_addons; }
-    else if (field =='KnowledgeExtractor') {
-        contents = field_type + field_name + field_prepend + field_property + open_addons;
-    }
-    else {contents += field_values + field_mandatory + field_hide + field_browse; };
+    if (field =='Textbox') { contents += field_value + field_placeholder + field_subclass_restriction + field_mandatory + field_hide; }
+    else if (field =='Dropdown') { contents += field_values + field_subclass_restriction + field_mandatory + field_hide + field_subclass + field_browse }
+    else if (field =='Textarea') { contents += field_placeholder + field_subclass_restriction + field_mandatory + field_hide; }
+    else if (field =='Date') { contents += field_calendar + field_subclass_restriction + field_mandatory + field_hide + field_browse ; }
+    else if (field =='Skos') { contents += field_available_vocabularies + accepted_values_vocabularies + field_placeholder + field_subclass_restriction + field_mandatory + field_hide + field_browse ; }
+    else if (field =='Multimedia') { contents += field_multimedia + field_placeholder + field_subclass_restriction + field_mandatory + field_hide; }
+    else if (field =='WebsitePreview') { contents += field_placeholder + field_subclass_restriction + field_mandatory + field_hide; }
+    else if (field =='Subtemplate') { contents += field_subtemplate_import + field_cardinality + field_data_inheritance + field_subclass_restriction + field_mandatory + field_hide + field_browse; }
+    else if (field =='KnowledgeExtractor') { contents += open_addons + field_subclass_restriction; }
+    else {contents += field_values + field_subclass_restriction + field_mandatory + field_hide + field_browse; };
     contents += close_addons + up_down;
     $(".sortable").append("<section class='block_field' data-id='"+temp_id+"'>"+contents+"</section>");
     updateindex();
@@ -490,6 +489,7 @@ function disable_other_subclass_dropdown(ckType) {
 
     var isChecked = $(ckType).prop("checked");
     $("input[type='checkbox'][id*=__subclass__]").prop("checked",false);
+    console.log($(".subclass-dropdown.row"))
     $(".subclass-dropdown.row").remove();
 
     // activate field-subclass dropdowns
@@ -497,22 +497,24 @@ function disable_other_subclass_dropdown(ckType) {
         $(ckType).prop("checked",true);
 
         // prepare the dropdown
-        var raw_subclasses = $(ckType).closest(".block_field").find("textarea[id*='__values__']").val();
-        var subclasses_array = raw_subclasses.split("\n").map(function(element) {
+        var rawSubclasses = $(ckType).closest(".block_field").find("textarea[id*='__values__']").val();
+        var subclassesArray = rawSubclasses.split("\n").map(function(element) {
             return element.trim();
         });
-        var field_subclass_dropdown = $("<section class='subclass-dropdown row'>\
+        var fieldSubclassDropdown = $("<section class='subclass-dropdown row'>\
             <label class='col-md-3'>SUBCLASS RESTRICTED <br><span class='comment'>make this field available once a subclass has been selected</span></label>\
             <select class='custom-select col-md-8'>\
                 <option value='None'>Select a subclass</option>\
             </select>\
         </section>");
-        subclasses_array.forEach(element => {
-            var subclass_parts = element.split(",");
-            if (subclass_parts.length >= 2) { 
-                var value = encodeURIComponent(subclass_parts[0].trim());
-                var label = subclass_parts[1].trim();
-                field_subclass_dropdown.find("select").append(
+        subclasses = {}
+        subclassesArray.forEach(element => {
+            var subclassParts = element.split(",");
+            if (subclassParts.length >= 2) { 
+                var value = encodeURIComponent(subclassParts[0].trim());
+                var label = subclassParts[1].trim();
+                subclasses[value] = label;
+                fieldSubclassDropdown.find("select").append(
                     $("<option></option>").attr("value", value).text(label)
                 );
             }
@@ -524,7 +526,7 @@ function disable_other_subclass_dropdown(ckType) {
             if ($(this).data("index") !== index) {
                 var lastInputField = $(this).find(".col-md-3:first-child").last();
                 var lastInputRow = lastInputField.closest(".row");
-                var reusableDropdown = field_subclass_dropdown.clone(true, true);
+                var reusableDropdown = fieldSubclassDropdown.clone(true, true);
                 var newId = $(this).data("index")+"__restricted__"+$(this).data("id");
                 reusableDropdown.find("select").attr("name", newId);
                 reusableDropdown.find("select").attr("id", newId);
@@ -552,17 +554,17 @@ function hide_field(el) {
 // SUBTEMPLATE FIELDS
 
 // generate a list of checkboxes to select one or more values
-function generateCheckboxes(importableTemplates, fieldId) {
+function generateCheckboxes(templatesObject, fieldId) {
     let result = "";
-    for (const [key, value] of Object.entries(importableTemplates)) {
-        var id = key.replace('resource_templates/','').replace('.json','');
+    for (const templateObj of templatesObject) {
+        var id = templateObj.short_name;
         var fullId = id + "__" + fieldId;
         var label = "<label for='"+fullId+"'>";
-        var openTemplate = "<a target='_blank' href='/"+id+"'><i class='fas fa-external-link-alt'></i></a>  "+value.toUpperCase();
-        var input = "<input type='checkbox' id='"+fullId+"' name='"+fullId+"' value='"+key+"'></label><br>";
-        result+=label+openTemplate+input
+        var openTemplate = "<a target='_blank' href='/template-"+id+"'><i class='fas fa-external-link-alt'></i></a>  " + templateObj.name.toUpperCase();
+        var input = "<input type='checkbox' id='"+fullId+"' name='"+fullId+"' value='"+templateObj.template+"'></label><br>";
+        result += label + openTemplate + input;
     }
-    result += "<label class='add-option'>CREATE NEW TEMPLATE <i class='fas fa-plus-circle' onclick='addTemplate(this)'></i></label>"
+    result += "<label class='add-option'>CREATE NEW TEMPLATE <i class='fas fa-plus-circle' onclick='addTemplate(subtemplate=this)'></i></label>"
     return result;
 }
 
@@ -893,80 +895,52 @@ function yasqe_to_hidden_field(el,keep=false) {
 ////// TODO //////
 //////////////////
 
-function import_subtemplate(el) {
-    var requested_template = el.value;
-    var requested_name = el.options[el.selectedIndex].text;
-    var name_field = $(el).parent().next().find('input[type="text"]').eq(0);
-    var class_field = $(el).parent().next().next().find('input[type="text"]').eq(0);
-    var edit_field = $(el).parent().next().next().next().find('input[type="button"]').eq(0);
-    console.log(edit_field)
-    $(name_field).parent().show();
-    $(class_field).parent().show();
-    // make fields not modifiable unless creating a new subtemplate
-    name_field.attr("disabled", true); 
-    class_field.attr("disabled", true);
-   
-    if (requested_template !== "CreateNewSubtemplate") {
-        // hide new template button
-        edit_field.parent().show();
-        // import an existing template
-        var encoded_template = encodeURIComponent(requested_template.replace("resource_templates/", ""));
-        var url = window.location.href.split("/");
-        var url_tpl = url[url.length-1];
-        var url_request = '/'+url_tpl+'?template=' + encoded_template;
-        $.ajax({
-            type: 'GET',
-            url: url_request,
-            datatype: 'text',
-            success: function(result_json) {
-            var results = result_json.substring(1, result_json.length - 1).split(", ", 2);
-            var resource_class = results[0].replaceAll("'", ""), resource_template = results[1];
-            name_field.val(requested_name);
-            class_field.val(resource_class);
-            },
-            error: function(xhr, status, error) {
-            console.error("AJAX error:", error);
-            }
-        });
-    } else {
-        // create a new subtemplate
-        name_field.attr("disabled", false); // re-activate disabled input fields
-        class_field.attr("disabled", false); 
-        name_field.focus(); // autofocus the name input field
-        name_field.val(""); class_field.val(""); // make the fields empty
-        edit_field.parent().show();
-    }   
-} 
+function editSubtemplate(newSubtemplateButton) {
+    var className = $("input[name='class_name']").val();
+    var shortName = className.toLowerCase().replaceAll(" ", "_");
+    var nextUrl = "/template-" + shortName;
+    var classUriInputs = $('#uri-container').find('input');
+    var classUri = '';
 
-function edit_subtemplate(el) {
-    var class_field = $(el).parent().prev().find('input').val();
-    var name_field = $(el).parent().prev().prev().find('input').val();
-    var template_name = $(el).parent().prev().prev().prev().find('select').val();
-    if (class_field==='' || name_field==='') {
-        alert("Please, specify a label and a class");
-    } else if (template_name ==="CreateNewSubtemplate") {
-        var modified_cls = name_field.toLowerCase().replaceAll(" ", "_");
-        var url = "/template-" + modified_cls;
-        var class_list = '';
-        var classes = class_field.split("; ");
-        for (let i = 0; i < classes.length; i++) { 
-        let new_class = "&uri_class_" + i + "=" + encodeURIComponent(classes[i]); 
-        class_list += new_class;
-        }
-
-        console.log(class_list)
-
-        console.log(url);
-        $.ajax({
+    classUriInputs.each(function(index,element) {
+        let new_class = "&uri_class_" + index + "=" + encodeURIComponent($(element).val()); 
+        classUri += new_class;
+    });
+    $.ajax({
         type: 'POST',
-        url: '/welcome-1?action=createTemplate'+class_list+'&class_name='+encodeURIComponent(name_field),
+        url: '/welcome-1?action=createTemplate'+classUri+'&class_name='+encodeURIComponent(className),
         success: function(data) {
-            setTimeout(function() { window.open(url, "_blank") }, 500);
+            setTimeout(function() { window.open(nextUrl, "_blank") }, 500);
         }
-        })
-    } else {
-        var modified_cls = name_field.toLowerCase().replaceAll(" ", "_");
-        var url = "/template-" + modified_cls;
-        setTimeout(function() { window.open(url, "_blank") }, 500);
+    });
+
+    // create a checkbox for each Subtemplate field
+    $(".import-section").each(function() {
+        var blockField = $(this).closest(".block_field");
+        var blockFieldId = blockField.data("id");
+        var blockFieldIndex = blockField.data("index");
+        var fullId = blockFieldIndex+"__"+shortName+"__"+blockFieldId;
+        var labelElement = "<label for='"+fullId+"'>\
+            <a target='_blank' href='"+nextUrl+"'><i class='fas fa-external-link-alt'></i></a>  " + className.toUpperCase() + "\
+            <input type='checkbox' id='"+fullId+"' name='"+fullId+"' value='"+encodeURIComponent('resource_templates/'+nextUrl)+".json'></label><br>";
+        blockField.find("label:last-child").before($(labelElement));
+    });
+
+    // activate the checkbox
+    console.log($(newSubtemplateButton),$(newSubtemplateButton).parent().prev(),$(newSubtemplateButton).parent().prev().find("input"))
+    $(newSubtemplateButton).parent().prev().prev().find("input").prop("checked",true);
+
+    // remove input elements and close modal
+    $('#uri-container').empty();
+    $("input[name='class_name']").val("");
+    $("#selectTemplateClassModal").toggleClass('open-modal');
+    $("body div.modal-bg").remove();
+
+    // add the novel template to the Array
+    var newTemplate = { 
+        name : className,
+        short_name : shortName,
+        template : "resource_templates/" + nextUrl + ".json" 
     }
+    templatesObject.push(newTemplate);
 }

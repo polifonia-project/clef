@@ -235,22 +235,6 @@ class Template:
 			the name assigned to the template / class
 		"""
 
-		# retrieve importable template
-		if web.input() and "template" in web.input():
-			try:
-				requested_template = web.input().template.decode('utf-8').strip()
-			except Exception as e:
-				requested_template = web.input().template.strip()
-			with open("resource_templates/"+requested_template, "r") as tpl_file:
-				template = json.load(tpl_file)
-
-			# get the class of the template
-			with open(TEMPLATE_LIST) as tpl_file:
-				tpl_list = json.load(tpl_file)
-			resource_class = [t["type"] for t in tpl_list if t["template"] == "resource_templates/"+requested_template][0]
-
-			return resource_class, template
-
 		# display template
 		is_git_auth = github_sync.is_git_auth()
 
@@ -276,16 +260,11 @@ class Template:
 			with open(SKOS_VOCAB, 'r') as skos_list:
 				skos_file = json.load(skos_list)
 
-		# importable templates
-		u.check_ask_class()
-		ask_form = u.change_template_names()
-		templates = ask_form[0]['values']
-
 		return render.template(f=fields,user=session['username'],
 								res_type=res_type,res_name=res_full_name,
 								res_status=res_status,is_git_auth=is_git_auth,
 								project=conf.myProject,skos_vocabs=skos_file,
-								templates=templates)
+								templates=tpl_list)
 
 	def POST(self, res_name):
 		""" Save the form template for data entry and reload config files

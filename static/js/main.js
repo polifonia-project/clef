@@ -23,49 +23,7 @@ $(document).ready(function() {
   // create a new TEMPLATE
   $("#selectTemplateClassButton").on('click', function() {
     // show modal
-    $("#selectTemplateClassModal").toggleClass('open-modal');
-    $('body').append($("<div class='modal-bg'>"));
-  });
-
-  /* check class_name */
-  $("#selectTemplateClass [name='class_name']").on('click', function() {
-    // show error message in case a name is already in use
-    var templatesNames = templatesObject.map(obj => obj.name.toLowerCase());
-    $(this).off('keyup').on('keyup', function() {
-      $(this).removeClass('error-input');
-      $(this).next('.error-message').remove();
-      var val = $(this).val();
-      if (templatesNames.includes(val.toLowerCase())) {
-        $(this).addClass('error-input');
-        $(this).after($('<span class="error-message"><i class="fas fa-exclamation-triangle"></i>This name is already in use. Try a new one</span>'))
-      } 
-    })
-    
-  });
-
-  /* check class_uri */
-  $("#selectTemplateClass [name='class_uri']").on('click', function() {
-    $(this).off('keyup').on('keyup', function(e) {
-      if (e.which == 13 && $(this).val().length > 0) {
-        var id = new Date().valueOf().toString();
-        $(this).next('section').append("<span class='tag'>"+$(this).val()+"</span><input type='hidden' class='hiddenInput' name='uri_class-"+id+"' value=\""+encodeURIComponent($(this).val())+"\"/>");
-        $(this).val('')
-      } 
-    })
-  });
-
-  /* remove template creation modal */
-  $("#selectTemplateClass [value='cancelTemplate'], #selectTemplateClass .fa-times").on('click', function(e) {
-    e.preventDefault();
-    $("#selectTemplateClassModal").toggleClass('open-modal');
-    $("body div.modal-bg").remove();
-    return false;
-  });
-
-  /* save new template */
-  $("#selectTemplateClass [value='createTemplate']").on('click', function(e) {
-    e.preventDefault();
-    validateTemplateClass();
+    addTemplate();
   });
 
   // message after saving
@@ -544,6 +502,7 @@ $(window).on('resize', function() {
 
 
 
+
 /////////////////////////
 // MULTIPLE LANGUAGES ///
 /////////////////////////
@@ -926,19 +885,66 @@ function visualize_subrecord_literals(el) {
 // BACKEND //
 //////////////
 
-function validateTemplateClass() {
+function addTemplate(subtemplate=null) {
+
+  // show modal
+  $("#selectTemplateClassModal").toggleClass('open-modal');
+  $('body').append($("<div class='modal-bg'>"));
+
+  // check class_name 
+  $("#selectTemplateClass [name='class_name']").on('click', function() {
+    // show error message in case a name is already in use
+    var templatesNames = templatesObject.map(obj => obj.name.toLowerCase());
+    $(this).off('keyup').on('keyup', function() {
+      $(this).removeClass('error-input');
+      $(this).next('.error-message').remove();
+      var val = $(this).val();
+      if (templatesNames.includes(val.toLowerCase())) {
+        $(this).addClass('error-input');
+        $(this).after($('<span class="error-message"><i class="fas fa-exclamation-triangle"></i>This name is already in use. Try a new one</span>'))
+      }
+    })
+    
+  });
+
+  // check class_uri
+  $("#selectTemplateClass [name='class_uri']").on('click', function() {
+    $(this).off('keyup').on('keyup', function(e) {
+      if (e.which == 13 && $(this).val().length > 0) {
+        var id = new Date().valueOf().toString();
+        $(this).next('section').append("<span class='tag'>"+$(this).val()+"</span><input type='hidden' class='hiddenInput' name='uri_class-"+id+"' value=\""+encodeURIComponent($(this).val())+"\"/>");
+        $(this).val('')
+      } 
+    })
+  });
+
+  // hide modal
+  $("#selectTemplateClass [value='cancelTemplate'], #selectTemplateClass .fa-times").on('click', function(e) {
+    e.preventDefault();
+    $("#selectTemplateClassModal").toggleClass('open-modal');
+    $("body div.modal-bg").remove();
+    return false;
+  });
+
+  // save new template
+  $("#selectTemplateClass [value='createTemplate']").on('click', function(e) {
+    e.preventDefault();
+    validateTemplateClass(subtemplate);
+  });
+}
+
+function validateTemplateClass(subtemplate) {
   // validate
   var class_name = $("input[name='class_name']").val();
   var class_uris = $('#uri-container').find('input');
   if (class_name == "" || class_uris.length == 0 ) {
     alert("Name and URI must be filled out");
-
     return false;
   } else if ($("input[name='class_name']").hasClass('error-input')) {
-    console.log("B")
     alert("Check your template Name");
-
     return false;
+  } else if (subtemplate!==null) {
+      editSubtemplate(subtemplate);
   } else {
     document.getElementById('selectTemplateClass').submit();
   }

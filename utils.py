@@ -199,14 +199,14 @@ def fields_to_json(data, json_file, skos_file):
 		if 'values' in d:
 			values_pairs = d['values'].replace('\r','').strip().split('\n')
 			d["value"] = "URI"
-			d['values'] = { pair.split(",")[0].strip():pair.split(",")[1].strip() for pair in values_pairs }
+			d['values'] = { pair.split(",")[0].strip():pair.split(",")[1].strip() for pair in values_pairs } if values_pairs[0] != "" else {}
 		d["disambiguate"] = "True" if 'disambiguate' in d else "False"
 		d["browse"] = "True" if 'browse' in d else "False"
 		d["mandatory"] = "True" if 'mandatory' in d else "False" # add mandatory fields
 		d["hidden"] = "True" if 'hidden' in d else "False" # add hidden fields
 		print(d)
 		d["subclass"] = "True" if "subclass" in d else "False" # add subclass drodpown
-		d["restricted"] = "None" if d["subclass"] == "True" else d["restricted"] # do not restrict the subclass field
+		d["restricted"] = "None" if d["subclass"] == "True" else d["restricted"] if "restricted" in d else "None" # do not restrict the subclass field
 		# default if missing
 		if d["type"] == "None":
 			d["type"] = "Textbox" if "values" not in d else "Dropdown"
@@ -238,6 +238,7 @@ def fields_to_json(data, json_file, skos_file):
 		# add default values
 		d['searchWikidata'] = "True" if d['type'] == 'Textbox' and d['value'] == 'URI' else "False"
 		d['searchGeonames'] = "True" if d['type'] == 'Textbox' and d['value'] == 'Place' else "False"
+		d['searchOrcid'] = "True" if d['type'] == 'Textbox' and d['value'] == 'Researcher' else "False"
 		d['searchSkos'] = "True" if d['type'] == 'Skos' else "False"
 		d['url'] = "True" if d['type'] == 'Textbox' and d['value'] == 'URL' else "False"
 
@@ -528,7 +529,7 @@ def update_skos_vocabs(d, skos):
 
 
 # KNOWLEDGE EXTRACTION
-def has_extractor(res_template, record_name=None):
+def has_extractor(res_template, record_name=None, processed_templates=[]):
 	"""Return a list of Knowledge Extraction input fields (if record_name == None) 
 	or a list of named graphs that may contain extractions (if record_name != None)
 
@@ -566,6 +567,7 @@ def has_extractor(res_template, record_name=None):
 	else:
 
 		# checks whether a template allows some knowledge extraction
+		processed_templates.append(res_template)
 		result = []
 		with open(res_template,'r') as tpl_file:
 			data = json.load(tpl_file)
@@ -584,7 +586,8 @@ def has_extractor(res_template, record_name=None):
 				elif 'import_subtemplate' in field and field['import_subtemplate'] != []:
 					# iterate over sub-templates
 					for imported_template in field['import_subtemplate']:
-						result.extend(has_extractor(imported_template, record_name=None))
+						if imported_template not in processed_templates:
+							result.extend(has_extractor(imported_template, record_name=None,processed_templates=processed_templates))
 
 		return result
 

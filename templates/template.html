@@ -86,7 +86,8 @@ $else:
 												<option value="None">Select</option>
 												<option value="Literal">Free text (Literal)</option>
 												<option value="URI">Entity (URI from Wikidata, VIAF, or catalogue)</option>
-												<option value="Place">Location (from geonames)</option>
+												<option value="Place">Location (from GeoNames)</option>
+												<option value="Researcher">Researcher and contributor (from ORCiD)</option>
 												<option value="URL">URL</option>
 											</select>
 											<script type="text/javascript">
@@ -239,7 +240,7 @@ $else:
 										$ data_reuse = field['dataReuse'] + "__" + id if 'dataReuse' in field else "denyDataReuse__" + id
 										<script type="text/javascript">
 											// import List
-											$$("#import-$id").html(generateCheckboxes(importableTemplates, '$id'));
+											$$("#import-$id").html(generateCheckboxes(templatesObject, '$id'));
 											// import Details
 											$$("#$cardinality").attr('checked', 'checked')
 											$$("#$data_reuse").attr('checked', 'checked')

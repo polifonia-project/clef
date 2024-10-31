@@ -86,7 +86,7 @@ def getRightURIbase(value):
 
 def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 	""" transform input data into RDF, upload data to the triplestore, dump data locally """
-	print("RECORD DATA:", recordData, "TEMPLATE:", tpl_form)
+	print("RECORD DATA:", recordData, "TEMPLATE:", tpl_form, "USER-ID:", userID)
 
 	# MAPPING FORM / PROPERTIES
 	if tpl_form:
@@ -102,13 +102,14 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 		tpl_list = json.load(tpl_file)
 
 	resource_class = next(t["type"] for t in tpl_list if t["template"] == tpl_form)
-	resource_subclass_field = next(f["id"] for f in fields if f["subclass"] == "True")
-	resource_subclass = urllib.parse.quote(getRightURIbase(recordData[resource_subclass_field]),safe='')
-	fields = [input_field for input_field in fields if input_field['hidden'] == 'False' and \
-			input_field["restricted"] in ["None",resource_subclass]]
-	
-	print(resource_subclass)
-	print("-------------")
+	resource_subclass_field = next((f["id"] for f in fields if f.get("subclass") == "True"), None)
+	resource_subclass = urllib.parse.quote(getRightURIbase(recordData[resource_subclass_field]),safe='') if resource_subclass_field != None else resource_subclass_field
+	print("resource_subclass:", resource_subclass)
+	fields = [
+		input_field for input_field in fields 
+		if input_field["hidden"] == "False" and 
+		("restricted" not in input_field or input_field["restricted"] in ["None", resource_subclass])
+	]
 
 	# CREATE/MODIFY A NAMED GRAPH for each new record
 
@@ -214,7 +215,8 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 					for literal in value['results']:
 						val, lang = literal
 						val = val.replace('\n','').replace('\r','')
-						wd.add(( URIRef(base+graph_name), URIRef(field['property']), Literal(val, lang=lang)))
+						if val != "":
+							wd.add(( URIRef(base+graph_name), URIRef(field['property']), Literal(val, lang=lang)))
 			
 			# now get also the entities associated to textareas (record creation)
 			if field['type'] == 'Textarea':
@@ -287,25 +289,28 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 					server.update('load <file:///'+dir_path+'/records/'+recordID+"-extraction-"+field["id"]+"-"+extraction_num+'.ttl> into graph <'+base+extraction_graph_name+'/>')
 		# SUBTEMPLATE
 		elif field['type']=="Subtemplate" and field['id'] in recordData:
-			if type(recordData[field['id']]) != type([]) and field['id']+"-subrecords" in recordData:
-				# get the list of subrecords associated to a 'Subtemplate' field
-				subrecords = recordData[field['id']+"-subrecords"].split(",") if recordData[field['id']+"-subrecords"] != "" else []
-				for subrecord in subrecords:
-					if ";" in subrecord:
-						subrecord_id, retrieved_label = subrecord.split(";",1)
-					else:
-						# process a new subrecord, send its data to the triplestore, and link it to the main record
-						subrecord_id = subrecord
-						allow_data_reuse = fields if 'dataReuse' in field and field['dataReuse']=='allowDataReuse' else False
-						processed_subrecord = process_new_subrecord(recordData,userID,stage,subrecord,supertemplate=None,allow_data_reuse=allow_data_reuse)
-						subrecord_id, retrieved_label = processed_subrecord
-					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+subrecord_id) ))
-					wd.add(( URIRef(base+subrecord_id), RDFS.label, Literal(retrieved_label, datatype="http://www.w3.org/2001/XMLSchema#string")))
-			elif type(recordData[field['id']]) == type([]):
-				for entity in recordData[field['id']]:
-					entity_URI, entity_label = entity
-					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+entity_URI) ))
-					wd.add(( URIRef(base+entity_URI), RDFS.label, Literal(entity_label, datatype="http://www.w3.org/2001/XMLSchema#string")))
+			if "," in recordData[field['id']] or ";" in recordData[field['id']]:
+				if type(recordData[field['id']]) != type([]) and field['id']+"-subrecords" in recordData:
+					# get the list of subrecords associated to a 'Subtemplate' field
+					subrecords = recordData[field['id']+"-subrecords"].split(",") \
+						if field['id']+"-subrecords" in recordData else []
+					for subrecord in subrecords:
+						if subrecord != "":
+							if ";" in subrecord:
+								subrecord_id, retrieved_label = subrecord.split(";",1)
+							else:
+								# process a new subrecord, send its data to the triplestore, and link it to the main record
+								subrecord_id = subrecord
+								allow_data_reuse = fields if 'dataReuse' in field and field['dataReuse']=='allowDataReuse' else False
+								processed_subrecord = process_new_subrecord(recordData,userID,stage,subrecord,supertemplate=None,allow_data_reuse=allow_data_reuse)
+								subrecord_id, retrieved_label = processed_subrecord
+							wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+subrecord_id) ))
+							wd.add(( URIRef(base+subrecord_id), RDFS.label, Literal(retrieved_label, datatype="http://www.w3.org/2001/XMLSchema#string")))
+				elif type(recordData[field['id']]) == type([]):
+					for entity in recordData[field['id']]:
+						entity_URI, entity_label = entity
+						wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+entity_URI) ))
+						wd.add(( URIRef(base+entity_URI), RDFS.label, Literal(entity_label, datatype="http://www.w3.org/2001/XMLSchema#string")))
 
 	# get keywords (record modify)
 	if stage == 'modified' and any([k for k,v in recordData.items() if k.startswith('keywords')]):

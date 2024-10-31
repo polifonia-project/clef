@@ -67,6 +67,7 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 				for vocabulary in field['skos']:
 					classes = classes + " " + vocabulary
 			classes = classes+' searchWikidata' if 'searchWikidata' in field and field['searchWikidata'] == 'True' else classes
+			classes = classes+' searchOrcid' if 'searchOrcid' in field and field['searchOrcid'] == 'True' else classes
 			classes = classes+' searchGeonames' if 'searchGeonames' in field and field['searchGeonames'] == 'True' else classes
 			classes = classes+' searchSkos' if 'searchSkos' in field and field['searchSkos'] == 'True' else classes
 			classes = classes+' wikidataConstraint' if 'wikidataConstraint' in field else classes
@@ -78,8 +79,9 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 			classes = classes+' oneVocableAccepted' if 'vocables' in field and field['vocables'] == 'oneVocable' else classes
 			classes = classes+' websitePreview' if field['type'] == 'WebsitePreview' else classes
 			classes = classes+' disabled' if 'disabled' in field and field['disabled'] == "True" else classes
-			classes = classes+ ' ' + field['cardinality'] if 'cardinality' in field else classes
-			classes = classes+ ' ' + field['dataReuse'] if 'dataReuse' in field else classes
+			classes = classes+' '+field['cardinality'] if 'cardinality' in field else classes
+			classes = classes+' '+field['dataReuse'] if 'dataReuse' in field else classes
+			classes = classes+' original-template'
 			autocomplete = field['cache_autocomplete'] if 'cache_autocomplete' in field and len(field['cache_autocomplete']) > 0 else ''
 			rdf_property = field['property'] if 'property' in field else ''
 			mandatory = field['mandatory'] if 'mandatory' in field and field['mandatory'] == 'True' else 'False'
@@ -130,7 +132,7 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 					data_supertemplate=data_supertemplate), )
 
 			# Entities, SKOS thesauri, links
-			if field['type'] in ['Skos', 'WebsitePreview'] or (field['type'] == 'Textbox' and field['value'] in ['URL', 'URI', 'Place']):
+			if field['type'] in ['Skos', 'WebsitePreview'] or (field['type'] == 'Textbox' and field['value'] in ['URL', 'URI', 'Place', 'Researcher']):
 				params = params + (form.Textbox(myid,
 					description = description,
 					id=myid,

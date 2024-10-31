@@ -39,28 +39,43 @@ $(document).ready(function() {
         $(this).closest("section.form_row.block_field").hide();
     });
 
-    $("[data-subclassdropdown='True']").on("change", function() {
-        var selectedValue = $(this).val();
-        var subclass = encodeURIComponent(selectedValue.trim());
-        var supertemplate = $(this).data("supertemplate"); // warning: check whether this must be changed to data("subrecord");
+    $("[data-subclassdropdown='True']").each(function() {
 
-        // hide unrequired fields
-        $("[data-subclass][data-supertemplate='"+supertemplate+"']:not([data-subclass='"+subclass+"']):not([data-subclass=''])").closest("section.form_row.block_field").each(function() {
-            $(this).fadeOut(400);
-            var inputId = $(this).find("input, textarea, select").first().attr("id");
-            $("li[data-id='"+inputId+"']").fadeOut(400);
-        })
-
-        // show required fields
-        $("[data-supertemplate='"+supertemplate+"'][data-subclass='"+subclass+"']").closest("section.form_row.block_field").each(function() {
-            $(this).fadeIn(400);
-            var inputId = $(this).find("input, textarea, select").first().attr("id");
-            $("li[data-id='"+inputId+"'").fadeIn(400);
+        // on change function
+        $(this).on("change", function() {
+            var selectedValue = $(this).val();
+            var subclass = encodeURIComponent(selectedValue.trim());
+            var supertemplate = $(this).data("supertemplate"); // warning: check whether this must be changed to data("subrecord");
+    
+            // hide unrequired fields
+            $("[data-subclass][data-supertemplate='"+supertemplate+"']:not([data-subclass='"+subclass+"']):not([data-subclass=''])").closest("section.form_row.block_field").each(function() {
+                $(this).fadeOut(400);
+                var inputId = $(this).find("input, textarea, select").first().attr("id");
+                $("li[data-id='"+inputId+"']").fadeOut(400);
+            })
+    
+            // show required fields
+            $("[data-supertemplate='"+supertemplate+"'][data-subclass='"+subclass+"']").closest("section.form_row.block_field").each(function() {
+                $(this).fadeIn(400);
+                var inputId = $(this).find("input, textarea, select").first().attr("id");
+                $("li[data-id='"+inputId+"'").fadeIn(400);
+            });
         });
-        
-        
-    })
 
+        // trigger the on change function to show subclass restricted fields (modify and review page)
+        if ($(this).val() !== "None") {
+            var selectedValue = $(this).val();
+            var subclass = encodeURIComponent(selectedValue.trim());
+            var supertemplate = $(this).data("supertemplate"); 
+
+            // show required fields
+            $("[data-supertemplate='"+supertemplate+"'][data-subclass='"+subclass+"']").closest("section.form_row.block_field").each(function() {
+                $(this).fadeIn(400);
+                var inputId = $(this).find("input, textarea, select").first().attr("id");
+                $("li[data-id='"+inputId+"'").fadeIn(400);
+            });
+        }
+    });
 
     // TABLE OF CONTENTS
     // table of contents: input fields
@@ -99,6 +114,10 @@ $(document).ready(function() {
         }
         $('.fields-list').append(listItem);
     });
+
+
+    // DETECT URLs - wayback machine popup
+    detectInputWebPage("detect_web_page");
 
 });
 
@@ -154,12 +173,12 @@ function makeSPARQLQuery( endpointUrl, sparqlQuery, doneCallback ) {
 function setSearchResult(searchtermId,searchtermElement=null){
     var element = searchtermId !== null ? $("#"+searchtermId) : $(searchtermElement);
     var offset = element.offset();
-    var leftpos = offset.left+15;
+    var leftpos = searchtermId !== "search" ? offset.left+15 : offset.left;
     var height = element.height();
     var width = element.width();
     var top = offset.top + height + 15 + "px";
 
-    $('#searchresult').css( {
+    $('#searchresult, #searchresultmenu').css( {
         'position': 'absolute',
         'margin-left': leftpos+'px',
         'top': top,
@@ -170,7 +189,7 @@ function setSearchResult(searchtermId,searchtermElement=null){
         'max-height': '300px',
         'overflow-y': 'auto'
     });
-    $("#searchresult").empty();
+    $("#searchresult, #searchresultmenu").empty();
 }
 
 // SEARCH GEONAMES
@@ -218,7 +237,7 @@ function searchGeonames(searchterm) {
                     }
                 }, 3000);
 
-                var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o ?desc "+inGraph+" where { ?s rdfs:label ?o . OPTIONAL { ?s rdfs:comment ?desc} . ?o bds:search '"+q+"*' .}"
+                var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s (STR(?o) as ?o_str) ?desc "+inGraph+" where { ?s rdfs:label ?o . OPTIONAL { ?s rdfs:comment ?desc} . ?o bds:search '"+q+"*' .}"
                 var encoded = encodeURIComponent(query)
                 $.ajax({
                     type: 'GET',
@@ -240,7 +259,7 @@ function searchGeonames(searchterm) {
                             if ( myUrl.substring(myUrl.length-1) != "/") {
                                 var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1)
                                 if (returnedJson.results.bindings[i].desc !== undefined) {var desc = '- '+returnedJson.results.bindings[i].desc.value} else {var desc = ''}
-                                $("#searchresult").append("<div class='wditem'><a class='blue orangeText' target='_blank' href='view-"+resID+"'><i class='fas fa-external-link-alt'></i></a> <a class='orangeText' data-id=" + returnedJson.results.bindings[i].s.value + "'>" + returnedJson.results.bindings[i].o.value + "</a> " + desc + "</div>");
+                                $("#searchresult").append("<div class='wditem'><a class='blue orangeText' target='_blank' href='view-"+resID+"'><i class='fas fa-external-link-alt'></i></a> <a class='orangeText' data-id=" + returnedJson.results.bindings[i].s.value + "'>" + returnedJson.results.bindings[i].o_str.value + "</a> " + desc + "</div>");
                             };
                         };
 
@@ -303,7 +322,7 @@ function searchCatalogue(searchterm) {
     $('#'+searchterm).keyup(function(e) {
         $("#searchresultmenu").show();
         var q = $('#'+searchterm).val();
-        var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o "+inGraph+" where { ?o bds:search '"+q+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o ; a ?class .}"
+        var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s (STR(?o) AS ?o_str) "+inGraph+" where { ?o bds:search '"+q+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o ; a ?class .}"
         var encoded = encodeURIComponent(query)
         if (q == '') { $("#searchresultmenu").hide();}
         $.ajax({
@@ -332,7 +351,7 @@ function searchCatalogue(searchterm) {
                     // exclude named graphs from results
                     if ( myUrl.substring(myUrl.length-1) != "/") {
                         var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1)
-                        $("#searchresultmenu").append("<div class='wditem'><a class='blue orangeText' target='_blank' href='view-"+resID+"'><i class='fas fa-external-link-alt'></i> " + returnedJson.results.bindings[i].o.value + "</a></div>");
+                        $("#searchresultmenu").append("<div class='wditem'><a class='blue orangeText' target='_blank' href='view-"+resID+"'><i class='fas fa-external-link-alt'></i> " + returnedJson.results.bindings[i].o_str.value + "</a></div>");
                     };
                 };
 
@@ -435,7 +454,7 @@ function searchCatalogueByClass(searchterm,fieldId,singleValue) {
 
         // prepare the query
         var query_term = $('#'+searchterm).val();
-        var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o where { ?o bds:search '"+query_term+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o . "+class_triples+filter_clause+"}";
+        var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s (STR(?o) as ?o_str) where { ?o bds:search '"+query_term+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o . "+class_triples+filter_clause+"}";
         var encoded = encodeURIComponent(query);
 
         // send the query request to the catalogue
@@ -455,7 +474,7 @@ function searchCatalogueByClass(searchterm,fieldId,singleValue) {
                         // get the URL and the label for each retrieved element 
                         var myUrl = returnedJson.results.bindings[i].s.value;
                         var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1);
-                        $("#searchresult").append("<div class='wditem fromCatalogue'><a class='blue orangeText' target='_blank' href='view-" + resID + "'><i class='fas fa-external-link-alt'></i></a> <a class='blue orangeText' data-id='" + myUrl + "'>" + returnedJson.results.bindings[i].o.value + "</a></div>");
+                        $("#searchresult").append("<div class='wditem fromCatalogue'><a class='blue orangeText' target='_blank' href='view-" + resID + "'><i class='fas fa-external-link-alt'></i></a> <a class='blue orangeText' data-id='" + myUrl + "'>" + returnedJson.results.bindings[i].o_str.value + "</a></div>");
                     }
                 }
 
@@ -479,7 +498,7 @@ function searchCatalogueByClass(searchterm,fieldId,singleValue) {
                         </button>\
                         </section>");
                         
-                        if ($('[name="'+fieldId+'-subrecords"]').length && !singleValue) {
+                        if ($('[name="'+fieldId+'-subrecords"]').length && $('[name="'+fieldId+'-subrecords"]').val()!="" && !singleValue) {
                             $('[name="'+fieldId+'-subrecords"]').val($('[name="'+fieldId+'-subrecords"]').val()+","+oldID+";"+oldLabel);
                         } else {
                             $('[name="'+fieldId+'-subrecords"]').remove();
@@ -1102,118 +1121,118 @@ function searchSkos(searchterm) {
             var vocabulary_name = Object.keys(obj)[0]
             if (obj[vocabulary_name].type == "API") {
 
-            // retrieve the parameters of the request to properly call the API
-            var query_parameters = Object.assign({}, obj[vocabulary_name].parameters);
-            // get the keys of the parameters object: the first key (keys[0]) must be associated with the query-term (i.e., input value)
-            var keys = Object.keys(query_parameters);
-            query_parameters[keys[0]] = $('#' + searchterm).val() + "*"; 
-            const request = $.getJSON(obj[vocabulary_name].endpoint, query_parameters);
+                // retrieve the parameters of the request to properly call the API
+                var query_parameters = Object.assign({}, obj[vocabulary_name].parameters);
+                // get the keys of the parameters object: the first key (keys[0]) must be associated with the query-term (i.e., input value)
+                var keys = Object.keys(query_parameters);
+                query_parameters[keys[0]] = $('#' + searchterm).val() + "*"; 
+                const request = $.getJSON(obj[vocabulary_name].endpoint, query_parameters);
 
-            requests.push(request);
-            results_array.push(obj[vocabulary_name].results);
-            vocabs_array.push(vocabulary_name);
+                requests.push(request);
+                results_array.push(obj[vocabulary_name].results);
+                vocabs_array.push(vocabulary_name);
             
             } else if (obj[vocabulary_name].type == "SPARQL") {
 
-            // the string 'QUERY-TERM' inside the query must be replaced with the input value; special charachters must be checked 
-            var query = (obj[vocabulary_name].query).replace("QUERY-TERM", ("^" + $('#' + searchterm).val())).replace("&gt;", ">").replace("&lt;", "<").replace(/&quot;/g, '"');
-            var request_parameters = {
-                type: 'GET',
-                url: '/sparqlanything?q=' + encodeURIComponent(query)
-            }
-            const request = $.ajax(request_parameters);
+                // the string 'QUERY-TERM' inside the query must be replaced with the input value; special charachters must be checked 
+                var query = (obj[vocabulary_name].query).replace("QUERY-TERM", ("^" + $('#' + searchterm).val())).replace("&gt;", ">").replace("&lt;", "<").replace(/&quot;/g, '"');
+                var request_parameters = {
+                    type: 'GET',
+                    url: '/sparqlanything?action=searchentities&q=' + encodeURIComponent(query) + '&service=none'
+                }
+                const request = $.ajax(request_parameters);
 
-            requests.push(request);
-            results_array.push(obj[vocabulary_name].results);
-            vocabs_array.push(vocabulary_name);
+                requests.push(request);
+                results_array.push(obj[vocabulary_name].results);
+                vocabs_array.push(vocabulary_name);
 
             }
         });
 
         Promise.all(requests)
             .then(function(results) {
-            const options = []; // array to include ALL the resulting terms of ALL the queries
-            console.log(results); // results = ALL the resulting objects of ALL the queries
-            results.forEach(function(data, index) {
-                console.log(data) // the resulting object of a query
-                var path = results_array[index];
-                var main_path = path.array.split(".");
-                let result = data;
-                main_path.forEach(key => {
-                result = result[key];
-                });
-
-                result.forEach(function(res) {
-                // extract a label for each term
-                let label_path = path.label.split(".");
-                let label = res;
-                label_path.forEach(key => {
-                    label = label[key];
-                });
-                // extract the URI value for each term
-                let uri_path = path.uri.split(".");
-                let uri = res;
-                uri_path.forEach(key => {
-                    uri = uri[key];
-                });
-                let add = uri + "," + label + "," + vocabs_array[index];
-                options.push(add);
-                });
-            });
-
-            $("#searchresult").show();
-
-            // autocomplete positioning;
-                var offset = $('#'+searchterm).offset();
-                var leftpos = offset.left+15;
-                    var height = $('#'+searchterm).height();
-            var top = offset.top + height + 15 + "px";
-            var max_width = '600px';
-
-                    $('#searchresult').css( {
-                        'position': 'absolute',
-                        'margin-left': leftpos+'px',
-                        'top': top,
-                        'z-index':1000,
-                        'background-color': 'white',
-                        'border':'solid 1px grey',
-                        'max-width':max_width,
+                const options = []; // array to include ALL the resulting terms of ALL the queries
+                console.log(results); // results = ALL the resulting objects of ALL the queries
+                results.forEach(function(data, index) {
+                    console.log(data) // the resulting object of a query
+                    var path = results_array[index];
+                    var main_path = path.array.split(".");
+                    let result = data;
+                    main_path.forEach(key => {
+                    result = result[key];
                     });
-            $("#searchresult").empty();
-            options.forEach(function(option) {
-                // each option (i.e., retrieved term) has this structure: URI,LABEL,VOCABULARY
-                const resource_uri = option.split(",");
-                var uri = resource_uri.shift(); 
-                var vocabulary = resource_uri.pop();
-                var label = resource_uri.join(","); // Join is needed for labels containing ","
 
-                // how to display the vocabulary name: e.g., 'vocab-one' → 'VOCAB ONE'
-                if (vocabulary.includes("-")) {
-                var vocabulary_noun = vocabulary.replace("-", " ").toUpperCase();
-                } else {
-                var vocabulary_noun = vocabulary.toUpperCase();
-                }
-                // create a list of options
-                $("#searchresult").append("<div class='vocableitem'><a class='blue' data-id='"+uri+"'>"+label+"</a> - "+vocabulary_noun+"</div>")
+                    result.forEach(function(res) {
+                    // extract a label for each term
+                    let label_path = path.label.split(".");
+                    let label = res;
+                    label_path.forEach(key => {
+                        label = label[key];
+                    });
+                    // extract the URI value for each term
+                    let uri_path = path.uri.split(".");
+                    let uri = res;
+                    uri_path.forEach(key => {
+                        uri = uri[key];
+                    });
+                    let add = uri + "," + label + "," + vocabs_array[index];
+                    options.push(add);
+                    });
+                });
 
-                $('a[data-id="'+ uri +'"]').each(function () {
-                $(this).bind('click', function (e) {
-                    e.preventDefault();
-                    if (!skos_vocabs.includes("oneVocableAccepted") || $('#' + searchterm).nextAll("span").length == 0) {
-                    $('#' + searchterm).after("<span class='tag " + uri + "' data-input='" + searchterm + "' data-id='" + uri + "'>" + label+" - "+vocabulary_noun + "</span><input type='hidden' class='hiddenInput " + uri + "' name='" + searchterm + "_" + uri + "' value=\"" + uri + "," + label + " - " + vocabulary_noun + "\"/>");
+                $("#searchresult").show();
+
+                // autocomplete positioning;
+                    var offset = $('#'+searchterm).offset();
+                    var leftpos = offset.left+15;
+                        var height = $('#'+searchterm).height();
+                var top = offset.top + height + 15 + "px";
+                var max_width = '600px';
+
+                        $('#searchresult').css( {
+                            'position': 'absolute',
+                            'margin-left': leftpos+'px',
+                            'top': top,
+                            'z-index':1000,
+                            'background-color': 'white',
+                            'border':'solid 1px grey',
+                            'max-width':max_width,
+                        });
+                $("#searchresult").empty();
+                options.forEach(function(option) {
+                    // each option (i.e., retrieved term) has this structure: URI,LABEL,VOCABULARY
+                    const resource_uri = option.split(",");
+                    var uri = resource_uri.shift(); 
+                    var vocabulary = resource_uri.pop();
+                    var label = resource_uri.join(","); // Join is needed for labels containing ","
+
+                    // how to display the vocabulary name: e.g., 'vocab-one' → 'VOCAB ONE'
+                    if (vocabulary.includes("-")) {
+                    var vocabulary_noun = vocabulary.replace("-", " ").toUpperCase();
+                    } else {
+                    var vocabulary_noun = vocabulary.toUpperCase();
                     }
-                    else if (skos_vocabs.includes("oneVocableAccepted") && $('#' + searchterm).nextAll("span").length > 0) {
-                    alert("Only one term is accepted!");
-                    }
-                    $("#searchresult").hide();
-                    $('#' + searchterm).val("");
+                    // create a list of options
+                    $("#searchresult").append("<div class='vocableitem'><a class='blue' data-id='"+uri+"'>"+label+"</a> - "+vocabulary_noun+"</div>")
+
+                    $('a[data-id="'+ uri +'"]').each(function () {
+                    $(this).bind('click', function (e) {
+                        e.preventDefault();
+                        if (!skos_vocabs.includes("oneVocableAccepted") || $('#' + searchterm).nextAll("span").length == 0) {
+                        $('#' + searchterm).after("<span class='tag " + uri + "' data-input='" + searchterm + "' data-id='" + uri + "'>" + label+" - "+vocabulary_noun + "</span><input type='hidden' class='hiddenInput " + uri + "' name='" + searchterm + "_" + uri + "' value=\"" + uri + "," + label + " - " + vocabulary_noun + "\"/>");
+                        }
+                        else if (skos_vocabs.includes("oneVocableAccepted") && $('#' + searchterm).nextAll("span").length > 0) {
+                        alert("Only one term is accepted!");
+                        }
+                        $("#searchresult").hide();
+                        $('#' + searchterm).val("");
+                    });
+                    });
                 });
-                });
-            });
 
             })
             .catch(function(error) {
-            console.error('Ajax Error:', error);
+                console.error('Ajax Error:', error);
             });
         } else { $("#searchresult").hide();}
     });
@@ -1340,12 +1359,14 @@ function generateExtractionField(res, recordId, subtemplate=null) {
             subtemplate.append(extractionRow);
 
             // retrieve previously generated extraction graphs
-            if (resId in extractionsObj) {
-                for (let i=0; i<extractionsObj[resId].length; i++) {
-                    var extractionId = extractionsObj[resId][i].internalId;
-                    var extractionResults = extractionsObj[resId][i].metadata.output;
-                    if (extractionResults.length > 0) {
-                        generateExtractionTagList(subtemplate,resId, extractionResults, resId+'-'+extractionId);
+            if (extractionsObj[recordId]) {
+                if (resId in extractionsObj[recordId]) {
+                    for (let i=0; i<extractionsObj[recordId][resId].length; i++) {
+                        var extractionId = extractionsObj[recordId][resId][i].internalId;
+                        var extractionResults = extractionsObj[recordId][resId][i].metadata.output;
+                        if (extractionResults.length > 0) {
+                            generateExtractionTagList(subtemplate,resId,recordId,extractionResults,recordId+'-'+extractionId);
+                        }
                     }
                 }
             }
@@ -1357,7 +1378,7 @@ function generateExtractionField(res, recordId, subtemplate=null) {
 function generateExtractionTagList(subtemplate,extractorId,recordId,results,id) {
     // delete previously retrieved entities if any
     $("#graph-"+id).remove();
-    // if new results exist, create a new list item to collect each retrieved URI,label pair in the form of a tag (containing an hidden input)
+    // if new results exist, create a new list item to collect each retrieved URI,label pair in the form of a tag (containing a hidden input)
     const table = $(subtemplate).find('#imported-graphs-'+extractorId).prev('table');
     table.find('tbody').append($("<tr>\
         <td id='graph-"+id+"'></td>\
@@ -1368,8 +1389,7 @@ function generateExtractionTagList(subtemplate,extractorId,recordId,results,id) 
     </tr>"));
 
     for (let idx = 0; idx < results.length; idx++) {
-        for (const key in results[idx]) {
-
+        for (const key of Object.keys(results[idx])) {
             if (results[idx][key].type === "literal" && !results[idx][key].value.startsWith("https://") && !results[idx][key].value.startsWith("http://")) {
                 var label = results[idx][key].value;
             } else if (results[idx][key].type === "uri" || results[idx][key].value.startsWith("https://") || results[idx][key].value.startsWith("http://")) {
@@ -1379,6 +1399,7 @@ function generateExtractionTagList(subtemplate,extractorId,recordId,results,id) 
         table.find("#graph-" + id).append("<span class='tag' data-id='" + uri + "'>" + label + "</span><input type='hidden' name='keyword_"+recordId+"_"+id+"_"+label+"' value='"+encodeURIComponent(uri)+"'/>");
     }
     table.removeClass('hidden');
+    table.next("span").css({'margin-top': '3.5em'});
 }
 
 /* Generate, Delete, Modify extraction module */ 
@@ -1803,7 +1824,7 @@ function prevExtractor(element, toHide, toShow, remove=false, id=null, recordId=
         if ('output' in extractionItem.metadata) {
             var results = extractionItem.metadata.output;
 
-            // if results exist, create a new list item to collect each retrieved URI,label pair in the form of a tag (containing an hidden input)
+            // if results exist, create a new list item to collect each retrieved URI,label pair in the form of a tag (containing a hidden input)
             if (results.length>0) {
                 generateExtractionTagList($('#imported-graphs-'+extractionListId).parent(),extractionListId,recordId,results,id);
             }
@@ -2202,4 +2223,84 @@ function changeResultsPage(page_n, length) {
     show_results.removeClass('hidden-result');
     $('.extractor-2').find('th').parent().removeClass('hidden-result');
     window.scrollTo(0, 0);
+}
+
+///////////////////////
+/// Wayback Machine ///
+///////////////////////
+
+// spot a uri in the field and pop up the request to send to wayback machine
+function detectInputWebPage(input_elem) {
+    // if the element includes an input text
+    var input_field = $('.'+input_elem).children("input");
+
+    var tooltip_save = '<span class="savetheweb" \
+    data-toggle="popover" \
+    data-container="body"\
+    data-offset="0,25%">\
+    </span>';
+
+    var tooltip_saved = '<span class="savedtheweb" \
+    data-toggle="popover" \
+    data-container="body"\
+    data-offset="0,25%">\
+    </span>';
+
+    if (input_field.length) {
+        input_field.each(function() {
+        if ( !$(this).hasClass("disable_popover") ) {
+            $(this).on("blur",  function() {
+            var input_val = $(this).val();
+            var expression = /^(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|^https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})$/gi;
+            var regex = new RegExp(expression);
+            if (input_val.match(regex)) {
+                $(this).parent().append(tooltip_save);
+                $(this).parent().append(tooltip_saved);
+                $(".savetheweb").popover({
+                    html: true,
+                    title : "<h4>Need to save a source for the future?</h4>",
+                    content: "<p>If you have a web page that is important to you, \
+                    we can save it using the \
+                    <a target='_blank' href='https://archive.org/web/'>Wayback Machine</a></p>\
+                    <p>Shall we?</p>\
+                    <button onclick=saveTheWeb('"+input_val+"') class='btn btn-dark'>yes</button> \
+                    <button onclick=destroyPopover() class='btn btn-dark'>Maybe later</button>\
+                    <p></p>",
+                    placement: "bottom",
+                }).popover('show');
+
+            }
+            });
+        };
+
+        });
+    };
+};
+  
+// destroy popovers for wayback machine
+function destroyPopover(el='savetheweb') {
+    $("."+el).popover('hide');
+  
+}
+  
+// call an internal api to send a post request to Wayback machine
+function saveTheWeb(input_url) {
+    console.log(input_url);
+    $(".savetheweb").popover('hide');
+    $(".savedtheweb").popover({
+        html: true,
+        title : "<span onclick=destroyPopover('savedtheweb')>x</span><h4>Thank you!</h4>",
+        content: "<p>We sent a request to the Wayback machine.</p>",
+        placement: "bottom",
+    }).popover('show');
+  
+    $.ajax({
+        type: 'GET',
+        url: "/savetheweb-"+encodeURI(input_url),
+        success: function(returnedJson) {
+            console.log(returnedJson);
+        }
+    });
+  
+  
 }

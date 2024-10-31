@@ -28,6 +28,7 @@ $(document).ready(function() {
 
   // message after saving
   $("#save_record").on('click', function(e) {
+    console.log("iii")
     e.preventDefault();
     var sel = document.getElementById('res_name');
 
@@ -451,12 +452,9 @@ $(document).ready(function() {
      $(this).parent().remove();
   });
 
-  // detect URLs in inputs - popup send to wayback machine
-  detectInputWebPage("detect_web_page");
-
   // language tags handling
   $('[lang]').each(function() {
-    modify_lang_inputs($(this));
+    modifyLangInputs($(this));
   });
 
   // multiple languages final visualization
@@ -506,63 +504,79 @@ $(window).on('resize', function() {
 /////////////////////////
 // MULTIPLE LANGUAGES ///
 /////////////////////////
-function modify_lang_inputs(el) {
-  var base_id = $(el).attr('id').split('_')[0];
-
+function modifyLangInputs(el) {
+  var baseId = $(el).attr('id').split('_')[0];
 
   // check if it's first of type
   if ($(el).is('[lang]:first-of-type')) {
-    $(el).parent().prev().append($('<i class="material-icons" onclick="language_form(this)">translate</i>'));
+
+    // add language icon
+    $(el).parent().prev().append($('<i class="material-icons" onclick="languageForm(this)">translate</i>'));
 
     if (!($(el).hasClass('subrecord-field'))) {
-      var new_id = base_id+"_"+$(el).attr('lang');
-      $(el).attr('name',new_id);
-      $(el).attr('id',new_id);
+
+      var newId = baseId+"_"+$(el).attr('lang');
+      $(el).attr('name',newId);
+      $(el).attr('id',newId);
       var lang = $(el).attr('lang').toUpperCase();
-      const languages_list = $('<div class="languages-list" id="languages-'+base_id+'"></div>');
-      const first_lang = $('<a class="lang-item selected-lang" title="text language: '+lang+'" onclick="show_lang(\''+new_id+'\')">'+lang+'</a>');
+
+      // create a div to store different language tags, then add the first language
+      const languagesList = $('<div class="languages-list" id="languages-'+baseId+'"></div>'); 
+      const firstLang = $('<a class="lang-item selected-lang" title="text language: '+lang+'" onclick="show_lang(\''+newId+'\')">'+lang+'</a>');
 
       // primary keys: specify main language
       if ($(el).hasClass('disambiguate')) {
-        if ($('#'+base_id+'_mainLang').length == 0) {
-          const hidden_main_lang = $('<input type="hidden" id="'+base_id+'_mainLang" name="'+base_id+'_mainLang" value="'+$(el).attr('lang')+'"/>')
-          $(el).after(hidden_main_lang);
-          first_lang.addClass('main-lang');
-        } else if ($('#'+base_id+'_mainLang').val() === $(el).attr('lang')) {
-          first_lang.addClass('main-lang');
+
+        if ($('#'+baseId+'_mainLang').length == 0) {
+          // create a hidden input to store the main language of the field
+          const hiddenMainLang = $('<input type="hidden" id="'+baseId+'_mainLang" name="'+baseId+'_mainLang" value="'+$(el).attr('lang')+'"/>')
+          $(el).after(hiddenMainLang);
+          firstLang.addClass('main-lang');
+        } 
+        else if ($('#'+baseId+'_mainLang').val() === $(el).attr('lang')) {
+          // make the current language the main one
+          firstLang.addClass('main-lang');
         }
       }
-      languages_list.append(first_lang);
-      $(el).before(languages_list);
+      languagesList.append(firstLang);
+      $(el).before(languagesList);
     }
   } 
   else {
 
-    // language tags handling: other lang (only in modify and review)
-    const main_lang = $('#'+base_id+'_mainLang').val();
+    // language tags handling: other lang, i.e. not the first one (only in modify and review)
+    var mainLang = $('#'+baseId+'_mainLang').val();
     var lang = $(el).attr('lang');
-    const languages_list = $('#languages-'+base_id);
-    const other_lang = $('<a class="lang-item" title="text language: '+lang.toUpperCase()+'" onclick="show_lang(\''+$(el).attr('id')+'\')">'+lang.toUpperCase()+'</a>');
-    if ($(el).hasClass('disambiguate') && lang===main_lang) {
-      var first_lang = languages_list.find('i').next('a');
-      other_lang.addClass('main-lang');
-      other_lang.addClass('selected-lang');
-      first_lang.removeClass('selected-lang');
-      first_lang.before(other_lang);
-      $('#'+base_id+'_'+first_lang.text().toLowerCase()).hide();
+    const languagesList = $('#languages-'+baseId);
+    const otherLang = $('<a class="lang-item" title="text language: '+lang.toUpperCase()+'" onclick="show_lang(\''+$(el).attr('id')+'\')">'+lang.toUpperCase()+'</a>');
+    if ($(el).hasClass('disambiguate') && lang===mainLang) {
+
+      var firstLang = languagesList.find('a:first-child');
+
+      // make this language the main one, then show the corresponding input field
+      otherLang.addClass('main-lang');
+      otherLang.addClass('selected-lang');
+      firstLang.removeClass('selected-lang');
+      firstLang.before(otherLang);
+      $('#'+baseId+'_'+firstLang.text().toLowerCase()).hide();
       $(el).show();
+
     } else {
-      languages_list.append(other_lang);
+
+      // add this language as a secondary one, then hide the corresponding input field
+      languagesList.append(otherLang);
       $(el).hide();
+
     }
-    label_section.append(languages_list);
+    $(el).closest("section").prepend(languagesList);
   }
 }
 
-function language_form(el) {
+function languageForm(el) {
   if ($('#lang-form').length > 0) {
-    $('#lang-form').remove()
+    $('#lang-form').remove();
   } else {
+    // set the language form style properties
     var height = $(el).offset().top + 32 + "px";
     var left = $(el).offset().left - 348 +"px";
     var current_lang = $(el).parent().next().find('.selected-lang').text().toLowerCase();
@@ -578,7 +592,7 @@ function language_form(el) {
     const change_language = $('<section class="form_row"><label>Change current language:</label><input type="textbox" class="custom-select" placeholder="Select a new language" onclick="activateFilter(this)"></input><div class="language-options"></div></section>');
     const add_language = $('<section class="form_row"><label>Add another language:</label><input type="textbox" class="custom-select" placeholder="Select a new language" onclick="activateFilter(this)"><div class="language-options"></input></div></section>')
     const main_lang = $('<section class="form_row"><label>Set this field primary language:</label><select class="custom-select"></select></section>');
-    main_lang.find('select').on('change', function() {change_main_lang(this,modify_subform)});
+    main_lang.find('select').on('change', function() {changeMainLang(this,modify_subform)});
     const remove_lang = $('<section class="form_row"><label>Remove current language: </label> <i class="far fa-trash-alt" onclick="removeCurrentLanguage(this,'+modify_subform+')"></i></section>');
     remove_lang.on('click', function() {remove_lang(this,modify_subform)});
     $.ajax({
@@ -622,15 +636,15 @@ function language_form(el) {
 
         // prepare the dropdown for selecting the main language of a primary key input field
         if (input.hasClass('disambiguate')) {
-          var current_languages = $(el).parent().next().find('.lang-item');
-          current_languages.each(function() {
-            var subtag = $(this).text().toLowerCase();
-            var extended_language = change_language.find('[href="#'+subtag+'"]').attr('lang');
-            var lang_option = $('<option value="'+subtag+'">'+extended_language+' ('+subtag+')</option>');
-            if (subtag == $(el).parent().find('.main-lang').text().toLowerCase()) {
-              lang_option.attr('selected', 'selected');
+          var currentLanguages = $(el).parent().next().find('.lang-item');
+          currentLanguages.each(function() {
+            var langTag = $(this).text().toLowerCase();
+            var extendedLangLabel = change_language.find('[href="#'+langTag+'"]').attr('lang');
+            var langOption = $('<option value="'+langTag+'">'+extendedLangLabel+' ('+langTag+')</option>');
+            if ($(this).hasClass("main-lang")) {
+              langOption.attr('selected', 'selected');
             }
-            main_lang.find('select').append(lang_option);
+            main_lang.find('select').append(langOption);
           })
           lang_form.append(main_lang);
         };
@@ -727,35 +741,38 @@ function changeCurrentLanguage(el,record) {
   
 }
 
-function change_main_lang(el,record) {
-  var id = $(el).parent().parent().attr('data-input');
-  let field_base = id.split('_')[0];
-  $('#languages-'+field_base).find('.main-lang').removeClass('main-lang');
-  var new_main_lang = $(el).val();
-  $('#languages-'+field_base).find('[title="text language: '+new_main_lang.toUpperCase()+'"]').addClass('main-lang');
-  $(el).parent().parent().remove();
-  var main_lang_input_id = '#'+field_base+'_mainLang';
-  if (record) {main_lang_input_id+='_'+record}
-  $(main_lang_input_id).val(new_main_lang);
+function changeMainLang(el,record) {
+  var langForm = $(el).closest("#lang-form");
+  var id = langForm.data("input");
+  let baseId = id.split('_')[0];
+  var newMainLang = $(el).val(); // new selected lang
+  langForm.remove();
+
+  // modify the current main language with the new one
+  $('#languages-'+baseId).find('.main-lang').removeClass('main-lang'); 
+  $('#languages-'+baseId).find('[title="text language: '+newMainLang.toUpperCase()+'"]').addClass('main-lang');
+  var mainLangInputId = '#'+baseId+'_mainLang';
+  if (record) {mainLangInputId+='_'+record}
+  $(mainLangInputId).val(newMainLang);
 }
 
 function removeCurrentLanguage(el,record) {
   var current_field = $(el).parent().parent().attr('data-input');
-  let field_base = current_field.split('_')[0];
-  var current_lang_tag = $('#languages-'+field_base).find('.selected-lang');
+  let baseId = current_field.split('_')[0];
+  var current_lang_tag = $('#languages-'+baseId).find('.selected-lang');
   if (current_lang_tag.next('a').length > 0) {
     current_lang_tag.next('a').addClass('selected-lang');
     var next_lang = current_lang_tag.next('a').text().toLowerCase();
     current_lang_tag.remove();
     $('#'+current_field).remove();
-    console.log('#'+field_base+'_'+next_lang)
-    $('#'+field_base+'_'+next_lang).show();
+    console.log('#'+baseId+'_'+next_lang)
+    $('#'+baseId+'_'+next_lang).show();
   } else if (current_lang_tag.prev('a').length > 0) {
     current_lang_tag.prev('a').addClass('selected-lang');
     var prev_lang = current_lang_tag.prev('a').text().toLowerCase();
     current_lang_tag.remove();
     $('#'+current_field).remove();
-    var show_lang_id = '#'+field_base+'_'+prev_lang;
+    var show_lang_id = '#'+baseId+'_'+prev_lang;
     if (record) {show_lang_id+='_'+record}
     $(show_lang_id).show();
   } else {
@@ -765,13 +782,13 @@ function removeCurrentLanguage(el,record) {
 }
 
 function show_lang(field_id) {
-  let field_base = field_id.split('_')[0];
-  $('[id^="'+field_base+'_"]').hide();
+  let baseId = field_id.split('_')[0];
+  $('[id^="'+baseId+'_"]').hide();
   $('#'+field_id).show();
   var target_lang = field_id.split('_')[1];
-  $('#languages-'+field_base).find('.selected-lang').removeClass('selected-lang');
+  $('#languages-'+baseId).find('.selected-lang').removeClass('selected-lang');
   console.log('[title="text language: '+target_lang.toUpperCase()+'"]')
-  $('#languages-'+field_base).find('[title="text language: '+target_lang.toUpperCase()+'"]').addClass('selected-lang')
+  $('#languages-'+baseId).find('[title="text language: '+target_lang.toUpperCase()+'"]').addClass('selected-lang')
 }
 
 /////////////////////////
@@ -1179,89 +1196,6 @@ function delete_inner_subrecord(inner_inputs) {
   }
 }
 
-////////////////////
-// PUBLISH RECORD //
-///////////////////
-
-// spot a uri in the field and pop up the request to send to wayback machine
-function detectInputWebPage(input_elem) {
-  // if the element includes an input text
-  var input_field = $('.'+input_elem).children("input");
-
-  var tooltip_save = '<span class="savetheweb" \
-    data-toggle="popover" \
-    data-container="body"\
-    data-offset="0,75%">\
-    </span>';
-
-    var tooltip_saved = '<span class="savedtheweb" \
-      data-toggle="popover" \
-      data-container="body"\
-      data-offset="0,75%">\
-      </span>';
-
-  if (input_field.length) {
-      input_field.each(function() {
-        if ( !$(this).hasClass("disable_popover") ) {
-          $(this).on("blur",  function() {
-            var input_val = $(this).val();
-            var expression = /^(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|^https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})$/gi;
-            var regex = new RegExp(expression);
-            if (input_val.match(regex)) {
-              $(this).parent().append(tooltip_save);
-              $(this).parent().append(tooltip_saved);
-              $(".savetheweb").popover({
-                html: true,
-                title : "<h4>Need to save a source for the future?</h4>",
-                content: "<p>If you have a web page that is important to you, \
-                we can save it using the \
-                <a target='_blank' href='https://archive.org/web/'>Wayback Machine</a></p>\
-                <p>Shall we?</p>\
-                <button onclick=saveTheWeb('"+input_val+"') class='btn btn-dark'>yes</button> \
-                <button onclick=destroyPopover() class='btn btn-dark'>Maybe later</button>\
-                <p></p>",
-                placement: "bottom",
-              }).popover('show');
-
-
-
-            }
-          });
-        };
-
-      });
-  };
-};
-
-// destroy popovers for wayback machine
-function destroyPopover(el='savetheweb') {
-  $("."+el).popover('hide');
-
-}
-
-// call an internal api to send a post request to Wayback machine
-function saveTheWeb(input_url) {
-  console.log(input_url);
-  $(".savetheweb").popover('hide');
-  $(".savedtheweb").popover({
-    html: true,
-    title : "<span onclick=destroyPopover('savedtheweb')>x</span><h4>Thank you!</h4>",
-    content: "<p>We sent a request to the Wayback machine.</p>",
-    placement: "bottom",
-  }).popover('show');
-
-  $.ajax({
-    type: 'GET',
-    url: "/savetheweb-"+encodeURI(input_url),
-    success: function(returnedJson) {
-      console.log(returnedJson);
-    }
-  });
-
-
-}
-
-
 ///////////////
 // TERM PAGE //
 ///////////////
@@ -1284,13 +1218,24 @@ function searchResources(event, element) {
       }
   `;
   
-  var query;
-  
+  var query = `SELECT DISTINCT ?o (STR(?label) AS ?label_str) ${inGraph} WHERE { 
+        {
+          GRAPH ?graph { ?o rdfs:label ?label . ${typePatterns} ${filterNotExists} . }
+          ?graph ?link ?extractionGraph .
+          GRAPH ?extractionGraph { <${uri}> ?p ?oInExtractionGraph . }
+        }
+          UNION 
+        {
+          ?o ?p2 <${uri}> ; rdfs:label ?label . ${typePatterns} ${filterNotExists} .
+        } 
+      }`
   if (offsetQuery === 0) {
-      query = `select distinct ?o ?label ${inGraph} where { ?o ?p <${uri}> ; rdfs:label ?label . ${typePatterns} ${filterNotExists} } ORDER BY ?o LIMIT ${limitQuery}`;
+    query += `ORDER BY ?o LIMIT ${limitQuery}`;
   } else {
-      query = `select distinct ?o ?label ${inGraph} where { ?o ?p <${uri}> ; rdfs:label ?label . ${typePatterns} ${filterNotExists} } ORDER BY ?o OFFSET ${offsetQuery} LIMIT ${limitQuery}`;
+    query += `ORDER BY ?o OFFSET ${offsetQuery} LIMIT ${limitQuery}`;
   }
+
+  console.log(query);
   
   var encoded = encodeURIComponent(query);
   $.ajax({
@@ -1306,7 +1251,7 @@ function searchResources(event, element) {
                   // exclude named graphs from results
                   if (myUrl.substring(myUrl.length - 1) !== "/") {
                       var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1);
-                      var newItem = $("<div id='" + resID + "' class='wditem'><a class='blue orangeText' target='_blank' href='view-" + resID + "'><i class='fas fa-external-link-alt'></i></a> <span class='orangeText' data-id='" + myUrl + "'>" + decodeURIComponent(unescape(returnedJson.results.bindings[i].label.value)) + "</span></div>").hide();
+                      var newItem = $("<div id='" + resID + "' class='wditem'><a class='blue orangeText' target='_blank' href='view-" + resID + "'><i class='fas fa-external-link-alt'></i></a> <span class='orangeText' data-id='" + myUrl + "'>" + decodeURIComponent(unescape(returnedJson.results.bindings[i].label_str.value)) + "</span></div>").hide();
                       $(element).parent().find('.related-resources').prepend(newItem);
                       newItem.show('slow');
                   }

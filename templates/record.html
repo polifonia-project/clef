@@ -11,7 +11,8 @@ $if alert == False:
 		</script>
 	<header class="row needDoc">
 		<button id="showRight"><i class="far fa-lightbulb"></i> help</button>
-		<button id="scrollToTop"><i class="fas fa-arrow-up"></i> top</button>
+		$if template:
+			<button id="scrollToTop"><i class="fas fa-arrow-up"></i> top</button>
 		<script type="text/javascript">
 			$$('#cbp-spmenu-s2').load( "./documentation #documentation", function() {
 				$$(".documentation").removeClass('col-md-7').addClass('col-md-12 col-sm-4');
@@ -40,7 +41,7 @@ $if alert == False:
 				$if template:
 					<input type='hidden' name='templateID' value=$:template>
 				<section class="row">
-					<section class="homeheading col-md-12 col-lg-12 col-sm-12">
+					<section class="col-md-12 col-lg-12 col-sm-12">
 						$for idx,input in enumerate(record_form.inputs):
 							$ id = input.get_default_id()
 							$if type(input) == Checkbox:
@@ -102,12 +103,11 @@ $if alert == False:
 									});
 								</script>
 						$if type(knowledge_extractor) == type([]):
-							$ extractors_list = list(knowledge_extractor)
-							$ extractors_template_ids = [tpl[0] for tpl in extractors_list]
-							$ extractors_names = [tpl[1] for tpl in extractors_list]
-							$ extractors_prepend = [tpl[2] for tpl in extractors_list]
-							$ extractors_id = [tpl[3] for tpl in extractors_list]
-							$ extractors_service = [tpl[4] for tpl in extractors_list]
+							$ extractors_template_ids = [tpl[0] for tpl in knowledge_extractor]
+							$ extractors_names = [tpl[1] for tpl in knowledge_extractor]
+							$ extractors_prepend = [tpl[2] for tpl in knowledge_extractor]
+							$ extractors_id = [tpl[3] for tpl in knowledge_extractor]
+							$ extractors_service = [tpl[4] for tpl in knowledge_extractor]
 							<script type="text/javascript">
 								const extractionsObj = {}
 								const extractorsArray = JSON.parse('$extractors_template_ids'.replace(/&#39;/g, '"'));

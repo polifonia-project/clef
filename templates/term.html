@@ -1,4 +1,4 @@
-$def with (user, data, count,is_git_auth,project,base,uri,name,results,map)
+$def with (user,label,count,is_git_auth,project,base,uri,name,results,map)
 
 $var user = user
 $var is_git_auth = is_git_auth
@@ -11,8 +11,7 @@ $var project = project
 
 <section class="row articleBox">
 	<section class="col-md-7">
-		$if data:
-			$ label = next((result["object"]["value"] for result in data["results"]["bindings"] if result["predicate"]["value"] in ["http://www.w3.org/2000/01/rdf-schema#label", "http://www.w3.org/2004/02/skos/core#prefLabel"]), "No label")
+		$if label:
 			<h2 class="articleTitle">$label</h2>
 			$if uri == base + name:
 				<section class="info-item">

@@ -548,7 +548,6 @@ class Record(object):
 		logged_in = True if user != 'anonymous' else False
 		block_user, limit = u.check_ip(str(web.ctx['ip']), str(datetime.datetime.now()) )
 		u.check_ask_class()
-		print("gitauth",is_git_auth)
 		ask_form = u.change_template_names(is_git_auth)
 		f = forms.get_form(ask_form,True)
 
@@ -726,7 +725,7 @@ class Modify(object):
 				extractor = u.has_extractor(res_template)
 				previous_extractors = u.has_extractor(res_template, name)
 				extractions_data = queries.retrieve_extractions(previous_extractors)
-				
+
 				return render.modify(graphdata=data, pageID=recordID, record_form=f,
 								user=session['username'],ids_dropdown=ids_dropdown,
 								is_git_auth=is_git_auth,invalid=True,
@@ -1081,15 +1080,23 @@ class Term(object):
 			name = name
 
 		web.header("Cache-Control", "no-cache, max-age=0, must-revalidate, no-store")
-		uri = mapping.getRightURIbase(name)
-		data = queries.describeTerm(uri)
 		is_git_auth = github_sync.is_git_auth()
-
 		results_by_class = {}
+
+		# look for occurrences in Record Graphs
+		uri = mapping.getRightURIbase(name)
+		label = queries.get_URI_label(uri)
+		data = queries.describe_term(uri)
 		appears_in = [ result["subject"]["value"] \
 					for result in data["results"]["bindings"] \
-					if (result["object"]["value"] == uri and result["object"]["type"] == 'uri') ]
+					if (result["object"]["value"] == uri and result["object"]["type"] == 'uri') ] \
+					if data != None else []
 		
+		# look for occurrences in Extraction Graphs
+		extractions_data = queries.describe_extraction_term(uri)
+		appears_in_extractions = [result["graph"]["value"][:-1] for result in extractions_data["results"]["bindings"] ] \
+			if extractions_data != None else []
+		appears_in.extend(appears_in_extractions)
 
 		with open(TEMPLATE_LIST) as tpl_list:
 			res_templates = json.load(tpl_list)
@@ -1104,7 +1111,7 @@ class Term(object):
 		count = len(appears_in)
 		map_coordinates = (queries.geonames_geocoding(uri)) if uri.startswith("https://sws.geonames.org/") else None
 		
-		return render.term(user=session['username'], data=data, count=count,
+		return render.term(user=session['username'], label=label, count=count,
 						is_git_auth=is_git_auth,project=conf.myProject,base=conf.base,
 						uri=uri,name=name,results=results_by_class,map=map_coordinates)
 
@@ -1328,7 +1335,6 @@ class Sparqlanything(object):
 			return json.dumps(results)
 		
 		elif action == "searchentities":
-			service = query_string.service
 			results = queries.SPARQLAnything(query_str_decoded)
 			for result in results["results"]["bindings"]:
 				if "uri" not in result:

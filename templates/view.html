@@ -103,17 +103,19 @@ $var project = project
 											</p>
 					</section>
 			$if graphID in knowledge_extractor and len(knowledge_extractor[graphID]) > 0:
-				<section class="info-item col-md-5 col-sm-12">
-					<h4 class="articleSubtitle">$knowledge_extractor[graphID+'_view']['field_name'] </h4>
-					$for n in range(len(knowledge_extractor[graphID])):
-						$for extracted_keyword in knowledge_extractor[graphID][n]["metadata"]["output"]:
-							<p property="$knowledge_extractor[graphID+'_view']['property']">
-								<link property="sameAs" url="$extracted_keyword['uri']['value']"/>
-								<a class="uri" target='_blank' href="$extracted_keyword['uri']['value']">
-									$extracted_keyword['label']['value']
-								</a>
-							</p>
-				</section>
+				$for field in knowledge_extractor[graphID]:
+					$if len(knowledge_extractor[graphID][field]) > 0:
+						<section class="info-item col-md-5 col-sm-12">
+							<h4 class="articleSubtitle">$knowledge_extractor[graphID+'_view']['field_name'] </h4>
+							$for n in range(len(knowledge_extractor[graphID][field])):
+								$for extracted_keyword in knowledge_extractor[graphID][field][n]["metadata"]["output"]:
+									<p property="$knowledge_extractor[graphID+'_view']['property']">
+										<link property="sameAs" url="$extracted_keyword['uri']['value']"/>
+										<a class="uri" target='_blank' href="/term-$extracted_keyword['uri']['value']">
+											$extracted_keyword['label']['value']
+										</a>
+									</p>
+						</section>
 	</section>
 	<section class="col-md-4 sideBoxes">
 		<section class="biblio">

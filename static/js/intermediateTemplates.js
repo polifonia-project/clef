@@ -14,7 +14,6 @@ $(document).ready(function() {
     $("[data-supertemplate]:not([data-supertemplate='None'])").each(function() {
         // this code applies only to first-level subtemplates
         // i.e.: subtemplates input fields within subrecords are not made ready in advance
-        $(this).addClass('original-subtemplate');
         $(this).parent().parent().hide();
     });
 
@@ -24,7 +23,6 @@ $(document).ready(function() {
         // i.e.: subtemplates input fields within subrecords are not made ready in advance
         prepareSubtemplateForms($(this));
     });
-
 })
 
 // Make Subtemplates' fields available
@@ -43,15 +41,18 @@ function prepareSubtemplateForms(element) {
       createSubrecord(subtemplateFieldId,label,createSubrecordBtn,dataReuse=allowDataReuse)
     });
     
+    console.log(label)
     // create hidden fields to store subrecords information when loading a previously created Record (only in modify/review page)
     if (formId === "modifyForm") {
+
+        // retrieve all existing subrecords for a given subtemplate field
         var subrecords = "";
         $('[data-input="'+subtemplateFieldId+'"').each(function() {
             subrecords+=$(this).attr('id')+";"+$(this).text()+",";
             var subformSection = $("<section class='subform_section col-md-12 col-sm-12' data-target='"+$(this).attr('id')+"'>\
                 <h4 class='subrecord-title closed-title'>"+$(this).text()+"\
                     <section class='buttons-container'>\
-                            <button class='btn btn-dark delete' title='delete-subrecord'>\
+                            <button class='btn btn-dark delete' type='button' title='delete-subrecord'>\
                                 <i class='far fa-trash-alt'></i>\
                             </button>\
                     </section>\
@@ -63,8 +64,12 @@ function prepareSubtemplateForms(element) {
             })
             $(this).parent().prepend(subformSection);
             $(this).remove();
-        })
-        $('#modifyForm').append('<input type="hidden" name="'+subtemplateFieldId+'-subrecords" id="'+subtemplateFieldId+'-subrecords" value="'+subrecords.slice(0,-1)+'">');
+        });
+
+        // store the existing subrecords' ids in a hidden input
+        if (subrecords !== "") {
+            $('#modifyForm').append('<input type="hidden" name="'+subtemplateFieldId+'-subrecords" id="'+subtemplateFieldId+'-subrecords" value="'+subrecords.slice(0,-1)+'">');
+        }
     }
 
     if (oneValue) {
@@ -110,6 +115,7 @@ function prepareSubtemplateForms(element) {
 
 // Create subrecords
 function createSubrecord(subtemplateFieldId, label, el, dataReuse=false, subrecordId=null, singleValue=false ) {
+    console.log(subtemplateFieldId, label)
     var absoluteSubtemplateFieldId = subtemplateFieldId.split("_")[0];
     // prepare a new subrecord id in case no one has been provided
     if (!subrecordId) {
@@ -125,13 +131,13 @@ function createSubrecord(subtemplateFieldId, label, el, dataReuse=false, subreco
 
     // create a clone for each input field belonging to the available subtemplates
     // i.e.: use data-class to find templates' related fields
-    var subtemplateOptions = $("#"+absoluteSubtemplateFieldId).find("option:not(first-of-type)");
+    var subtemplateOptions = $("#"+absoluteSubtemplateFieldId).find("option:not(:first-of-type)");
     console.log(subtemplateOptions)
 
     subtemplateOptions.each(function() {
         var subtemplateOptionsClass = $(this).attr("value");
         console.log(subtemplateOptionsClass)
-        $("[data-class='"+subtemplateOptionsClass+"'][class~='original-subtemplate']").each(function() {
+        $("[data-class='"+subtemplateOptionsClass+"'][class~='original-template']").each(function() {
             console.log(subtemplateOptionsClass)
     
             // DATA REUSE: 
@@ -150,7 +156,7 @@ function createSubrecord(subtemplateFieldId, label, el, dataReuse=false, subreco
                 const cloneElement = $(this).parent().parent().clone();
                 cloneElement.find('textarea, select:not([type="hidden"]), input:not([type="hidden"]):not(label.switch input)').attr('data-subform',subrecordId); // associate the input field with the subrecord id
                 cloneElement.find('textarea, select, input').addClass('hidden');
-                cloneElement.find('textarea, select, input').removeClass('original-subtemplate');
+                cloneElement.find('textarea, select, input').removeClass('original-template');
                 // associate proper identifiers to input fields belonging to the subrecord form
                 var inputId = cloneElement.find('textarea, select, input:not([type="hidden"]):not(label.switch input)').attr('id');
                 cloneElement.find('textarea, select, input:not([type="hidden"]):not(label.switch input)').attr('id', inputId+"_"+subrecordId.toString());
@@ -240,7 +246,7 @@ function createSubrecord(subtemplateFieldId, label, el, dataReuse=false, subreco
                             code = subrecords[i].split(";")[0];
                             label = subrecords[i].split(";")[1];
                         } else {          
-                            var subrecordLabelField = $('.original-subtemplate.disambiguate[class*="('+subrecordCls+')"]');
+                            var subrecordLabelField = $('.original-template.disambiguate[class*="('+subrecordCls+')"]');
                             if (subrecordLabelField.length > 0) {
                                 var mainLang = $('#'+subrecordLabelField.attr('id').split('_')[0] + '_mainLang_' + code).val();
                                 label = $('#'+subrecordLabelField.attr('id').split('_')[0]+'_'+mainLang+'_'+code).val();
@@ -275,11 +281,12 @@ function createSubrecord(subtemplateFieldId, label, el, dataReuse=false, subreco
     if (singleValue===false) {
         // save or cancel subrecord (buttons)
         const subrecordButtons = $("<section class='row subform-buttons buttonsSection'></section>");
-        const saveSubrecordButton = $("<button id='subrecord-save' class='btn btn-dark'><i class='material-icons'>task_alt</i></button");
-        const cancelSubrecordButton = $("<button id='subrecord-cancel' class='btn btn-dark delete'><i class='far fa-trash-alt'></i></button");
-    
+        const saveSubrecordButton = $("<button id='subrecord-save' type='button' class='btn btn-dark'><i class='material-icons'>task_alt</i></button");
+        const cancelSubrecordButton = $("<button id='subrecord-cancel' type='button' class='btn btn-dark delete'><i class='far fa-trash-alt'></i></button");
+        
         // SAVE SUBRECORD
         saveSubrecordButton.on('click', function(e) {
+            console.log("HHH")
             e.preventDefault();
             // generate a tag
             var isValid = checkMandatoryFields(this);
@@ -290,7 +297,7 @@ function createSubrecord(subtemplateFieldId, label, el, dataReuse=false, subreco
                 
                 toggleSubform(subrecordTitle,label=tagLabel);
         
-                // for each subtemplate field, create an hidden input value including a list of related subrecords
+                // for each subtemplate field, create a hidden input value including a list of related subrecords
                 // this is needed to streamline the creation of records (back-end application)
                 var subrecordBase = subtemplateFieldId;
                 var createdSubrecords = $('[name="'+subrecordBase+'-subrecords"]');
@@ -335,9 +342,14 @@ function createSubrecord(subtemplateFieldId, label, el, dataReuse=false, subreco
         subrecordForm.find('[data-subform="'+subrecordId+'"]').parent().parent().parent().parent().parent().parent().show();
     }
 
+    subrecordForm.find("input[type='text'], input[type='textarea']").on('keyup keypress', function(e) {
+        var keyCode = e.keyCode || e.which;
+        if (keyCode === 13) {
+          e.preventDefault();
+          return false;
+        }
+    });
     subrecordSection.append(subrecordForm);
-    console.log(subrecordForm, subrecordSection, $(el))
-
     $(el).before(subrecordSection);
     
 }
@@ -347,12 +359,12 @@ function activateTemplateSelection(select,subrecordId) {
     console.log(selected)
     $(select).parent().parent().parent().find('.form_row.block_field:not(.subtemplate-select)').hide();
     $(select).parent().parent().parent().find('[data-class="'+selected+'"]').parent().parent().show();
-    saveSubrecordClass(select,subrecordId,false)
+    saveSubrecordClass($(select),subrecordId,false)
     $(select).parent().parent().parent().find('select[data-class="'+selected+'"]').parent().parent().parent().parent().parent().parent().show();
 }
 
 function saveSubrecordClass(selectElement,subrecordId,singleOption=false) {
-    // store the selected subtemplate class as an hidden input value
+    // store the selected subtemplate class as a hidden input value
     console.log("HERE", subrecordId)
     var selectedClass;
     selectedClass = singleOption 
@@ -365,11 +377,13 @@ function saveSubrecordClass(selectElement,subrecordId,singleOption=false) {
 
 // CANCEL SUBRECORD (before adding it to #recordForm)
 function cancelSubrecord(subrecord_section) {
+    console.log("here!!d")
     $(subrecord_section).closest('.subform_section').remove();
 };
 
 // DELETE or MODIFY SUBRECORD (after it has been added to #recordForm)
 function modifySubrecord(subId, keep) {
+    console.log("here!!d")
     // get the 'Subtemplate' input field and the 'Subtemplate' class
     var originalSubtemplateId = $('[name*="-subrecords"][value*="'+subId+'"').attr('name').replace("-subrecords", "");
     var originalSubtemplateClass = $('#'+originalSubtemplateId).attr('data-subtemplate');
@@ -401,10 +415,10 @@ function toggleSubform(element,label=null) {
     if (label) {
         const subrecordId = $(element).next('.subform').attr('id').replace('-form', '')
         $(element).html(label+"<section class='buttons-container'>\
-        <button class='btn btn-dark delete' title='delete-subrecord'>\
+        <button class='btn btn-dark delete' type='button' title='delete-subrecord'>\
             <i class='far fa-trash-alt'></i>\
         </button>\
-        <button class='btn btn-dark modify' title='modify-subrecord'>\
+        <button class='btn btn-dark modify' type='button' title='modify-subrecord'>\
             <i class='far fa-edit'></i>\
         </button>\
         </section>");

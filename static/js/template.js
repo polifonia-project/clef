@@ -558,7 +558,7 @@ function generateCheckboxes(templatesObject, fieldId) {
     let result = "";
     for (const templateObj of templatesObject) {
         var id = templateObj.short_name;
-        var fullId = id + "__" + fieldId;
+        var fullId = "template-"+ id + "__" + fieldId;
         var label = "<label for='"+fullId+"'>";
         var openTemplate = "<a target='_blank' href='/template-"+id+"'><i class='fas fa-external-link-alt'></i></a>  " + templateObj.name.toUpperCase();
         var input = "<input type='checkbox' id='"+fullId+"' name='"+fullId+"' value='"+templateObj.template+"'></label><br>";

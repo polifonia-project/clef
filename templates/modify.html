@@ -32,7 +32,7 @@ $if query_templates!=None:
 			<p class="caption">Table of contents</p>
 			<ul class="fields-list"></ul>
 		</section>
-	<section class="col-md-8 col-lg-8 col-sm-8 homeheading"  id="form-section">
+	<section class="col-md-8 col-lg-8 col-sm-8 homeheading" id="form-section">
 		<form id="modifyForm" class="col-md-12 col-sm-12 col-lg-12" action="" method="POST">
 			<input type='hidden' name='recordID' value=$:pageID>
 			$if template:
@@ -42,21 +42,40 @@ $if query_templates!=None:
 					$for idx,input in enumerate(record_form.inputs):
 						$ id = input.get_default_id()
 						$if type(input) == Checkbox:
-							<section class="form_row block_field">
+							$if type(record_form.inputs[idx-1]) != Checkbox:
+								<section class=" form_row block_field">
+									$:input.pre
+									$ i = 0
+									$while type(record_form.inputs[idx+i]) == Checkbox :
+										<section class="col-md-12 col-sm-12 col-lg-12">
+											$:record_form.inputs[idx+i].render()
+											$:record_form.inputs[idx+i].description
+										</section>
+										$ i+=1	
+										<script type="text/javascript">
+											console.log("$id".split('-')[0])
+											var elements = $$("#"+"$id".split('-')[0])[0].attributes;
+											var attrsToChange = [];
+		
+											$$.each(elements, function(index, attr) {
+												if (attr.name.startsWith("data_")) {
+													attrsToChange.push(attr);
+												}
+											});
+											$$.each(attrsToChange, function(index, attr) {
+												var newName = attr.name.replace("data_", "data-");
+												$$('#$id'.split('-')[0]).attr(newName, attr.value);
+												$$('#$id'.split('-')[0]).removeAttr(attr.name);
+											});
+										</script>
+								</section>
 								$ checked_value = 'http'+id.split('_http')[1].split(',',1)[0]
 								$ field_base = id.split('_http')[0].rsplit('-',1)[0]
 								$ field_name = id.split('_http')[0]
-
-								<section class="col-md-12 col-sm-12 col-lg-12">
-									$:input.pre
-									$:input.render()
-									$:input.description
-									$if any(checked_value in k_v for k_v in graphdata[field_base]):
-										<script type="text/javascript">
-											$$("input[name=$field_name]").attr("checked","checked");
-										</script>
-								</section>
-							</section>
+								$if any(checked_value in k_v for k_v in graphdata[field_base]):
+									<script type="text/javascript">
+										$$("input[name=$field_name]").attr("checked","checked");
+									</script>
 						$else:
 							<section class="form_row block_field">
 								<section class="label col-12">
@@ -139,7 +158,7 @@ $if query_templates!=None:
 							</section>
 							<script type="text/javascript">
 								console.log('$id')
-								var elements = $$('#$id')[0].attributes;
+								var elements = $$('[id^="$id"]')[0].attributes;
 								var attrsToChange = [];
 
 								$$.each(elements, function(index, attr) {
@@ -153,11 +172,12 @@ $if query_templates!=None:
 									$$('#$id').removeAttr(attr.name);
 								});
 							</script>
-					$if type(knowledge_extractor) == type(set()):
-						$ extractors_list = list(knowledge_extractor)
-						$ extractors_template_ids = [tpl[0] for tpl in extractors_list]
-						$ extractors_names = [tpl[1] for tpl in extractors_list]
-						$ extractors_prepend = [tpl[2] for tpl in extractors_list]
+					$if type(knowledge_extractor) == type([]):
+						$ extractors_template_ids = [tpl[0] for tpl in knowledge_extractor]
+						$ extractors_names = [tpl[1] for tpl in knowledge_extractor]
+						$ extractors_prepend = [tpl[2] for tpl in knowledge_extractor]
+						$ extractors_id = [tpl[3] for tpl in knowledge_extractor]
+						$ extractors_service = [tpl[4] for tpl in knowledge_extractor]
 						$ extractions_object = extractions
 						<script type="text/javascript">
 							var extractionsString = `$extractions_object`.replace(/\n/g, "\\n").replace(/&quot;/g, "'").replace(/&#39;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
@@ -165,8 +185,10 @@ $if query_templates!=None:
 							const extractorsArray = JSON.parse('$extractors_template_ids'.replace(/&#39;/g, '"'));
 							const extractorsNames = JSON.parse('$extractors_names'.replace(/&#39;/g, '"'));
 							const extractorsPrepend = JSON.parse('$extractors_prepend'.replace(/&#39;/g, '"'));
+							const extractorsIds = JSON.parse('$extractors_id'.replace(/&#39;/g, '"'));
+							const extractorsService = JSON.parse('$extractors_service'.replace(/&#39;/g, '"'));
 							if (extractorsArray.includes('$template')) {
-								generateExtractionField('$pageID');
+								generateExtractionField('$template','$pageID');
 							}
 						</script>
 				</section>

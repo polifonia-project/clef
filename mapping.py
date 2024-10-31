@@ -26,6 +26,7 @@ ULAN = Namespace("http://vocab.getty.edu/ulan/")
 AAT = Namespace("http://vocab.getty.edu/aat/")
 PROV = Namespace("http://www.w3.org/ns/prov#")
 GEO = Namespace("https://sws.geonames.org/")
+ORCID = Namespace("https://orcid.org/")
 
 # CHANGE remove
 SCHEMA = Namespace("https://schema.org/")
@@ -81,7 +82,7 @@ def getLiteralValuesFromFields(fieldPrefix, recordData):
 	return result_dict
 
 def getRightURIbase(value):
-	return WD+value if value.startswith('Q') else GEO+value if value.isdecimal() else VIAF+value[4:] if value.startswith("viaf") else ''+value if value.startswith("http") else base+value.lstrip().rstrip()
+	return WD+value if value.startswith('Q') else GEO+value if value.isdecimal() else VIAF+value[4:] if value.startswith("viaf") else ORCID+value[5:] if value.startswith("orcid") else ''+value if value.startswith("http") else base+value.lstrip().rstrip()
 
 
 def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
@@ -166,7 +167,7 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 	for field in fields:
 		if field['type'] not in ['KnowledgeExtractor', 'Subtemplate']:
 			# URI, Textarea (only text at this stage), Literals
-			value = getValuesFromFields(field['id'], recordData, fields=fields) if 'value' in field and field['value'] in ['URI','Place'] \
+			value = getValuesFromFields(field['id'], recordData, fields=fields) if 'value' in field and field['value'] in ['URI','Place','Researcher'] \
 					else getValuesFromFields(field['id'], recordData, field_type=field['value']) if 'value' in field and field['value'] == 'URL' \
 					else getLiteralValuesFromFields(field['id'], recordData) if 'value' in field and field['value'] == 'Literal' else recordData[field['id']]
 			

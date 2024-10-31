@@ -173,7 +173,8 @@ function add_field(field, res_type, backend_file=null) {
         <option value='None'>Select</option>\
         <option value='Literal'>Free text (Literal)</option>\
         <option value='URI'>Entity (URI from Wikidata, VIAF, or catalogue)</option>\
-        <option value='Place'>Location (from geonames)</option>\
+        <option value='Researcher'>Researcher and contributor (from ORCiD)</option>\
+        <option value='Place'>Location (from GeoNames)</option>\
         <option value='URL'>URL</option>\
         </select>\
     </section>";

@@ -5,6 +5,8 @@ const wdImgIcon = '<img src="https://upload.wikimedia.org/wikipedia/commons/d/d2
 const geoImg = '<img src="https://www.geonames.org/img/globe.gif"/ style="max-width:30px">';
 const viafImg = '<img src="https://upload.wikimedia.org/wikipedia/commons/0/01/VIAF_icon.svg"/>';
 const viafImgIcon = '<img src="https://upload.wikimedia.org/wikipedia/commons/0/01/VIAF_icon.svg" style="max-width:18px"/>'
+const orcidImg = '<img src="https://upload.wikimedia.org/wikipedia/commons/1/14/ORCID_logo.svg"/>';
+const orcidImgIcon = '<img src="https://upload.wikimedia.org/wikipedia/commons/0/06/ORCID_iD.svg" style="max-width:18px"/>'
 const wikidataEndpoint = "https://query.wikidata.org/sparql"
 $(document).ready(function() {
 
@@ -181,6 +183,10 @@ $(document).ready(function() {
 			searchGeonames(searchID);
 		};
 
+    if ( $(this).hasClass('searchOrcid') ) {
+			searchOrcid(searchID);
+		};
+
     if ( $(this).hasClass('searchSkos') ) {
 			searchSkos(searchID);
 		};
@@ -270,10 +276,12 @@ $(document).ready(function() {
 	// append WD icon to input fields
 	$('.searchWikidata').parent().prev().append(wdImg);
   $('.searchWikidata').parent().prev().append(viafImg);
+  $('.searchOrcid').parent().prev().append(orcidImg);
   $('.searchGeonames').parent().prev().append(geoImg);
   $('.wikiEntity').append(wdImgIcon);
   $('.geoEntity').append(geoImg);
-  $('.viafEntity').append(viafImg); 
+  $('.orcidEntity').append(orcidImgIcon);
+  $('.viafEntity').append(viafImg);
   // append Entity Autocompletion toggle switch to input fields
   $('.searchWikidata').parent().append($('<div class="autocompletion-container">\
     <span class="toggle-comment">Autocompletion</span>\

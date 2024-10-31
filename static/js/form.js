@@ -211,8 +211,8 @@ function searchGeonames(searchterm) {
         function(data) {
             // autocomplete positioning;
             var offset = $('#'+searchterm).offset();
-                var leftpos = offset.left+15;
-                    var height = $('#'+searchterm).height();
+            var leftpos = offset.left+15;
+            var height = $('#'+searchterm).height();
             var top = offset.top + height + 15 + "px";
             var max_width = '600px';
 
@@ -316,6 +316,68 @@ function searchGeonames(searchterm) {
     });
 };
 
+// SEARCH ORCID
+function searchOrcid(searchterm) {
+    $('#'+searchterm).off('keyup').on('keyup', function() { 
+        var q = $("#"+searchterm).val();
+        var query = "https://pub.orcid.org/v3.0/expanded-search/?q="+encodeURIComponent(q);
+        if (q !== '') {$("#searchresult").show()};
+        $.ajax({
+            type: 'GET',
+            url: query,
+            headers: { Accept: 'application/json; charset=utf-8'},
+            success: function(returnedJson) {
+                $("#searchresult").empty();
+                // autocomplete positioning
+                setSearchResult(searchterm);
+                
+                // if no result
+                if (!returnedJson["expanded-result"] || returnedJson["expanded-result"].length === 0) {
+                    $("#searchresult").empty();
+                    var nores = "<div class='wditem noresults'>Searching...</div>";
+                    $("#searchresult").append(nores);
+                    // remove messages after 1 second
+                    setTimeout(function(){
+                        if ($('.noresults').length > 0) {
+                            $('.noresults').remove();
+                        }
+                    }, 1000);
+                };
+
+                var resultLength = returnedJson["expanded-result"].length;
+                var showItems = resultLength > 5 ? 5 : resultLength;
+
+                // process results
+                for (i = 0; i < showItems; i++) {
+                    var orcid = returnedJson["expanded-result"][i]["orcid-id"];
+                    var givenName = returnedJson["expanded-result"][i]["given-names"];
+                    var familyName = returnedJson["expanded-result"][i]["family-names"];
+                    var affiliations = returnedJson["expanded-result"][i]["institution-name"];
+                    console.log(affiliations)
+                    var item = "<div class='wditem'><a class='blue orangeText' target='_blank' href='https://orcid.org/"+orcid+"'>"+orcidImgIcon+"</a> <a class='blue' data-id='"+orcid+"'>"+givenName+" "+familyName+"</a>";
+                    if (affiliations.length) {
+                        item += " - " + affiliations.join("; ");
+                    }
+                    item += "</div>";
+                    $("#searchresult").append(item);
+                };
+
+                // add item on click
+                $('a[data-id]').each(function () {
+                    $(this).bind('click', function (e) {
+                        e.preventDefault();
+                        var orcid = this.getAttribute('data-id');
+                        var label = $(this).text();
+                        $('#' + searchterm).after("<span class='tag " + orcid + "' data-input='" + searchterm + "' data-id='" + orcid + "'>" + label + "</span><input type='hidden' class='hiddenInput " + orcid + "' name='" + searchterm + "_" + orcid + "' value=\"orcid" + orcid + "," + encodeURIComponent(label) + "\"/>");
+                        $("#searchresult").hide();
+                        $('#' + searchterm).val('');
+                    });
+                });
+            }
+        })
+    })
+}
+
 // SEARCH CATALOGUE
 // search bar menu
 function searchCatalogue(searchterm) {
@@ -334,6 +396,7 @@ function searchCatalogue(searchterm) {
                 // autocomplete positioning
                 setSearchResult(searchterm);
 
+                // if no result
                 if (!returnedJson.length) {
                     $("#searchresultmenu").empty();
                     var nores = "<div class='wditem noresults'>Searching...</div>";
@@ -346,6 +409,7 @@ function searchCatalogue(searchterm) {
                         }, 1000);
                 };
 
+                // process results
                 for (i = 0; i < returnedJson.results.bindings.length; i++) {
                     var myUrl = returnedJson.results.bindings[i].s.value;
                     // exclude named graphs from results
@@ -384,12 +448,12 @@ function searchCatalogueAdvanced(searchterm) {
                     if ($('#searchresult [data-id="'+catalogueId+'"]').length == 0) {
                         var newItemDiv = $('<div class="wditem"><a class="blue" target="_blank" href="'+obj.item.value+'"><i class="fas fa-external-link-alt"></i></a> <a class="blue" data-id="'+catalogueId+'">'+obj.itemLabel.value+'</a></div>');
                         newItemDiv.find('[data-id]').bind('click', function(e) {
-                        e.preventDefault();
-                        var oldID = $(this).attr('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
-                        var oldLabel = $(this).text();
-                        $('#' + searchterm).next('.tags-url').append("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(JSON.stringify(obj)) + "\"/>");
-                        $("#searchresult").hide();
-                        $('#' + searchterm).val('');
+                            e.preventDefault();
+                            var oldID = $(this).attr('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
+                            var oldLabel = $(this).text();
+                            $('#' + searchterm).next('.tags-url').append("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "-" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(JSON.stringify(obj)) + "\"/>");
+                            $("#searchresult").hide();
+                            $('#' + searchterm).val('');
                         });
                         $("#searchresult").append(newItemDiv);
                     };
@@ -713,21 +777,21 @@ function searchWD(searchterm) {
         })
     });
 
-        // if the user presses enter - create a new entity
-        $('#'+searchterm).keypress(function(e) {
-            if(e.which == 13) {
-                e.preventDefault();
-                var now = new Date().valueOf();
-                var newID = 'MD'+now;
-                if (!$('#'+searchterm).val() == '') {
-                    $('#'+searchterm).next('.tags-url').append("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"-"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
-                };
-                $("#searchresult").hide();
-                $('#'+searchterm).val('');
-                //colorForm();
+    // if the user presses enter - create a new entity
+    $('#'+searchterm).keypress(function(e) {
+        if(e.which == 13) {
+            e.preventDefault();
+            var now = new Date().valueOf();
+            var newID = 'MD'+now;
+            if (!$('#'+searchterm).val() == '') {
+                $('#'+searchterm).next('.tags-url').append("<span class='tag "+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'>"+$('#'+searchterm).val()+"</span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"-"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/>");
             };
-        });
-    };
+            $("#searchresult").hide();
+            $('#'+searchterm).val('');
+            //colorForm();
+        };
+    });
+};
 
 // search Wikidata with SPARQL patterns
 function searchWDAdvanced(searchterm) {

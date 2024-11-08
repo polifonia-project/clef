@@ -1188,6 +1188,21 @@ table.url-table i, table.extraction-table i {
   margin: 0 2em 0 1em;
 }
 
+.chart-heading.full-width {
+  max-width: 100% !important;
+  width: 100%;
+}
+
+.map-chart {
+  width: 100%;
+  background-color: #f8f8f8;
+  height: 500px;
+  overflow: hidden;
+  border: 1px solid #332421;
+  z-index: 1001;
+  font-size: 12px;
+}
+
 .articleTitle {
   font-size: 5em;
   text-transform: none !important;
@@ -2988,7 +3003,7 @@ h4.subrecord-title.closed-title {
 }
 
 /* extra */
-.material-icons, .fa-plus-circle, .fa-eye, .fa-trash, .fa-external-link-alt{color: rgba(100,23,180,1); cursor: pointer;}
+.material-icons, .fa-plus-circle, .fa-eye, .fa-trash, .fa-trash-alt, .fa-external-link-alt{color: rgba(100,23,180,1); cursor: pointer;}
 .material-icons {font-size: 1.5em;}
 .link_btn, .btn {white-space: nowrap; font-weight: 500;}
 .add_fields .link_btn {display: inline-block; margin-bottom: 8px}

@@ -29,8 +29,8 @@ $var project = project
                                 <!-- TYPE -->
                                 <section class="row">
                                     <label class="col-md-3">TYPE</label>
-                                    <select onchange="changeChart(this)" class="col-md-8 custom-select" name="type__$id" id="type__$id">
-                                        <option value="None">Select</option>
+                                    <select onchange="changeVisualization(this)" class="col-md-8 custom-select" name="type__$id" id="type__$id">
+                                        <option value="None">Select a visualization type</option>
                                         <option value="counter">Counter</option>
                                         <option value="chart">Chart</option>
                                         <option value="map">Map</option>
@@ -59,8 +59,11 @@ $var project = project
                                                     <label class='inner-label col-md-12'>Counters list</label>\
                                                 </li>
                                                 $for counter in chart["counters"]:
-                                                    <li><label>$counter["title"] <i class="far fa-edit" onclick="modifyCounter(this)"></i></label></li>
-                                                <li><label class="add-option">Add new counter <i class="fas fa-plus-circle" onclick="addCounter(this)"></i></label></li>
+                                                    <li>
+                                                        <label>$counter["title"] <i class="far fa-edit" onclick="modifyCounter(this)"></i> <i class="far fa-trash-alt" onclick="removeCounter(this)"></i></label>
+                                                        <input type="hidden" id="$counter['id']" name="$counter['id']" value="$counter['query']"/>
+                                                    </li>
+                                                <li><label class="add-option">Add new counter <i class="fas fa-plus-circle" onclick="addCounter(this, '$id')"></i></label></li>
                                             </ul>
                                         </section>
                                     </section>
@@ -80,11 +83,12 @@ $var project = project
                                     <!-- CHART TYPE -->
                                     <section class="row">
                                         <label class="col-md-3">CHART TYPE</label>
-                                        <select onchange="changeChartType(this)" class="col-md-8 custom-select" name="chart__$id" id="chart__$id">
-                                            <option value="None">Select</option>
+                                        <select onchange="changeVisualizationType(this)" class="col-md-8 custom-select" name="chart__$id" id="chart__$id">
+                                            <option value="None">Select a chart type</option>
                                             <option value="bar">Bar Chart</option>
                                             <option value="pie">Pie Chart</option>
                                             <option value="donut">Donut Chart</option>
+                                            <option value="semi-circle">Semi-circle Chart</option>
                                         </select>
                                     </section>
                                     <script>
@@ -113,8 +117,8 @@ $var project = project
                                                 <input type="text" id="x-name__$id" name="x-name__$id" value="$chart['x-axis'].split(',',1)[1]"/>
                                             </section>
                                             <section class="col-md-2 center-checkbox">
-                                                <label class="inner-label">Sort by X</label>
-                                                <input type="checkbox" id="x-sort__$id" name="x-sort__$id" onclick="sortChart('$id')"/>
+                                                <label class="inner-label">Sort by</label>
+                                                <input type="checkbox" id="x-sort__$id" name="x-sort__$id" onclick="sortChart(this, '$id')"/>
                                             </section>
                                         </section>
                                         <!-- Y-AXIS -->
@@ -129,8 +133,41 @@ $var project = project
                                                 <input type="text" id="y-name__$id" name="y-name__$id" value="$chart['y-axis'].split(',',1)[1]"/>
                                             </section>
                                             <section class="col-md-2 center-checkbox">
-                                                <label class="inner-label">Sort by Y</label>
-                                                <input type="checkbox" id="y-sort__$id" name="y-sort__$id" onclick="sortChart('$id')"/>
+                                                <label class="inner-label">Sort by</label>
+                                                <input type="checkbox" id="y-sort__$id" name="y-sort__$id" onclick="sortChart(this, '$id')"/>
+                                            </section>
+                                        </section>
+                                    $elif chart_type in ["pie", "donut", "semi-circle"]:
+                                        <!-- 1st variable -->
+                                        <section class="row">
+                                            <label class="col-md-3">1st VARIABLE<br><span class="comment">set a SPARQL variable</span></label>
+                                            <section class="col-md-3">
+                                                <label class="inner-label">SPARQL variable</label>
+                                                <input type="text" id="x-var__$id" name="x-var__$id" value="$chart['x-axis'].split(',',1)[0]"/>
+                                            </section>
+                                            <section class="col-md-3">
+                                                <label class="inner-label">Display name</label>
+                                                <input type="text" id="x-name__$id" name="x-name__$id" value="$chart['x-axis'].split(',',1)[1]"/>
+                                            </section>
+                                            <section class="col-md-2 center-checkbox">
+                                                <label class="inner-label">Sort by</label>
+                                                <input type="checkbox" id="x-sort__$id" name="x-sort__$id" onclick="sortChart(this, '$id')"/>
+                                            </section>
+                                        </section>
+                                        <!-- 2nd variable -->
+                                        <section class="row">
+                                            <label class="col-md-3">2nd VARIABLE<br><span class="comment">set a SPARQL variables</span></label>
+                                            <section class="col-md-3">
+                                                <label class="inner-label">SPARQL variable</label>
+                                                <input type="text" id="y-var__$id" name="y-var__$id" value="$chart['y-axis'].split(',',1)[0]"/>
+                                            </section>
+                                            <section class="col-md-3">
+                                                <label class="inner-label">Display name</label>
+                                                <input type="text" id="y-name__$id" name="y-name__$id" value="$chart['y-axis'].split(',',1)[1]"/>
+                                            </section>
+                                            <section class="col-md-2 center-checkbox">
+                                                <label class="inner-label">Sort by</label>
+                                                <input type="checkbox" id="y-sort__$id" name="y-sort__$id" onclick="sortChart(this, '$id')"/>
                                             </section>
                                         </section>
                                     <!-- LEGEND -->
@@ -139,16 +176,23 @@ $var project = project
 										<label class="left col-md-11 col-sm-6" for="legend__$id">Show legend</label>
 										<input $legend type="checkbox" id="legend__$id" name="legend__$id">
 									</section>
+                                    <!-- SCRIPT -->
+                                    $if "sorted" in chart:
+                                        <script type="text/javascript">
+                                            $$("#$chart['sorted']-sort__$id").prop("checked", true);
+                                        </script>
                                 <!-- ARROW + DELETE BUTTONS -->
-                                <a href="#" class="up"><i class="fas fa-arrow-up"></i></a> <a href="#" class="down"><i class="fas fa-arrow-down"></i></a>
+                                <a href="#" class="up"><i class="fas fa-arrow-up"></i></a> 
+                                <a href="#" class="down"><i class="fas fa-arrow-down"></i></a>
+                                <a href="#" class="preview"><i class="fas fa-eye"></i></a>
                                 <a href="#" class="trash"><i class="far fa-trash-alt"></i></a>
                             </section>
                 </section>
                 <!-- Add Charts buttons -->
                 <section class="add_fields homeheading col-md-12 col-lg-12 col-sm-12">
-                    <a class="link_btn" onclick="addChart('counter')" name="add_counter">Add Counter</a>
-                    <a class="link_btn" onclick="addChart('chart')" name="add_chart">Add Chart</a>
-                    <a class="link_btn" onclick="addChart('map')" name="add_map">Add Map</a>
+                    <a class="link_btn" onclick="addVisualization('counter')" name="add_counter">Add Counter</a>
+                    <a class="link_btn" onclick="addVisualization('chart')" name="add_chart">Add Chart</a>
+                    <a class="link_btn" onclick="addVisualization('map')" name="add_map">Add Map</a>
                 </section>
             </section>
             <!-- Buttons section -->
@@ -161,10 +205,21 @@ $var project = project
     <!-- Tips -->
     <section class="homeheading col-md-4 col-sm-4 col-lg-4">
 		<p class="caption">Tips</p>
-        <p>You can create your charts template for data visualization in few easy steps! Select the chart type and provide some information</p>
+        <p>You can create your charts template for data visualization in few easy steps! Select the visualization type you prefer and provide some information to shape your data. Thanks to the preview function, you can check each visualization in advance.</p>
 		<h5>Counter</h5>
-        <p>Provide one or multiple SPARQL queries to get the count of meaningful entities collected within the Knowledge Graph.</p>
-        <h5>Bar-chart</h5>
-        <p>Provide a SPARQL query</p>
+        <p>Provide one or multiple SPARQL queries to get the count of meaningful entities collected within the Knowledge Graph. Each counter will include a label and the number of items retrieved by the query.</p>
+        <h5>Charts</h5>
+        <p>Shape your data by choosing your preferred visualization. Multiple solutions are available, each of them including the option for a values' legend:</p>
+        <p><code>Bar Chart</code>: display your data into a bar chart. Provide a query for retrieving a categorical variable and a quantitative one. Each variable can be assigned either to X-axis or the Y-axis of the graph. Moreover, results can be sorted according to the values of an axis.</p>
+        <p><code>Pie Chart</code>: display your data into a pie chart. Provide a query for retrieving a categorical variable to retrieve the number and the labels of the chart's slices, and a quantitative variable to determine the slices' sizes.</p>
+        <p><code>Donut Chart</code>: display your data as a donut chart. Likewise pie charts, provide a SPARQL query for retrieving a categorical variable to retrieve the number and the labels of the chart's slices, and a quantitative variable to determine the slices' sizes. The donut range is set by default.</p>
+        <p><code>Semi-circle Chart</code>:</p>
+        <h5>Map</h5>
+        <p>Maps allow to display data distribution and locations.</p>
+        <p><code>Map</code>: this basic option allows displaying data on a map independently of their counts. A SPARQL query must be provided, allowing the system to retrieve a set of locations and their labels. Multiple occurrences will be ignored: no quantitative datum is available.</p>  
+        <p><code>Drill-down Map</code>: this advanced option is based on quantitative analysis of described locations. Provide a SPARQL query to retrieve a set of geonames locations or geographic coordinates (i.e., latitude, longitude pairs).s</p>
 	</section>
+    <section style="display:none; width:90vw; position:absolute; height: 70vh; overflow:scroll; z-index: 3000;">
+        <iframe src="/charts" style="width: 100vw;overflow: scroll;height: 100%;"></iframe>
+    </section>
 </section>

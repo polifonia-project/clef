@@ -945,7 +945,7 @@ class Records:
 				res_class=template["type"]
 				records = queries.getRecords(res_class)
 				records_by_template[template["name"]] = records
-				alll = queries.countAll(res_class,True)
+				alll = queries.countAll(res_class,False)
 				count_by_template[template["name"]] = alll
 				filtersBrowse = queries.getBrowsingFilters(template["template"])
 				filters_by_template[template["name"]] = filtersBrowse
@@ -1416,8 +1416,10 @@ class Charts(object):
 					y_value = int(result[y_var]["value"]) if "datatype" in result[y_var] and result[y_var]["datatype"] == "http://www.w3.org/2001/XMLSchema#integer" else result[y_var]["value"]
 					stats_result.append({x_name: x_value, y_name: y_value})
 				if "sorted" in chart and chart["sorted"] != "None":
-					sort_key = x_name if chart["sorted"] == "x" else y_name
-					stats_result = list(reversed(sorted(stats_result, key=lambda x: x[sort_key])))
+					if chart["sorted"] == "x":
+						stats_result = list(reversed(sorted(stats_result, key=lambda x: x[x_name])))
+					elif chart["sorted"] == "y":
+						stats_result = list(reversed(sorted(stats_result, key=lambda x: x[y_name])))
 				chart["stats"] = json.dumps(stats_result)
 				chart["info"] = (chart_id, x_name, y_name)
 				print(charts)

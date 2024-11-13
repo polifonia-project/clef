@@ -410,14 +410,17 @@ $(document).ready(function() {
 
   // trigger tabs in EXPLORE
   var triggerTabList = [].slice.call(document.querySelectorAll('#resource_classes_tab a'))
-    triggerTabList.forEach(function (triggerEl) {
-      var tabTrigger = new bootstrap.Tab(triggerEl)
+  triggerTabList.forEach(function (triggerEl) {
+    var tabTrigger = new bootstrap.Tab(triggerEl)
 
-      triggerEl.addEventListener('click', function (event) {
-        event.preventDefault()
-        tabTrigger.show()
-      })
-    });
+    triggerEl.addEventListener('click', function (event) {
+      event.preventDefault()
+      tabTrigger.show()
+    })
+  });
+  if (triggerTabList.length > 0) {
+    triggerTabList[0].click();
+  }
   
   // alternate inverse entities navigation in "view" page
   $(".inverse-properties-tabs .nav-item a").on('click', function () {

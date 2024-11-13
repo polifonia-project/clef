@@ -42,7 +42,7 @@ $def with (content)
 				<section class="col-md-8 col-sm-12 collapse navbar-collapse" id="navbarSupportedContent">
 					<span><a href="/" class="logo_header">$content.project</a>
 					<a href="records">Explore</a>
-					<a href="charts">Charts</a></span>
+					<a href="charts-visualization">Charts</a></span>
 					$if content.user == 'anonymous' or content.user == 'unknown':
 						$if content.is_git_auth == True:
 							<button class="btn btn-dark" onclick="window.location.href='gitauth'"  role="button" id="dropdownMenuLink">Member area <i class="fab fa-github"></i></button>

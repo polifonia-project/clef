@@ -5,16 +5,31 @@ to create or modify explorative charts
 */
 
 $(document).ready(function() {
-    $(document).on('click', '#addChart', function(e) {
-        e.preventDefault();
-        addChart();
-    });
 
+    // generate preview
     $('.preview').on('click', function(e) {
         e.preventDefault();
         var url = "http://localhost:8080/charts";
         var modal = $("<div class='modal-previewMM'><span class='previewTitle'>This is a preview of your multimedia file:<br><a href=''>"+url+"</a></span><span class='closePreview'></span><iframe src='" + url + "'></div>")
         $(this).after(modal);
+    });
+
+    // save the charts template
+    $("#updateTemplate").on('click', function(e) {
+        e.preventDefault();
+
+        // resolve yasqe textarea
+        $(".charts-yasqe").each(function() {
+            var query = getYASQEQuery($(this));
+            var queryIdx = $(this).attr("id").split("__")[0];
+            var queryId = queryIdx + "__query__" + queryIdx;
+            $("#chartForm").append($("<input type='hidden' name='"+queryId+"' value='"+query+"'/>"));
+            $(this).find("textarea").remove();
+        });
+
+        // save the template in case everything is ok
+        Swal.fire({ title: 'Saved!'});
+        setTimeout(function() { document.getElementById("chartForm").submit();}, 500);
     });
 });
 
@@ -80,7 +95,7 @@ function addVisualization(visualizationType) {
 
     var chartType =  "<section class='row'>\
         <label class='col-md-3'>TYPE</label>\
-        <select onchange='changeChart(this)' class='col-md-8 custom-select' name='type__"+newId+"' id='type__"+newId+"'>\
+        <select onchange='changeChart(this)' class='col-md-8 custom-select' name='chartType__"+newId+"' id='chartType__"+newId+"'>\
             <option value='None'>Select a chart type</option>\
             <option value='bar'>Bar Chart</option>\
             <option value='pie'>Pie Chart</option>\
@@ -200,18 +215,7 @@ function saveCounter(element,fieldId) {
     var itemsList = $(element).closest("ul");
     var itemIndex = itemsList.find("li").length - 1;
     var label = item.find("[name='description']").val();
-    let query = "";
-    let newLine = "";
-
-    var yasqeQueryRows = item.find('.CodeMirror-code>div');
-    yasqeQueryRows.each(function() {
-        var tokens = $(this).find('pre span span');
-        query+=newLine;
-        tokens.each(function() {
-            query += $(this).hasClass('cm-ws') ? ' ' : $(this).text();
-            newLine="\n";
-        });
-    });
+    var query = getYASQEQuery(item);
 
     // make sure a label has been provided
     if (label === "") {
@@ -539,14 +543,14 @@ function map(elid) {
 
         for (var i = 0; i < data.length; i++) {
             var city = data[i];
-            addCity(city["longitude"], city["latitude"], city["title"]);
+            addCity(city["longitude"], city["latitude"], city["label"]);
         }
 
-        function addCity(longitude, latitude, title) {
-            console.log(longitude, latitude, title)
+        function addCity(longitude, latitude, label) {
+            console.log(longitude, latitude, label)
             pointSeries.data.push({
                 geometry: { type: "Point", coordinates: [longitude, latitude] },
-                title: title
+                title: label
             });
         }
 
@@ -675,9 +679,9 @@ function mapDrillDown(elid) {
 
             groupedData[country].count++;
 
-            if (!groupedData[country].cities[item.title]) {
-                groupedData[country].cities[item.title] = { 
-                    name: item.title, 
+            if (!groupedData[country].cities[item.label]) {
+                groupedData[country].cities[item.label] = { 
+                    name: item.label,
                     count: 0, 
                     geometry: { 
                         type: "Point", 
@@ -685,7 +689,7 @@ function mapDrillDown(elid) {
                     }
                 };
             }
-            groupedData[country].cities[item.title].count++;
+            groupedData[country].cities[item.label].count++;
         });
 
         return groupedData;
@@ -788,7 +792,7 @@ function mapDrillDown(elid) {
                     fill: am5.color(0x000000),
                     fillOpacity: 0.7,
                     cursorOverStyle: "pointer",
-                    tooltipText: "{name}: {count} valori"
+                    tooltipText: "{name}: {count} values"
                 }, circleTemplate));
 
                 var label = container.children.push(am5.Label.new(root, {
@@ -824,7 +828,7 @@ function mapDrillDown(elid) {
                             radius: 10,
                             fill: am5.color(0x000000),
                             fillOpacity: 0.7,
-                            tooltipText: "{name}: {count} valori",
+                            tooltipText: "{name}: {count} values",
                             cursorOverStyle: "pointer"
                         }));
                         
@@ -934,10 +938,27 @@ function getCountryByCoords(lat, lon) {
             if (data && data.countryName) {
                 resolve(data.countryName);
             } else {
-                reject("Nazione non trovata");
+                reject("Country not found");
             }
         }).fail(function(jqXHR, textStatus, errorThrown) {
-            reject("Errore nel recupero della nazione: " + errorThrown);
+            reject("Error: " + errorThrown);
         });
     });
+}
+
+function getYASQEQuery(item) {
+    let query = "";
+    let newLine = "";
+
+    var yasqeQueryRows = $(item).find('.CodeMirror-code>div');
+    yasqeQueryRows.each(function() {
+        var tokens = $(this).find('pre span span');
+        query+=newLine;
+        tokens.each(function() {
+            query += $(this).hasClass('cm-ws') ? ' ' : $(this).text();
+            newLine="\n";
+        });
+    });
+
+    return query
 }

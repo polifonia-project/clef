@@ -168,7 +168,7 @@ def fields_to_json(data, json_file, skos_file):
 	as modified via the web page *template* """
 
 	list_dicts = defaultdict(dict)
-	list_ids = sorted([k.split("__")[0] for k in data.keys()])
+	#list_ids = sorted([k.split("__")[0] for k in data.keys()])
 	template_config = {'hidden': 'True'}
 
 	for k,v in data.items():
@@ -185,7 +185,7 @@ def fields_to_json(data, json_file, skos_file):
 	with open(TEMPLATE_LIST, 'r') as file:
 		tpls = json.load(file)
 
-	# Modifica il contenuto
+	# Modify the template status in tpl_list
 	for tpl in tpls:
 		if tpl['template'] == json_file:
 			tpl['hidden'] = template_config['hidden']
@@ -641,12 +641,48 @@ def get_query_templates(res_tpl):
 
 # CHARTS CONFIG
 def charts_to_json(charts_file, data):
-	print("CHARTS DATA", data)
 
-	""" with open(charts_file, 'w') as fout:
-		fout.write(json.dumps(charts, indent=1)) """
+	# initialize a blank list of dictionaries
+	charts = {"charts": []}
+
+	# parse data
+	list_dicts = defaultdict(dict)
+	for k,v in data.items():
+		if k != 'action':
+			# group k,v by number in the k to preserve the order
+			# e.g. '4__type__scope': 'Checkbox'
+			idx, json_key, field_id = k.split("__")
+			list_dicts[int(idx)]["id"] = idx
+			list_dicts[int(idx)][json_key] = v
+	
+	for idx,params in list_dicts.items():
+		# counters
+		print([viz for viz in params if viz.startswith("counter")])
+		counters = [{
+			"id": str(idx)+"__"+viz+"__"+str(idx),
+			"query": params[viz],
+			"title": viz.split("_")[1]
+		} for viz in params if viz.startswith("counter")]
+		params["counters"] = counters
+
+		# sorted
+		if "y-sort" in params:
+			params["sorted"] = "y"
+		elif "x-sort" in params:
+			params["sorted"] = "x"
+
+		#legend
+		params["legend"] == "True" if "legend" in params else "False"		
+
+	# sort viz by index
+	ordict = OrderedDict(sorted(list_dicts.items()))
+	ordlist = [d for k,d in ordict.items()]
+	charts["charts"] = ordlist
+
+	with open(charts_file, 'w') as fout:
+		fout.write(json.dumps(charts, indent=4))
 
 def delete_charts(charts_file):
 	with open(charts_file, 'w') as fout:
-		fout.write(json.dumps({}, indent=1))
+		fout.write(json.dumps({}, indent=4))
 	

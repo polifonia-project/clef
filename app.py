@@ -68,7 +68,7 @@ urls = (
 	prefix + '/nlp','Nlp',
 	prefix + '/sparqlanything', 'Sparqlanything',
 	prefix + '/wd', 'Wikidata',
-	prefix + '/charts', 'Charts',
+	prefix + '/charts-visualization', 'Charts',
 	prefix + '/charts-template', 'ChartsTemplate'
 )
 
@@ -1341,6 +1341,7 @@ class Sparqlanything(object):
 					result["uri"] = {"value": result["label"]["value"], "type": "uri"}
 				uri = result["uri"]["value"]
 				if not (uri.startswith("http://") or uri.startswith("https://")):
+					service = query_string.service if "service" in action else "wd"
 					result["uri"]["value"] = queries.entity_reconciliation(uri,service)
 			print(results)
 			return json.dumps(results)
@@ -1395,7 +1396,7 @@ class Charts(object):
 						i = 0
 						while i < int(result["count"]["value"]):
 							stats_result.append({
-								"title" : result["title"]["value"],
+								"label" : result["label"]["value"],
 								"latitude": lat,
 								"longitude": long
 							})
@@ -1405,9 +1406,9 @@ class Charts(object):
 			elif chart["type"] == "chart":
 				chart_id = str(time.time()).replace('.','-')
 				stats_query = chart["query"]
-				x_var, x_name = chart["x-axis"].split(",",1)
+				x_var, x_name = chart["x-var"], chart["x-name"]
 				x_var = x_var.replace("?","")
-				y_var, y_name = chart["y-axis"].split(",",1)
+				y_var, y_name = chart["y-var"], chart["y-name"]
 				y_var = y_var.replace("?","")
 				query_results = queries.hello_blazegraph(stats_query)
 				stats_result = []
@@ -1422,11 +1423,9 @@ class Charts(object):
 						stats_result = list(reversed(sorted(stats_result, key=lambda x: x[y_name])))
 				chart["stats"] = json.dumps(stats_result)
 				chart["info"] = (chart_id, x_name, y_name)
-				print(charts)
-				
 
 
-		return render.charts(user=session['username'], is_git_auth=is_git_auth,
+		return render.charts_visualization(user=session['username'], is_git_auth=is_git_auth,
 					   project=conf.myProject, charts=charts)
 	
 class ChartsTemplate(object):
@@ -1446,6 +1445,7 @@ class ChartsTemplate(object):
 
 	def POST(self):
 		data = web.input()
+		print("#DATA:", data)
 		if 'action' in data and 'deleteTemplate' in data.action:
 			u.delete_charts(conf.charts)
 		elif 'action' in data and 'updateTemplate' in data.action:

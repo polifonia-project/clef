@@ -12,7 +12,7 @@ $var project = project
 
 <!-- Header -->
 <header class="row">
-	<h3 class="col-md-12 col-lg-12 col-sm-12">Generate explorative charts</h3>
+	<h3 class="col-md-12 col-lg-12 col-sm-12">Generate charts and visualizations</h3>
 </header>
 <!-- Form and Tips -->
 <section class="corners row set_template_field">
@@ -68,6 +68,19 @@ $var project = project
                                         </section>
                                     </section>
                                 $elif type == "map":
+                                    <!-- MAP TYPE -->
+                                    $ map_type = chart["mapType"]
+                                    <section class="row">
+                                        <label class="col-md-3">MAP TYPE</label>
+                                        <select onchange="changeMapType(this)" class="col-md-8 custom-select" name="mapType__$id" id="mapType__$id">
+                                            <option value="None">Select a map type</option>
+                                            <option value="common-map">Simple Map</option>
+                                            <option value="drilldown-map">Drill-down Map</option>
+                                        </select>
+                                    </section>
+                                    <script>
+                                        $$("#mapType__$id option[value='$map_type']").attr("selected","selected");
+                                    </script>
                                     <!-- QUERY -->
                                     <section class="row">
                                         <label class="col-md-3">QUERY<br><span class="comment">set a SPARQL query to retrieve data (two variables required)</span></label>
@@ -79,11 +92,11 @@ $var project = project
                                         generateYASQE("yasqe-$id", `$chart['query']`);
                                     </script>
                                 $elif type == "chart":
-                                    $ chart_type = chart["chart_type"]
                                     <!-- CHART TYPE -->
+                                    $ chart_type = chart["chartType"]
                                     <section class="row">
                                         <label class="col-md-3">CHART TYPE</label>
-                                        <select onchange="changeVisualizationType(this)" class="col-md-8 custom-select" name="chart__$id" id="chart__$id">
+                                        <select onchange="changeVisualizationType(this)" class="col-md-8 custom-select" name="chartType__$id" id="chartType__$id">
                                             <option value="None">Select a chart type</option>
                                             <option value="bar">Bar Chart</option>
                                             <option value="pie">Pie Chart</option>
@@ -92,7 +105,7 @@ $var project = project
                                         </select>
                                     </section>
                                     <script>
-                                        $$("#chart__$id option[value='$chart_type']").attr("selected","selected");
+                                        $$("#chartType__$id option[value='$chart_type']").attr("selected","selected");
                                     </script>
                                     <!-- QUERY -->
                                     <section class="row">
@@ -197,6 +210,7 @@ $var project = project
             </section>
             <!-- Buttons section -->
             <section class="buttonsSection">
+                <input type="hidden" class="hiddenInput" name="action" value="updateTemplate">
 				<button id="updateTemplate" name="action" value="updateTemplate" class="btn btn-dark" type="submit">Save Charts</button>
 				<button class="btn btn-dark delete_template" data-toggle="modal" data-target="#popup" name="action" value="deleteTemplate" type="submit" title="delete">Reset Charts <i class="far fa-trash-alt"></i></button>
 			</section>
@@ -205,19 +219,19 @@ $var project = project
     <!-- Tips -->
     <section class="homeheading col-md-4 col-sm-4 col-lg-4">
 		<p class="caption">Tips</p>
-        <p>You can create your charts template for data visualization in few easy steps! Select the visualization type you prefer and provide some information to shape your data. Thanks to the preview function, you can check each visualization in advance.</p>
+        <p>You can create your charts template for data visualization in few easy steps! Select the visualization type you prefer and provide some information to shape your data.<br>Thanks to the preview function, you can check your visualizations in advance. Additionally, you can customize your captions by using HTML tags (e.g.:<code>&lt;a href=""&gt;&lt;/a&gt;</code> for links).</p>
 		<h5>Counter</h5>
-        <p>Provide one or multiple SPARQL queries to get the count of meaningful entities collected within the Knowledge Graph. Each counter will include a label and the number of items retrieved by the query.</p>
+        <p>Enter one or multiple SPARQL queries to retrieve counts of key entities within the Knowledge Graph. Each counter will include a label along with the total number of items retrieved by the query.</p>
         <h5>Charts</h5>
-        <p>Shape your data by choosing your preferred visualization. Multiple solutions are available, each of them including the option for a values' legend:</p>
-        <p><code>Bar Chart</code>: display your data into a bar chart. Provide a query for retrieving a categorical variable and a quantitative one. Each variable can be assigned either to X-axis or the Y-axis of the graph. Moreover, results can be sorted according to the values of an axis.</p>
-        <p><code>Pie Chart</code>: display your data into a pie chart. Provide a query for retrieving a categorical variable to retrieve the number and the labels of the chart's slices, and a quantitative variable to determine the slices' sizes.</p>
-        <p><code>Donut Chart</code>: display your data as a donut chart. Likewise pie charts, provide a SPARQL query for retrieving a categorical variable to retrieve the number and the labels of the chart's slices, and a quantitative variable to determine the slices' sizes. The donut range is set by default.</p>
-        <p><code>Semi-circle Chart</code>:</p>
+        <p>customize your data by choosing your preferred visualization. Multiple solutions are available, each of them including optional features, such as a legend and value sorting:</p>
+        <p><code>Bar Chart</code>: display your data in a bar chart format. Provide a query to retrieve a categorical variable and a quantitative one. You can assign each variable to either the X-axis or Y-axis. Results can also be sorted based on the values of an axis.</p>
+        <p><code>Pie Chart</code>: showcase your data in a pie chart. Provide a query to obtain a categorical variable, representing the labels and the counts of each slices, and a quantitative variable to determine slice sizes.</p>
+        <p><code>Donut Chart</code>: visualize your data with a donut chart. Like the pie chart, use a SPARQL query to retrieve a categorical variable for slice labels and counts, and a quantitative variable for slice sizes. The donut's central radius is fixed by default.</p>
+        <p><code>Semi-circle Chart</code>: similar to a donut chart, a semi-circle chart represents data in a half-circle format, displaying values within a semi-circular arc. Use a query to retrieve a categorical variable for slice labels and counts, along with a quantitative variable for slice sizes.</p>
         <h5>Map</h5>
-        <p>Maps allow to display data distribution and locations.</p>
-        <p><code>Map</code>: this basic option allows displaying data on a map independently of their counts. A SPARQL query must be provided, allowing the system to retrieve a set of locations and their labels. Multiple occurrences will be ignored: no quantitative datum is available.</p>  
-        <p><code>Drill-down Map</code>: this advanced option is based on quantitative analysis of described locations. Provide a SPARQL query to retrieve a set of geonames locations or geographic coordinates (i.e., latitude, longitude pairs).s</p>
+        <p>Maps allow displaying data points distribution and locations.</p>
+        <p><code>Map</code>: the basic map option displays data point on a map independently of their counts. A SPARQL query must be provided to retrieve a set of locations and their labels. Multiple occurrences will be ignored, as this map type does not support quantitative data. Use your query to either retrieve geonames entities or coordinates</p>  
+        <p><code>Drill-down Map</code>: this advanced option supports quantitative analysis for locations. Use a SPARQL query to retrieve geographical coordinates (latitude and longitude) or geonames locations, enabling detailed exploration of data points by location.</p>
 	</section>
     <section style="display:none; width:90vw; position:absolute; height: 70vh; overflow:scroll; z-index: 3000;">
         <iframe src="/charts" style="width: 100vw;overflow: scroll;height: 100%;"></iframe>

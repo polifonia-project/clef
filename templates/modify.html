@@ -1,8 +1,9 @@
-$def with (graphdata,pageID,record_form,user,ids_dropdown,is_git_auth,invalid,project,template,query_templates,knowledge_extractor,extractions)
+$def with (graphdata,pageID,record_form,user,ids_dropdown,is_git_auth,invalid,project,template,query_templates,knowledge_extractor,extractions,main_lang)
 
 $var user = user
 $var is_git_auth = is_git_auth
 $var project = project
+$var main_lang = main_lang
 
 $if query_templates!=None:
 	<script type="text/javascript">
@@ -14,8 +15,7 @@ $if query_templates!=None:
 	<button id="scrollToTop"><i class="fas fa-arrow-up"></i> top</button>
 	<script type="text/javascript">
 		$$('#cbp-spmenu-s2').load( "./documentation #documentation", function() {
-			$$(".documentation").removeClass('col-md-7').addClass('col-md-12 col-sm-4');
-			$$("h2").css('font-size','2em');
+			setFormDocumentation();
 		} );
 	</script>
 	$if invalid == True:
@@ -100,7 +100,7 @@ $if query_templates!=None:
 											$:input.render()
 											$if len(graphdata[id]) > 0:
 												<script type="text/javascript">
-													$$('#$id').prepend($$('<option value="None">Select from the list</option>'));
+													$$('#$id').prepend($$('<option value="">Select from the list</option>'));
 													$$("#$id option[value$$='$graphdata[id][0][0]']").attr("selected","selected");
 												</script>
 
@@ -152,7 +152,7 @@ $if query_templates!=None:
 										$:input.render()
 										$if type(input) == Dropdown:
 											<script type="text/javascript">
-												$$('#$id').prepend($$('<option selected=selected value="None">Select from the list</option>'));
+												$$('#$id').prepend($$('<option selected=selected value="">Select from the list</option>'));
 											</script>
 								</section>
 							</section>

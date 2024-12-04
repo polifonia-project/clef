@@ -366,7 +366,7 @@ class Index:
 				notreviewed=notreviewed,underreview=underreview,
 				published=published, page=page,pagination=int(conf.pagination),
 				filter=filterRecords, filterName = 'filterAll',is_git_auth=is_git_auth,
-				project=conf.myProject,templates=tpl_list)
+				project=conf.myProject,templates=tpl_list,main_lang=conf.mainLang)
 		else:
 			if conf.gitClientID == '':
 				session['logged_in'] = 'False'
@@ -375,7 +375,7 @@ class Index:
 					notreviewed=notreviewed,underreview=underreview,
 					published=published, page=page,pagination=int(conf.pagination),
 					filter=filterRecords, filterName = 'filterAll',is_git_auth=is_git_auth,
-					project=conf.myProject,templates=tpl_list)
+					project=conf.myProject,templates=tpl_list,main_lang=conf.mainLang)
 			else:
 				session['logged_in'] = 'False'
 				u.log_output('WELCOME PAGE NOT LOGGED IN', session['logged_in'], session['username'])
@@ -431,7 +431,7 @@ class Index:
 				underreview=underreview, published=published,
 				page=page, pagination=int(conf.pagination),
 				filter= filterRecords, filterName = filterName, is_git_auth=is_git_auth,
-				project=conf.myProject,templates=tpl_list)
+				project=conf.myProject,templates=tpl_list,main_lang=conf.mainLang)
 
 		# create a new record
 		elif actions.action.startswith('createRecord'):
@@ -465,7 +465,7 @@ class Index:
 					underreview=underreview, published=published,
 					page=page, pagination=int(conf.pagination),
 					filter= filterRecords, filterName = filterName, is_git_auth=is_git_auth,
-					project=conf.myProject,templates=tpl_list)
+					project=conf.myProject,templates=tpl_list,main_lang=conf.mainLang)
 
 		# modify a record
 		elif actions.action.startswith('modify'):
@@ -498,7 +498,7 @@ class Index:
 					underreview=underreview, published=published,
 					page=page, pagination=int(conf.pagination),
 					filter= filterRecords, filterName = filterName, is_git_auth=is_git_auth,
-					project=conf.myProject,templates=tpl_list)
+					project=conf.myProject,templates=tpl_list,main_lang=conf.mainLang)
 
 		# create a new template
 		elif actions.action.startswith('createTemplate'):
@@ -555,7 +555,8 @@ class Record(object):
 							alert=block_user, limit=limit,
 							is_git_auth=is_git_auth,invalid=False,
 							project=conf.myProject,template=None,
-							query_templates=None,knowledge_extractor=set())
+							query_templates=None,knowledge_extractor=set(),
+							main_lang=conf.mainLang)
 
 	def POST(self, name):
 		""" Submit a new record
@@ -584,7 +585,8 @@ class Record(object):
 			return render.record(record_form=f, pageID=name, user=user, alert=block_user,
 								limit=limit, is_git_auth=is_git_auth,invalid=True,
 								project=conf.myProject,template=None,
-								query_templates=None,knowledge_extractor=set())
+								query_templates=None,knowledge_extractor=set(),
+								main_lang=conf.mainLang)
 		else:
 			recordData = web.input()
 
@@ -598,7 +600,8 @@ class Record(object):
 					return render.record(record_form=f, pageID=name, user=user, alert=block_user,
 									limit=limit, is_git_auth=is_git_auth,invalid=False,
 									project=conf.myProject,template=recordData.res_name,
-									query_templates=query_templates,knowledge_extractor=extractor)
+									query_templates=query_templates,knowledge_extractor=extractor,
+									main_lang=conf.mainLang)
 				else:
 					raise web.seeother(prefixLocal+'record-'+name)
 
@@ -618,7 +621,8 @@ class Record(object):
 					return render.record(record_form=f, pageID=name, user=user, alert=block_user,
 									limit=limit, is_git_auth=is_git_auth,invalid=True,
 									project=conf.myProject,template=templateID,
-									query_templates=query_templates,knowledge_extractor=extractor)
+									query_templates=query_templates,knowledge_extractor=extractor,
+									main_lang=conf.mainLang)
 				else:
 					#u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
 					userID = user.replace('@','-at-').replace('.','-dot-')
@@ -680,7 +684,7 @@ class Modify(object):
 							is_git_auth=is_git_auth,invalid=False,
 							project=conf.myProject,template=res_template,
 							query_templates=query_templates,knowledge_extractor=extractor,
-							extractions=extractions_data)
+							extractions=extractions_data,main_lang=conf.mainLang)
 		else:
 			session['logged_in'] = 'False'
 			raise web.seeother(prefixLocal+'/')
@@ -731,7 +735,7 @@ class Modify(object):
 								is_git_auth=is_git_auth,invalid=True,
 								project=conf.myProject,template=res_template,
 								query_templates=query_templates,knowledge_extractor=extractor,
-								extractions=extractions_data)
+								extractions=extractions_data,main_lang=conf.mainLang)
 			else:
 				recordID = recordData.recordID
 				#u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
@@ -795,7 +799,7 @@ class Review(object):
 								ids_dropdown=ids_dropdown,is_git_auth=is_git_auth,
 								invalid=False,project=conf.myProject,template=res_template,
 								query_templates=query_templates,knowledge_extractor=extractor,
-								extractions=extractions_data)
+								extractions=extractions_data,main_lang=conf.mainLang)
 		else:
 			session['logged_in'] = 'False'
 			raise web.seeother(prefixLocal+'/')
@@ -843,7 +847,7 @@ class Review(object):
 									ids_dropdown=ids_dropdown,is_git_auth=is_git_auth,
 									invalid=True,project=conf.myProject,template=templateID,
 									query_templates=query_templates,knowledge_extractor=extractor,
-									extractions=extractions_data)
+									extractions=extractions_data,main_lang=conf.mainLang)
 			else:
 				recordData = web.input()
 				recordID = recordData.recordID
@@ -885,7 +889,7 @@ class Review(object):
 									ids_dropdown=ids_dropdown,is_git_auth=is_git_auth,
 									invalid=True,project=conf.myProject,template=templateID,
 									query_templates=query_templates,knowledge_extractor=extractor,
-									extractions=extractions_data)
+									extractions=extractions_data,main_lang=conf.mainLang)
 			else:
 				recordData = web.input()
 				#u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
@@ -915,7 +919,8 @@ class Documentation:
 		web.header("Cache-Control", "no-cache, max-age=0, must-revalidate, no-store")
 		is_git_auth = github_sync.is_git_auth()
 		return render.documentation(user=session['username'],
-									is_git_auth=is_git_auth,project=conf.myProject)
+									is_git_auth=is_git_auth,project=conf.myProject,
+									main_lang=conf.mainLang)
 
 	def POST(self):
 		""" Editorial guidelines"""
@@ -952,7 +957,8 @@ class Records:
 		return render.records(user=session['username'], data=records_by_template,
 							title='Latest resources', r_base=conf.base,
 							alll=count_by_template, filters=filters_by_template,
-							is_git_auth=is_git_auth,project=conf.myProject)
+							is_git_auth=is_git_auth,project=conf.myProject,
+							main_lang=conf.mainLang)
 
 	def POST(self):
 		""" EXPLORE page """

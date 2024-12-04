@@ -187,6 +187,10 @@ $(document).ready(function() {
 			searchOrcid(searchID);
 		};
 
+    if ( $(this).hasClass('searchWorldcat') ) {
+      searchWorldcat(searchID);
+    }
+
     if ( $(this).hasClass('searchSkos') ) {
 			searchSkos(searchID);
 		};
@@ -218,6 +222,10 @@ $(document).ready(function() {
     if ( $(this).hasClass('manual-entity')) {
       addManualEntity(searchID);
     }
+
+    $(this).on('blur', function () {
+      $("#searchresult").empty().hide();
+    });
 
 	});  
   
@@ -814,7 +822,7 @@ function visualize_subrecord(el) {
   if (!hide) {
     // organize subrecords as an accordion
     $(this).addClass('subtemplateValue')
-    $(this).append('<span class="subtamplate"><i class="fa fa-chevron-down" aria-hidden="true"></i></span>')
+    $(this).append('<span class="subtemplate"><i class="fa fa-chevron-down" aria-hidden="true"></i></span>')
     externalLink.prepend("<i class='fas fa-external-link-alt'></i>  ")
 
     // show and hide inner values
@@ -1300,10 +1308,12 @@ function sortList(ul) {
 // get values by property in EXPLORE page, e.g. creators
 function getPropertyValue(elemID, prop, typeProp, typeField, elemClass='') {
   if (elemClass.length) {var class_restriction = "?s a <"+elemClass+"> . "} else {var class_restriction = ''};
-  // TODO extend for vocabulary terms
-  if ((typeProp == 'URI' || typeProp == 'Place' || typeProp == 'URL') && (typeField == 'Textbox' || typeField == 'Dropdown'|| typeField == 'Checkbox' || typeField == 'Vocab') ) {
+  if ((typeProp == 'URI' || typeProp == 'Place' || typeProp == 'URL') && (typeField == 'Textbox' || typeField == 'Dropdown'|| typeField == 'Checkbox' || typeField == 'Subtemplate') ) {
     var query = "select distinct ?o ?oLabel (COUNT(?s) AS ?count) "+inGraph+" where { GRAPH ?g { ?s <"+prop+"> ?o. "+class_restriction+" ?o rdfs:label ?oLabel . } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } GROUP BY ?o ?oLabel ORDER BY DESC(?count) lcase(?oLabel)";
-  } else if ((typeProp=='Date' || typeProp=='gYear' || typeProp=='gYearMonth') && typeField == 'Date')  {
+  } else if (typeProp == 'URI' && typeField == 'Skos') {
+    var query = "select distinct ?o ?oLabel (COUNT(?s) AS ?count) "+inGraph+" where { GRAPH ?g { ?s <"+prop+"> ?o. "+class_restriction+" ?o <http://www.w3.org/2004/02/skos/core#prefLabel> ?oLabel . } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } GROUP BY ?o ?oLabel ORDER BY DESC(?count) lcase(?oLabel)";
+  } 
+  else if ((typeProp=='Date' || typeProp=='gYear' || typeProp=='gYearMonth') && typeField == 'Date')  {
     var query = "select distinct ?o (COUNT(?s) AS ?count) "+inGraph+" where { GRAPH ?g { ?s <"+prop+"> ?o. "+class_restriction+" } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } GROUP BY ?o ORDER BY DESC(?count) lcase(?o)";
   } else {var query = "none"};
 

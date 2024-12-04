@@ -149,6 +149,27 @@ function checkMandatoryFields(subrecordButton=false){
 
 }
 
+
+//////////////////////
+//// DOCUMENTATION ///
+//////////////////////
+
+function setFormDocumentation() {
+    $(".documentation").removeClass('col-md-7').addClass('col-md-12 col-sm-4');
+    $(".documentation").find("section.articleSection").each(function() {
+        $(this).find(".articleSubsection").hide();
+        $(this).after($("<hr>"));
+        $(this).find("h4").append("<span><i class='fa fa-chevron-down' aria-hidden='true'></i></span>");
+        $(this).hover(function() { $(this).css({"cursor": "pointer"})});
+        $(this).find("h4").on("click", function() {
+            const content = $(this).next('.articleSubsection');
+            $(".documentation .open").removeClass("open");
+            content.addClass("open");
+            content.slideToggle(300);
+        });
+    })
+}
+
 //////////////////////
 //// AUTOCOMPLETE ////
 //////////////////////
@@ -378,6 +399,23 @@ function searchOrcid(searchterm) {
     })
 }
 
+// SEARCH WORLDCAT
+function searchWorldcat(searchterm) {
+    $('#'+searchterm).off('keyup').on('keyup', function() { 
+        var q = $("#"+searchterm).val();
+        var query = "https://americas.discovery.api.oclc.org/worldcat/search/v2/bibs?orderBy=bestMatch&q=clay+AND+ac=scipio" //+encodeURIComponent(q);
+        if (q !== '') {$("#searchresult").show()};
+        $.ajax({
+            type: 'GET',
+            url: query,
+            headers: { Accept: 'application/json; charset=utf-8'},
+            success: function(returnedJson) {
+                console.log(returnedJson);
+            }
+        });
+    });
+}
+
 // SEARCH CATALOGUE
 // search bar menu
 function searchCatalogue(searchterm) {
@@ -557,10 +595,13 @@ function searchCatalogueByClass(searchterm,fieldId,singleValue) {
                         subformHeading.attr('onclick','').removeClass('italic');
                         subformHeading.attr('onclick','');
                         subformHeading.html(oldLabel+"<section class='buttons-container'>\
-                        <button class='btn btn-dark delete' title='delete-subrecord' onclick='cancelSubrecord(event,"+$(this).parent()+")'>\
+                        <button class='btn btn-dark delete' type='button' title='delete-subrecord'>\
                             <i class='far fa-trash-alt'></i>\
                         </button>\
                         </section>");
+                        subformHeading.find('button.delete').on('click', function() {
+                            cancelSubrecord($(this).parent());
+                        })
                         
                         if ($('[name="'+fieldId+'-subrecords"]').length && $('[name="'+fieldId+'-subrecords"]').val()!="" && !singleValue) {
                             $('[name="'+fieldId+'-subrecords"]').val($('[name="'+fieldId+'-subrecords"]').val()+","+oldID+";"+oldLabel);

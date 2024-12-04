@@ -73,7 +73,7 @@ def getLiteralValuesFromFields(fieldPrefix, recordData):
 	results = set()
 	for key, value in recordData.items():
 		if key.startswith(fieldPrefix+'_'):
-			lang = key.rsplit('_')[1]
+			lang = key.rsplit('_',1)[1]
 			if lang == 'mainLang':
 				result_dict['mainLang'] = value
 			elif term._is_valid_langtag(lang):
@@ -290,28 +290,27 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 					server.update('load <file:///'+dir_path+'/records/'+recordID+"-extraction-"+field["id"]+"-"+extraction_num+'.ttl> into graph <'+base+extraction_graph_name+'/>')
 		# SUBTEMPLATE
 		elif field['type']=="Subtemplate" and field['id'] in recordData:
-			if "," in recordData[field['id']] or ";" in recordData[field['id']]:
-				if type(recordData[field['id']]) != type([]) and field['id']+"-subrecords" in recordData:
-					# get the list of subrecords associated to a 'Subtemplate' field
-					subrecords = recordData[field['id']+"-subrecords"].split(",") \
-						if field['id']+"-subrecords" in recordData else []
-					for subrecord in subrecords:
-						if subrecord != "":
-							if ";" in subrecord:
-								subrecord_id, retrieved_label = subrecord.split(";",1)
-							else:
-								# process a new subrecord, send its data to the triplestore, and link it to the main record
-								subrecord_id = subrecord
-								allow_data_reuse = fields if 'dataReuse' in field and field['dataReuse']=='allowDataReuse' else False
-								processed_subrecord = process_new_subrecord(recordData,userID,stage,subrecord,supertemplate=None,allow_data_reuse=allow_data_reuse)
-								subrecord_id, retrieved_label = processed_subrecord
-							wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+subrecord_id) ))
-							wd.add(( URIRef(base+subrecord_id), RDFS.label, Literal(retrieved_label, datatype="http://www.w3.org/2001/XMLSchema#string")))
-				elif type(recordData[field['id']]) == type([]):
-					for entity in recordData[field['id']]:
-						entity_URI, entity_label = entity
-						wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+entity_URI) ))
-						wd.add(( URIRef(base+entity_URI), RDFS.label, Literal(entity_label, datatype="http://www.w3.org/2001/XMLSchema#string")))
+			if type(recordData[field['id']]) != type([]) and field['id']+"-subrecords" in recordData:
+				# get the list of subrecords associated to a 'Subtemplate' field
+				subrecords = recordData[field['id']+"-subrecords"].split(",") \
+					if field['id']+"-subrecords" in recordData else []
+				for subrecord in subrecords:
+					if subrecord != "":
+						if ";" in subrecord:
+							subrecord_id, retrieved_label = subrecord.split(";",1)
+						else:
+							# process a new subrecord, send its data to the triplestore, and link it to the main record
+							subrecord_id = subrecord
+							allow_data_reuse = fields if 'dataReuse' in field and field['dataReuse']=='allowDataReuse' else False
+							processed_subrecord = process_new_subrecord(recordData,userID,stage,subrecord,supertemplate=None,allow_data_reuse=allow_data_reuse)
+							subrecord_id, retrieved_label = processed_subrecord
+						wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+subrecord_id) ))
+						wd.add(( URIRef(base+subrecord_id), RDFS.label, Literal(retrieved_label, datatype="http://www.w3.org/2001/XMLSchema#string")))
+			elif type(recordData[field['id']]) == type([]):
+				for entity in recordData[field['id']]:
+					entity_URI, entity_label = entity
+					wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(base+entity_URI) ))
+					wd.add(( URIRef(base+entity_URI), RDFS.label, Literal(entity_label, datatype="http://www.w3.org/2001/XMLSchema#string")))
 
 	# get keywords (record modify)
 	if stage == 'modified' and any([k for k,v in recordData.items() if k.startswith('keywords')]):
@@ -433,7 +432,7 @@ def process_new_subrecord(data, userID, stage, subrecord_id, supertemplate=None,
 
 	print("#### DATA:\n",new_record_data)
 	store_data = storify(new_record_data)
-	grapht_to_clear = None if stage == 'not modified' else base+subrecord_id+"/"
-	inputToRDF(store_data,userID,stage,graphToClear=grapht_to_clear,tpl_form=subtemplate_path)
+	graph_to_clear = None if stage == 'not modified' else base+subrecord_id+"/"
+	inputToRDF(store_data,userID,stage,graphToClear=graph_to_clear,tpl_form=subtemplate_path)
 	result = [subrecord_id,label]
 	return result

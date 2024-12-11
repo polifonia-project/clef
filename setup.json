@@ -35,6 +35,23 @@
   },
   {
     "type":"Textbox",
+    "id":"mainLang",
+    "label":"Main Language",
+    "placeholder":"e.g. en",
+    "prepend":"The tag for the main language of your project",
+    "disabled":"False",
+    "class":"col-md-11",
+    "searchWikidata":"False",
+    "cache_autocomplete":"off",
+    "property":"http://purl.org/dc/terms/language",
+    "value":"Literal",
+    "defaultvalue":"en",
+    "disambiguate":"False",
+    "browse":"False",
+    "hidden": "False"
+  },
+  {
+    "type":"Textbox",
     "id":"myEndpoint",
     "label":"my endpoint",
     "placeholder":"$myEndpoint",

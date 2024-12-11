@@ -223,10 +223,6 @@ $(document).ready(function() {
       addManualEntity(searchID);
     }
 
-    $(this).on('blur', function () {
-      $("#searchresult").empty().hide();
-    });
-
 	});  
   
   // remove modal preview
@@ -472,7 +468,7 @@ $(document).ready(function() {
   });
 
   // language tags handling
-  $('[lang]').each(function() {
+  $('form:not(#setupForm) [lang]').each(function() {
     modifyLangInputs($(this));
   });
 
@@ -715,7 +711,6 @@ function addNewLanguage(el,record) {
         nlpText(new_lang_input_id);
     });
   }
-
 
   $('[id^="'+last_lang_id.split('_')[0]+'"]').hide(); 
   $('#'+last_lang_id).after(new_lang_input);

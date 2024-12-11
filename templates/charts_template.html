@@ -1,7 +1,8 @@
-$def with(user,is_git_auth,project,charts)
+$def with(user,is_git_auth,project,charts,main_lang)
 $var user = user
 $var is_git_auth = is_git_auth
 $var project = project
+$var main_lang = main_lang
 
 <!-- Extra -->
 <link rel="stylesheet" type="text/css" href="./static/css/yasgui.css">
@@ -123,11 +124,11 @@ $var project = project
                                             <label class="col-md-3">X-AXIS<br><span class="comment">set the SPARQL variable to be shown in the X-Axis</span></label>
                                             <section class="col-md-3">
                                                 <label class="inner-label">SPARQL variable</label>
-                                                <input type="text" id="x-var__$id" name="x-var__$id" value="$chart['x-axis'].split(',',1)[0]"/>
+                                                <input type="text" id="x-var__$id" name="x-var__$id" value="$chart['x-var']"/>
                                             </section>
                                             <section class="col-md-3">
                                                 <label class="inner-label">Display name</label>
-                                                <input type="text" id="x-name__$id" name="x-name__$id" value="$chart['x-axis'].split(',',1)[1]"/>
+                                                <input type="text" id="x-name__$id" name="x-name__$id" value="$chart['x-name']"/>
                                             </section>
                                             <section class="col-md-2 center-checkbox">
                                                 <label class="inner-label">Sort by</label>
@@ -139,11 +140,11 @@ $var project = project
                                             <label class="col-md-3">Y-AXIS<br><span class="comment">set the SPARQL variable to be shown in the Y-Axis</span></label>
                                             <section class="col-md-3">
                                                 <label class="inner-label">SPARQL variable</label>
-                                                <input type="text" id="y-var__$id" name="y-var__$id" value="$chart['y-axis'].split(',',1)[0]"/>
+                                                <input type="text" id="y-var__$id" name="y-var__$id" value="$chart['y-var']"/>
                                             </section>
                                             <section class="col-md-3">
                                                 <label class="inner-label">Display name</label>
-                                                <input type="text" id="y-name__$id" name="y-name__$id" value="$chart['y-axis'].split(',',1)[1]"/>
+                                                <input type="text" id="y-name__$id" name="y-name__$id" value="$chart['y-name']"/>
                                             </section>
                                             <section class="col-md-2 center-checkbox">
                                                 <label class="inner-label">Sort by</label>
@@ -156,11 +157,11 @@ $var project = project
                                             <label class="col-md-3">1st VARIABLE<br><span class="comment">set a SPARQL variable</span></label>
                                             <section class="col-md-3">
                                                 <label class="inner-label">SPARQL variable</label>
-                                                <input type="text" id="x-var__$id" name="x-var__$id" value="$chart['x-axis'].split(',',1)[0]"/>
+                                                <input type="text" id="x-var__$id" name="x-var__$id" value="$chart['x-var']"/>
                                             </section>
                                             <section class="col-md-3">
                                                 <label class="inner-label">Display name</label>
-                                                <input type="text" id="x-name__$id" name="x-name__$id" value="$chart['x-axis'].split(',',1)[1]"/>
+                                                <input type="text" id="x-name__$id" name="x-name__$id" value="$chart['x-name']"/>
                                             </section>
                                             <section class="col-md-2 center-checkbox">
                                                 <label class="inner-label">Sort by</label>
@@ -172,11 +173,11 @@ $var project = project
                                             <label class="col-md-3">2nd VARIABLE<br><span class="comment">set a SPARQL variables</span></label>
                                             <section class="col-md-3">
                                                 <label class="inner-label">SPARQL variable</label>
-                                                <input type="text" id="y-var__$id" name="y-var__$id" value="$chart['y-axis'].split(',',1)[0]"/>
+                                                <input type="text" id="y-var__$id" name="y-var__$id" value="$chart['y-var']"/>
                                             </section>
                                             <section class="col-md-3">
                                                 <label class="inner-label">Display name</label>
-                                                <input type="text" id="y-name__$id" name="y-name__$id" value="$chart['y-axis'].split(',',1)[1]"/>
+                                                <input type="text" id="y-name__$id" name="y-name__$id" value="$chart['y-name']"/>
                                             </section>
                                             <section class="col-md-2 center-checkbox">
                                                 <label class="inner-label">Sort by</label>

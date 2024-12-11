@@ -100,11 +100,11 @@ is_git_auth = github_sync.is_git_auth()
 
 def notfound():
 	return web.notfound(render.notfound(user=session['username'],
-		is_git_auth=is_git_auth,project=conf.myProject))
+		is_git_auth=is_git_auth,project=conf.myProject,main_lang=conf.mainLang))
 
 def internalerror():
 	return web.internalerror(render.internalerror(user=session['username'],
-		is_git_auth=is_git_auth,project=conf.myProject))
+		is_git_auth=is_git_auth,project=conf.myProject,main_lang=conf.mainLang))
 
 class Notfound:
 	def GET(self):
@@ -185,7 +185,8 @@ class Setup:
 		f = forms.get_form('setup.json') # get the form template
 		data = u.get_vars_from_module('conf') # fill in the form with conf values
 		return render.setup(f=f,user=session['username'],
-							data=data, is_git_auth=is_git_auth,project=conf.myProject)
+							data=data, is_git_auth=is_git_auth,
+							project=conf.myProject,main_lang=conf.mainLang)
 
 	def POST(self):
 		""" Modify config.py and static/js/conf.json and reload the module
@@ -211,7 +212,7 @@ class Setup:
 			file.writelines('template_list = "'+TEMPLATE_LIST+'"\n')
 			file.writelines('ask_form = "'+RESOURCE_TEMPLATES+'ask_class.json"\n')
 			file.writelines('skos_vocabularies = "skos_vocabs.json"\n')
-			file.writelines('knowledge_extraction = "knowledge_extraction.json"\n')
+			file.writelines('charts = "charts.json"\n')
 			data = u.validate_setup(data)
 
 			for k,v in data.items():
@@ -303,7 +304,9 @@ class Login:
 			raise web.seeother(prefixLocal+'welcome-1')
 		else:
 			u.log_output('HOMEPAGE ANONYMOUS', session['logged_in'], session['username'])
-			return render.login(user='anonymous',is_git_auth=is_git_auth,project=conf.myProject,payoff=conf.myPayoff,github_repo_name=github_repo_name)
+			return render.login(user='anonymous',is_git_auth=is_git_auth,
+					   project=conf.myProject,payoff=conf.myPayoff,
+					   github_repo_name=github_repo_name,main_lang=conf.mainLang)
 
 	def POST(self):
 		data = web.input()
@@ -678,6 +681,7 @@ class Modify(object):
 			extractor = u.has_extractor(res_template)
 			previous_extractors = u.has_extractor(res_template, name)
 			extractions_data = queries.retrieve_extractions(previous_extractors)
+			print("main_lang:", conf.mainLang)
 
 			return render.modify(graphdata=data, pageID=recordID, record_form=f,
 							user=session['username'],ids_dropdown=ids_dropdown,
@@ -1432,7 +1436,8 @@ class Charts(object):
 
 
 		return render.charts_visualization(user=session['username'], is_git_auth=is_git_auth,
-					   project=conf.myProject, charts=charts)
+					   project=conf.myProject, charts=charts,
+					   main_lang=conf.mainLang)
 	
 class ChartsTemplate(object):
 	def GET(self):
@@ -1447,7 +1452,8 @@ class ChartsTemplate(object):
 			charts = json.load(chart_file)
 
 		return render.charts_template(user=session['username'], is_git_auth=is_git_auth,
-					   project=conf.myProject, charts=charts)
+					   project=conf.myProject, charts=charts,
+					   main_lang=conf.mainLang)
 
 	def POST(self):
 		data = web.input()

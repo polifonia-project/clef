@@ -9,6 +9,52 @@ management of Records Creation, Modification and Publication.
 ///////////////
 $(document).ready(function() {
 
+    // SETUP PAGE
+    if ($("#setupForm #mainLang").length > 0) {
+        $.ajax({
+            type: 'GET',
+            url: "https://raw.githubusercontent.com/mattcg/language-subtag-registry/master/data/json/registry.json",
+            dataType: 'json',
+            success: function(data) {
+                let languageOptions = {};
+                // Loop through the array of objects
+                for (let obj of data) {
+                    if (!obj.hasOwnProperty("Deprecated")) {
+                        var lang = obj.Description[0];
+                        var tag = obj.Subtag;
+                        languageOptions[lang] = tag;
+                    }
+                }
+                
+                $("#mainLang").off('keyup').on('keyup', function(){
+                    $("#searchresult").empty().show();
+                    setSearchResult("mainLang");
+                    let inputString = $("#mainLang").val();
+                    if (inputString !== '') {
+                        var matchingTags = Object.keys(languageOptions).filter(function(key) {
+                            return key.toLowerCase().includes(inputString.toLowerCase());
+                        });
+                        
+                        $.each(matchingTags, function (i, item) {
+                            // dropdown of language options
+                            $("#searchresult").append("<div class='wditem'><a class='blue' data-id='" + languageOptions[item] + "'>" + item + "</a> - " + languageOptions[item] + "</div>");
+                            
+                            // add the language tag on click
+                            $('a[data-id="' + languageOptions[item] + '"]').each(function () {
+                                $(this).bind('click', function (e) {
+                                    e.preventDefault();
+                                    $("#mainLang").val(languageOptions[item])
+                                    $("#searchresult").hide();
+                                });
+                            });
+                        });
+                    }
+                });
+            }
+        })
+    }
+        
+
     // TEMPLATE SELECTION
     $("select.template-select").closest(".row").children("section").first().css({'padding': '1em 10em 0em 0em'});
     $("select.template-select").closest(".row").next(".buttonsSection").css({'padding-left': '0'});

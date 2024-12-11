@@ -137,6 +137,8 @@ function createSubrecord(subtemplateFieldId,label,el,dataReuse=false,subrecordId
                 
                 // SET LITERAL INPUT FIELDS
                 if (cloneElement.find('[lang]').length > 0) {
+                    // remove all inner inputs except for the first one
+                    cloneElement.find('input').not(':first').remove();
                     var literalInput = cloneElement.find('[lang]');
                     var newLiteralInputId = literalInput.attr('id').split("_")[0] + "_" + mainLang + "_" + subrecordId.toString();
                     var hiddenMainLangId = literalInput.attr('id').split("_")[0] + "_mainLang_" + subrecordId.toString();
@@ -266,6 +268,7 @@ function createSubrecord(subtemplateFieldId,label,el,dataReuse=false,subrecordId
             var labelField = subrecordForm.find('.disambiguate').eq(0);
             var labelMainLang = $('#'+labelField.attr('id').replace(labelField.attr('lang'), 'mainLang')).val();
             var tagLabel = subrecordForm.find('.disambiguate[lang="'+labelMainLang+'"]').val() || (label + "-" + subrecordId);
+            console.log(subrecordForm.find('.disambiguate[lang="'+labelMainLang+'"]'));
             console.log(labelMainLang, tagLabel)
             // restart from here
             toggleSubform(subrecordTitle,label=tagLabel);

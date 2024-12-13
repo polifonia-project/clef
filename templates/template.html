@@ -1,7 +1,8 @@
-$def with(f,user,res_type,res_name,res_status,is_git_auth, project, skos_vocabs, templates)
+$def with(f,user,res_type,res_name,res_status,is_git_auth,project,skos_vocabs,templates,main_lang)
 $var user = user
 $var is_git_auth = is_git_auth
 $var project = project
+$var main_lang = main_lang
 
 <!-- Subtemplates list -->
 $if templates:
@@ -297,8 +298,10 @@ $else:
 											$$.each(subclasses, function(uri, label) {
 												var encodedURI = encodeURIComponent(uri)
 												var option = $$("<option></option>").attr("value", encodedURI).text(label);
+												console.log('$field["restricted"]', encodedURI)
 												if (selectedSubclass === encodedURI) {
 													option.attr("selected","selected");
+													console.log('tris')
 												}
 												$$('#restricted__$id').append(option);
 											});
@@ -420,7 +423,10 @@ $else:
 		<h5>Website Preview</h5>
 		<p>Provide the url to embed a webpage's preview within a record.</p>
 		<h5>Knowledge Extraction</h5>
-		<p>Automatic extraction of Key Entities through queries (API, SPARQL, Static Files)</p>
+		<p>Automatic extraction of Key Entities through queries (API, SPARQL, Static Files). Extracted entities will be stored in a new named graph, connected to the Record by means of the provided RDF property.</p>
+		<h5>Subtemplate</h5>
+		<p>Select one or multiple templates to add their input fields to the main form, enabling the simultaneous creation of linked records. In case multiple templates are selected, a dropdown menu will allow users to choose the most suitable one for describing a new entity.</p>
+		<p>If <code>Data Inheritance</code> is set to <code>Allowed</code>, any field in a subtemplate that shares an RDF property with a field in the main template will not be displayed. Instead, corresponding data will be automatically inherited from the top-level form.</p>
 	</section>
 
 	<!-- CREATE SUBTEMPLATE FORM -->

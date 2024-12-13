@@ -30,10 +30,11 @@ def hello_blazegraph(q):
 # LIST OF RECORDS IN THE BACKEND
 
 
-def getRecords(res_class=None):
+def getRecords(res_class=None,res_subclasses=None):
 	""" get all the records created by users to list them in the backend welcome page """
+	extended_class_list = res_subclasses.extend(res_class) if res_subclasses != None and res_class != None else None
 	filter_class_exists = "\n".join([f"FILTER EXISTS {{ ?s a <{cls}> }}" for cls in res_class]) if res_class != None else ""
-	filter_class_not_exists = f"FILTER (NOT EXISTS {{ ?s a ?other_class FILTER (?other_class NOT IN ({', '.join([f'<{cls}>' for cls in res_class])})) }})" if res_class != None else ""
+	filter_class_not_exists = f"FILTER (NOT EXISTS {{ ?s a ?other_class FILTER (?other_class NOT IN ({', '.join([f'<{cls}>' for cls in extended_class_list])})) }})" if extended_class_list != None else ""
 
 	queryRecords = """
 		PREFIX prov: <http://www.w3.org/ns/prov#>
@@ -44,7 +45,7 @@ def getRecords(res_class=None):
 			?s ?p ?o . ?s a ?class .
 			""" +filter_class_exists+filter_class_not_exists+ """
 			OPTIONAL { ?g rdfs:label ?title; prov:wasAttributedTo ?user; prov:generatedAtTime ?date ; <http://dbpedia.org/ontology/currentStatus> ?stage. ?user rdfs:label ?userLabel .
-				OPTIONAL {?g prov:wasInfluencedBy ?modifier. ?modifier rdfs:label ?modifierLabel .} }
+			OPTIONAL {?g prov:wasInfluencedBy ?modifier. ?modifier rdfs:label ?modifierLabel .} }
 			OPTIONAL {?g rdfs:label ?title; prov:generatedAtTime ?date ; <http://dbpedia.org/ontology/currentStatus> ?stage . }
 
 			BIND(COALESCE(?date, '-') AS ?date ).
@@ -67,12 +68,12 @@ def getRecords(res_class=None):
 	sparql = SPARQLWrapper(conf.myEndpoint)
 	sparql.setQuery(queryRecords)
 	sparql.setReturnFormat(JSON)
-	print("query: \n",queryRecords)
 	results = sparql.query().convert()
-	print("res: \n",results)
 
 	for result in results["results"]["bindings"]:
-		records.add( (result["g"]["value"], result["title"]["value"], result["userLabel"]["value"], result["modifierLabel"]["value"], result["date"]["value"], result["stage"]["value"], result["classes"]["value"] ))
+		classes = result["classes"]["value"].split("; ")
+		subclass = next((single_class for single_class in classes if single_class not in res_class),None) 
+		records.add( (result["g"]["value"], result["title"]["value"], result["userLabel"]["value"], result["modifierLabel"]["value"], result["date"]["value"], result["stage"]["value"], result["classes"]["value"], subclass))
 	return records
 
 
@@ -297,6 +298,7 @@ def getData(graph,res_template):
 	for result in results["results"]["bindings"]:
 		result.pop('subject',None)
 		graph_label = result.pop('graph_title',None)
+		print("LABEL:", graph_label)
 		for k,v in result.items():
 			if '_label' not in k and v['type'] == 'literal': # string values
 				value = v['value']
@@ -644,6 +646,7 @@ def geonames_geocoding(geonames_uri):
 	search_url = f'http://api.geonames.org/getJSON?geonameId={uri_id}&username=palread'
 	response = requests.get(search_url)
 	data = response.json()
+	print("geonames:", data)
 	latitude = data['lat']
 	longitude = data['lng']
 	return latitude, longitude

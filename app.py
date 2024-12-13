@@ -265,7 +265,7 @@ class Template:
 								res_type=res_type,res_name=res_full_name,
 								res_status=res_status,is_git_auth=is_git_auth,
 								project=conf.myProject,skos_vocabs=skos_file,
-								templates=tpl_list)
+								templates=tpl_list,main_lang=conf.mainLang)
 
 	def POST(self, res_name):
 		""" Save the form template for data entry and reload config files
@@ -363,7 +363,6 @@ class Index:
 		if (session['username'] != 'anonymous') or \
 			(conf.gitClientID == '' and session['username'] == 'anonymous'):
 			u.log_output('WELCOME PAGE', session['logged_in'], session['username'])
-
 			return render.index(wikilist=records, user=session['username'],
 				varIDpage=str(time.time()).replace('.','-'), alll=alll, all=all,
 				notreviewed=notreviewed,underreview=underreview,
@@ -398,7 +397,6 @@ class Index:
 		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
 
 		actions = web.input()
-		print(actions)
 		session['ip_address'] = str(web.ctx['ip'])
 		is_git_auth = github_sync.is_git_auth()
 
@@ -599,7 +597,6 @@ class Record(object):
 					f = forms.get_form(recordData.res_name,processed_templates=[])
 					query_templates = u.get_query_templates(recordData.res_name)
 					extractor = u.has_extractor(recordData.res_name)
-					print("Extractors:", extractor)
 					return render.record(record_form=f, pageID=name, user=user, alert=block_user,
 									limit=limit, is_git_auth=is_git_auth,invalid=False,
 									project=conf.myProject,template=recordData.res_name,
@@ -681,7 +678,6 @@ class Modify(object):
 			extractor = u.has_extractor(res_template)
 			previous_extractors = u.has_extractor(res_template, name)
 			extractions_data = queries.retrieve_extractions(previous_extractors)
-			print("main_lang:", conf.mainLang)
 
 			return render.modify(graphdata=data, pageID=recordID, record_form=f,
 							user=session['username'],ids_dropdown=ids_dropdown,
@@ -694,7 +690,6 @@ class Modify(object):
 			raise web.seeother(prefixLocal+'/')
 
 	def POST(self, name):
-		print(name)
 		""" Modify an existing record
 
 		Parameters
@@ -952,7 +947,8 @@ class Records:
 		for template in templates:
 			if not (is_git_auth==False and template["hidden"] =='True'):
 				res_class=template["type"]
-				records = queries.getRecords(res_class)
+				res_subclasses = template["subclasses"]
+				records = queries.getRecords(res_class,res_subclasses)
 				records_by_template[template["name"]] = records
 				alll = queries.countAll(res_class,False)
 				count_by_template[template["name"]] = alll
@@ -988,7 +984,6 @@ class View(object):
 		record = base+name
 		res_class = queries.getClass(conf.base+name)
 		data, stage, title, properties, data_labels, extractions_data, new_dict_classes, properties_sorted = None, None, None, None, {}, {}, {}, {}
-
 		try:
 			res_template = u.get_template_from_class(res_class)
 			data = dict(queries.getData(record+'/',res_template))
@@ -1038,6 +1033,7 @@ class View(object):
 			with open(TEMPLATE_LIST) as tpl_list:
 				templates = json.load(tpl_list)
 			for k in list(class_sorted.keys()):
+
 				template = next((t["name"], t["template"]) for t in templates if t["type"] == sorted(k.split("; ")))
 				template_name, template_file = template
 				with open(template_file) as tpl_file:
@@ -1052,13 +1048,11 @@ class View(object):
 		except Exception as e:
 			pass
 
-
-
-
 		return render.view(user=session['username'], graphdata=data_labels,
 						graphID=name, title=title, stage=stage, base=base,properties=properties,
 						is_git_auth=is_git_auth,project=conf.myProject,knowledge_extractor=extractions_data,
-						inverses_by_class=new_dict_classes, inverses_by_properties = properties_sorted)
+						inverses_by_class=new_dict_classes,inverses_by_properties=properties_sorted,
+						main_lang=conf.mainLang)
 
 	def POST(self,name):
 		""" Record web page
@@ -1163,7 +1157,6 @@ class DataModel:
 					props_labels = [ u.get_LOV_labels(field["property"],'property') for field in fields]
 					res_data_model["props_labels"] = props_labels
 				res_data_models.append(res_data_model)
-		print(res_data_models)
 		return render.datamodel(user=session['username'], data=res_data_models,is_git_auth=is_git_auth,
 								project=conf.myProject)
 
@@ -1457,7 +1450,6 @@ class ChartsTemplate(object):
 
 	def POST(self):
 		data = web.input()
-		print("#DATA:", data)
 		if 'action' in data and 'deleteTemplate' in data.action:
 			u.delete_charts(conf.charts)
 		elif 'action' in data and 'updateTemplate' in data.action:

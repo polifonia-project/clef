@@ -169,7 +169,8 @@ def fields_to_json(data, json_file, skos_file):
 
 	list_dicts = defaultdict(dict)
 	#list_ids = sorted([k.split("__")[0] for k in data.keys()])
-	template_config = {'hidden': 'True'}
+	template_config = {'hidden': 'True',
+					'subclasses': []}
 
 	for k,v in data.items():
 		if k != 'action' and '__template__' not in k:
@@ -181,17 +182,6 @@ def fields_to_json(data, json_file, skos_file):
 		elif '__template__' in k:
 			if v == 'on':
 				template_config['hidden'] = 'False'
-	
-	with open(TEMPLATE_LIST, 'r') as file:
-		tpls = json.load(file)
-
-	# Modify the template status in tpl_list
-	for tpl in tpls:
-		if tpl['template'] == json_file:
-			tpl['hidden'] = template_config['hidden']
-
-	with open(TEMPLATE_LIST, 'w') as file:
-		json.dump(tpls, file, indent=1)
 			
 	list_dicts = dict(list_dicts)
 	for n,d in list_dicts.items():
@@ -200,13 +190,19 @@ def fields_to_json(data, json_file, skos_file):
 			values_pairs = d['values'].replace('\r','').strip().split('\n')
 			d["value"] = "URI"
 			d['values'] = { pair.split(",")[0].strip():pair.split(",")[1].strip() for pair in values_pairs } if values_pairs[0] != "" else {}
+		
+		# set subclasses
+		if "subclass" in d:
+			d["subclass"] = "True"
+			template_config["subclasses"] = [subclass for subclass in d["values"].keys()]
+		else:
+			d["subclass"] = "False"
+		d["restricted"] = "None" if d["subclass"] == "True" else d["restricted"] if "restricted" in d else "None" # do not restrict the subclass field
+		
 		d["disambiguate"] = "True" if 'disambiguate' in d else "False"
 		d["browse"] = "True" if 'browse' in d else "False"
 		d["mandatory"] = "True" if 'mandatory' in d else "False" # add mandatory fields
 		d["hidden"] = "True" if 'hidden' in d else "False" # add hidden fields
-		print(d)
-		d["subclass"] = "True" if "subclass" in d else "False" # add subclass drodpown
-		d["restricted"] = "None" if d["subclass"] == "True" else d["restricted"] if "restricted" in d else "None" # do not restrict the subclass field
 		# default if missing
 		if d["type"] == "None":
 			d["type"] = "Textbox" if "values" not in d else "Dropdown"
@@ -273,6 +269,18 @@ def fields_to_json(data, json_file, skos_file):
 	# store the dict as json file
 	with open(json_file, 'w') as fout:
 		fout.write(json.dumps(ordlist, indent=1))
+
+	with open(TEMPLATE_LIST, 'r') as file:
+		tpls = json.load(file)
+
+	# Modify the template status in tpl_list
+	for tpl in tpls:
+		if tpl['template'] == json_file:
+			tpl['hidden'] = template_config['hidden']
+			tpl['subclasses'] = template_config['subclasses']
+
+	with open(TEMPLATE_LIST, 'w') as file:
+		json.dump(tpls, file, indent=1)
 
 def validate_setup(data):
 	""" Validate user input in setup page and check errors / missing values"""
@@ -371,6 +379,10 @@ def get_template_from_class(res_type):
 	with open(TEMPLATE_LIST,'r') as tpl_file:
 		data = json.load(tpl_file)
 
+	for t in data:
+		for s in t["subclasses"]:
+			if s in res_type:
+				res_type.remove(s)
 	res_template = [t["template"] for t in data if t["type"] == sorted(res_type)][0]
 	return res_template
 

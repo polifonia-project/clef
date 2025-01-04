@@ -11,12 +11,11 @@ $if query_templates!=None:
 		const query_templates = JSON.parse(query_templates_str);
 	</script>
 <header class="row needDoc">
-	<button id="showRight">&gt; help</button>
+	<button id="showRight"><i class="far fa-lightbulb"></i> help</button>
 	<button id="scrollToTop"><i class="fas fa-arrow-up"></i> top</button>
 	<script type="text/javascript">
 		$$('#cbp-spmenu-s2').load( "./documentation #documentation", function() {
-			$$(".documentation").removeClass('col-md-7').addClass('col-md-12 col-sm-4');
-			$$("h2").css('font-size','2em');
+			setFormDocumentation();
 		} );
 	</script>
 	$if invalid == True:
@@ -24,7 +23,6 @@ $if query_templates!=None:
 	$else:
 		<h3>Review record</h3>
 </header>
-
 <section class="corners row" style="left: -30vw">
 	<section class="col-md-12 col-lg-12 col-sm-12 homeheading">
 		<h2>Ready to publish?</h2>
@@ -195,7 +193,6 @@ $if query_templates!=None:
 						</script>
 				</section>
 				<section class="homeheading col-md-4 col-sm-4 col-lg-4">
-					<h2>Ready to publish?</h2>
 					$ has_keywords = ['yes' for k,v in graphdata.items() if 'keywords' in k]
 					$if len(has_keywords) > 0:
 						<p>Here are the keywords you saved</p>

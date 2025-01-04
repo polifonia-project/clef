@@ -22,6 +22,12 @@ $(document).ready(function() {
 	  }
 	});
 
+  // show existing TEMPLATES
+  $("#showTemplateClassButton").on('click', function() {
+    // show modal
+    showTemplates();
+  });
+
   // create a new TEMPLATE
   $("#selectTemplateClassButton").on('click', function() {
     // show modal
@@ -30,7 +36,6 @@ $(document).ready(function() {
 
   // message after saving
   $("#save_record").on('click', function(e) {
-    console.log("iii")
     e.preventDefault();
     var sel = document.getElementById('res_name');
 
@@ -285,7 +290,7 @@ $(document).ready(function() {
   $('.wikiEntity').append(wdImgIcon);
   $('.geoEntity').append(geoImg);
   $('.orcidEntity').append(orcidImgIcon);
-  $('.viafEntity').append(viafImg);
+  $('.viafEntity').append(viafImgIcon);
   // append Entity Autocompletion toggle switch to input fields
   $('.searchWikidata').parent().append($('<div class="autocompletion-container">\
     <span class="toggle-comment">Autocompletion</span>\
@@ -599,7 +604,7 @@ function languageForm(el) {
     var field_id = input.attr('id');
 
     // set a variable to modify the subrecord's list of fields in case the textbox is part of a subtemplate
-    var subform = $('#'+field_id).attr('data-subform');
+    var subform = $('#'+field_id).data('subform');
     var modify_subform = subform ? subform : null
     
 
@@ -916,6 +921,20 @@ function visualize_subrecord_literals(el) {
 // BACKEND //
 //////////////
 
+function showTemplates() {
+  // show modal
+  $("#showTemplateClassModal").toggleClass('open-modal');
+  $('body').append($("<div class='modal-bg'>"));
+
+  // hide modal
+  $("#showTemplateClassModal .fa-times").off('click').on('click', function(e) {
+    e.preventDefault();
+    $("#showTemplateClassModal").toggleClass('open-modal');
+    $("body div.modal-bg").remove();
+    return false;
+  });
+}
+
 function addTemplate(subtemplate=null) {
 
   // show modal
@@ -950,7 +969,7 @@ function addTemplate(subtemplate=null) {
   });
 
   // hide modal
-  $("#selectTemplateClass [value='cancelTemplate'], #selectTemplateClass .fa-times").on('click', function(e) {
+  $("#selectTemplateClass [value='cancelTemplate'], #selectTemplateClass .fa-times").off('click').on('click', function(e) {
     e.preventDefault();
     $("#selectTemplateClassModal").toggleClass('open-modal');
     $("body div.modal-bg").remove();
@@ -1301,8 +1320,9 @@ function sortList(ul) {
 
 
 // get values by property in EXPLORE page, e.g. creators
-function getPropertyValue(elemID, prop, typeProp, typeField, elemClass='') {
+function getPropertyValue(elemID, prop, typeProp, typeField, elemClass='', elemSubclass='') {
   if (elemClass.length) {var class_restriction = "?s a <"+elemClass+"> . "} else {var class_restriction = ''};
+  if (elemSubclass.length) {class_restriction += "?s a <"+elemSubclass+"> . "};
   if ((typeProp == 'URI' || typeProp == 'Place' || typeProp == 'URL') && (typeField == 'Textbox' || typeField == 'Dropdown'|| typeField == 'Checkbox' || typeField == 'Subtemplate') ) {
     var query = "select distinct ?o ?oLabel (COUNT(?s) AS ?count) "+inGraph+" where { GRAPH ?g { ?s <"+prop+"> ?o. "+class_restriction+" ?o rdfs:label ?oLabel . } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } GROUP BY ?o ?oLabel ORDER BY DESC(?count) lcase(?oLabel)";
   } else if (typeProp == 'URI' && typeField == 'Skos') {
@@ -1336,7 +1356,7 @@ function getPropertyValue(elemID, prop, typeProp, typeField, elemClass='') {
               var xsdProp = typeProp;
             }
             var count = returnedJson.results.bindings[i].count.value;
-            var result = "<button onclick=getRecordsByPropValue(this,'."+elemID+"results','"+elemClass+"','"+xsdProp+"') id='"+res+"' class='queryGroup' data-property='"+prop+"' data-value='"+res+"' data-toggle='collapse' data-target='#"+elemID+"results' aria-expanded='false' aria-controls='"+elemID+"results' class='info_collapse'>"+resLabel+" ("+count+")</button>";
+            var result = "<button onclick=getRecordsByPropValue(this,'."+elemID+"results','"+elemClass+"','"+elemSubclass+"','"+xsdProp+"') id='"+res+"' class='queryGroup' data-property='"+prop+"' data-value='"+res+"' data-toggle='collapse' data-target='#"+elemID+"results' aria-expanded='false' aria-controls='"+elemID+"results' class='info_collapse'>"+resLabel+" ("+count+")</button>";
             if (allresults.indexOf(result) === -1) {
               allresults.push(result);
               results.push($(result).hide());
@@ -1373,8 +1393,9 @@ function getPropertyValue(elemID, prop, typeProp, typeField, elemClass='') {
 };
 
 // get records by value and property in EXPLORE
-function getRecordsByPropValue(el, resElem, elemClass='', typeProp=false) {
+function getRecordsByPropValue(el, resElem, elemClass='', elemSubclass='', typeProp=false) {
   if (elemClass.length) {var class_restriction = "?s a <"+elemClass+"> . "} else {var class_restriction = ''};
+  if (elemSubclass.length) {class_restriction += "?s a <"+elemSubclass+"> . "};
   $(el).toggleClass("alphaActive");
   if ($(resElem).length) {$(resElem).empty();}
   var prop = $(el).data("property");
@@ -1402,6 +1423,42 @@ function getRecordsByPropValue(el, resElem, elemClass='', typeProp=false) {
         }
   });
 };
+
+function filterBySubclass(btn) {
+  let subclassURI = $(btn).attr("value");
+  var tab = $(btn).closest(".articleBox");
+  tab.find("[data-target]").show();
+  tab.find(".hidden").removeClass("hidden");
+  
+  // active filter button
+  $(btn).siblings().removeClass("active");
+  $(btn).addClass("active");
+
+  // hide excluded alphabet filters
+  if (subclassURI !== "") {
+    tab.find(".list > a.resource_collapse[data-subclass]").each(function() {
+      if ($(this).data("subclass") !== subclassURI) {
+        $(this).parent().addClass("hidden");
+        if ($(this).closest(".toBeWrapped").find(".list:not(.hidden)").length == 0) {
+          var target = $(this).parent().attr("id");
+          $("[data-target='#"+target+"']").hide();
+        }
+      }
+    });
+  }
+
+  // generate new property-value filters
+  var scripts = tab.find("script");
+  $(".resultAccordion .collapse").empty();
+  $(".collapse.show").toggleClass("show");
+  scripts.each(function() {
+    $(this).prev().prev().empty();
+    let scriptContent = $(this).html();
+    scriptContent = scriptContent.replace('")', '", "'+subclassURI+'")');
+    let dynamicFunction = new Function(scriptContent);
+    dynamicFunction();
+  })
+}
 
 
 // Alerts

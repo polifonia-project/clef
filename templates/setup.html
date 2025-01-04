@@ -5,9 +5,11 @@ $var project = project
 $var main_lang = main_lang
 
 <header class="row">
-	<h3>Setup your application</h3>
+	<h3 class="col-md-12 col-lg-12 col-sm-12">Setup your application</h3>
 </header>
-<section class="corners row">
+<section class="corners row set_template_field">
+
+	<!-- SETUP FORM -->
 	<section class="col-md-6 col-lg-6 col-sm-6">
 		<form id="setupForm" class="col-md-12 col-sm-12 col-lg-12" action="" method="POST">
 			<section class="row">
@@ -39,8 +41,8 @@ $var main_lang = main_lang
 			</section>
 		</form>
 	</section>
-	<section id="searchresult">
-	</section>
+
+	<!-- TIPS -->
 	<section class="homeheading col-md-6 col-sm-6 col-lg-6">
 		<p class="caption">Tips</p>
 		<p>Personalise the project name and the payoff in the homepage.</p>
@@ -70,5 +72,6 @@ $var main_lang = main_lang
 		<p>Follow the instructions for creating the OAuth app, and select as <b>Authorization callback URL</b> the following path: <code>YOURDOMAIN/oauth-callback</code>. At the end, come back here and paste the <code>CLIENT ID</code> and <code>SECRET KEY</code>.</p>
 		<p>Done, time to enjoy.</p>
 	</section>
-
+	<section id="searchresult">
+	</section>
 </section>

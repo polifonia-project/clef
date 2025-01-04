@@ -173,6 +173,7 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 			
 			# TODO disambiguate as URI, value
 			if field["disambiguate"] == 'True': # use the key 'disambiguate' as title of the graph
+				print("VALUE:", value)
 				main_lang = value['mainLang']
 				main_value = [label for label in value['results'] if label[1] == main_lang]
 				main_value = list(value['results']) if len(main_value) == 0 else main_value
@@ -211,7 +212,7 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 						wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(entityURI) ))
 						wd.add(( URIRef( entityURI ), rdf_property, Literal(entity[1].lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
 						if "subclass" in field and field["subclass"] != "False": # Subclass
-							wd.add(( URIRef(base+graph_name), DCTERMS.type, URIRef(entityURI) ))
+							wd.add(( URIRef(base+graph_name), RDF.type, URIRef(entityURI) ))
 				elif value['type'] == 'Literal': #multi-language Literals
 					for literal in value['results']:
 						val, lang = literal

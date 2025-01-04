@@ -109,17 +109,20 @@ $(document).ready(function() {
         });
 
         // trigger the on change function to show subclass restricted fields (modify and review page)
-        if ($(this).val() !== "None") {
-            var selectedValue = $(this).val();
-            var subclass = encodeURIComponent(selectedValue.trim());
-            var supertemplate = $(this).data("supertemplate"); 
+        if ($("#modifyForm").length > 0) {
+            if ($(this).val() !== "None" && $(this).val() !== "") {
+                var selectedValue = $(this).val();
+                console.log(selectedValue)
+                var subclass = encodeURIComponent(selectedValue.trim());
+                var supertemplate = $(this).data("supertemplate"); 
 
-            // show required fields
-            $("[data-supertemplate='"+supertemplate+"'][data-subclass='"+subclass+"']").closest("section.form_row.block_field").each(function() {
-                $(this).fadeIn(400);
-                var inputId = $(this).find("input, textarea, select").first().attr("id");
-                $("li[data-id='"+inputId+"'").fadeIn(400);
-            });
+                // show required fields
+                $("[data-supertemplate='"+supertemplate+"'][data-subclass='"+subclass+"']").closest("section.form_row.block_field").each(function() {
+                    $(this).fadeIn(400);
+                    var inputId = $(this).find("input, textarea, select").first().attr("id");
+                    $("li[data-id='"+inputId+"'").fadeIn(400);
+                });
+            }
         }
     });
 
@@ -1935,9 +1938,10 @@ function nextExtractor(element, recordId, id, type) {
         // API QUERY:
         $.getJSON(objectItem["url"], objectItem["query"],
             function(data) {
-            // show the query results in a table
-            var bindings = showExtractionResult(data,type,id,recordId,objectItem);
-            objectItem["output"] = bindings;
+                // show the query results in a table
+                console.log(data)
+                var bindings = showExtractionResult(data,type,id,recordId,objectItem);
+                objectItem["output"] = bindings;
         }).error(function(jqXHR, textStatus, errorThrown) {
             showErrorPopup(("error: check your parameters"))
         })
@@ -2216,12 +2220,17 @@ function showExtractionResult(jsonData,type,extractionId,recordId,objectItem=nul
 
         // set the results paths
         var jsonResults = objectItem["results"];
+        console.log(jsonResults)
         var mainPath = jsonResults.array.split(".");
         let resultsArray = jsonData;
         mainPath.forEach(key => {
             resultsArray = resultsArray[key];
         });
         
+        if (resultsArray === undefined) {
+            showErrorPopup(("error: check your parameters"))
+            return false;
+        }
         resultsArray.forEach(function(res) {
             // extract a label for each term
             let labelPath = jsonResults.label.split(".");
@@ -2253,21 +2262,24 @@ function showExtractionResult(jsonData,type,extractionId,recordId,objectItem=nul
         resultTable.append(tr);
 
         bindings = jsonData.results.bindings
+        console.log(bindings)
         for (let idx=0; idx<bindings.length; idx++){
             var result = bindings[idx];
             var resultTableRow = $('<tr></tr>');
 
             for (let i=0; i<labels.length; i++){
                 var label = labels[i];
+                console.log(label)
+                if (result[label].value !== null && result[label].value !== "") {
+                    if (result[label].value.startsWith("https://") || result[label].value.startsWith("http://")) {
+                        var item = "<a href='"+result[label].value+"' target='_blank'>"+result[label].value+"</a><i class='far fa-edit'></i>";
+                    } else {
+                        var item = "<span>" + result[label].value + "</span><i class='far fa-edit'></i>";
+                    }
 
-                if (result[label].value.startsWith("https://") || result[label].value.startsWith("http://")) {
-                    var item = "<a href='"+result[label].value+"' target='_blank'>"+result[label].value+"</a><i class='far fa-edit'></i>";
-                } else {
-                    var item = "<span>" + result[label].value + "</span><i class='far fa-edit'></i>";
+                    var td = $('<td>' + item + '</td>')
+                    resultTableRow.append(td);
                 }
-
-                var td = $('<td>' + item + '</td>')
-                resultTableRow.append(td);
             }
             resultTable.append(resultTableRow)
         }
@@ -2289,7 +2301,7 @@ function showExtractionResult(jsonData,type,extractionId,recordId,objectItem=nul
     $('.import-form.block_field .block_field').append(buttonList);
 
     // manage results pagination
-    if (bindings.length > 25) {extractorPagination(bindings)};
+    if (bindings.length > 25) {extractorPagination(extractionId,bindings)};
 
     return bindings
 }
@@ -2340,7 +2352,7 @@ function modifyExtractionResult(icon,index,extractionId,recordId) {
 
 }
 
-function extractorPagination(results) {
+function extractorPagination(extractionId,results) {
     var length = results.length;
     var remainder = length%25;
     if (remainder > 0) {
@@ -2352,13 +2364,15 @@ function extractorPagination(results) {
         var hide_results = $('.extractor-2').find('tr').slice(25, length);
         hide_results.addClass('hidden-result');
     }
-    var page_section = $('<section class="pagination row justify-content-md-center justify-content-lg-center extractor-2"></section>')
+    var page_section = $('<section id="paginate" class="pagination row justify-content-md-center justify-content-lg-center extractor-2"></section>')
     for (let n=0; n<total;n++) {
         var page_n = n + 1
         var button=$('<input id="page_'+page_n+'" class="btn btn-dark extractor-2" value="'+page_n+'" onClick="changeResultsPage(\''+page_n+'\', \''+length+'\')">');
         page_section.append(button)
     }
-    $('.block_field').append(page_section);
+
+    var extractionFieldId = "imported-graphs-"+extractionId.split("-")[0];
+    $("#"+extractionFieldId).next('.block_field').find(".row.extractor-2:last-of-type").before(page_section);
 }
 
 function changeResultsPage(page_n, length) {
@@ -2373,7 +2387,7 @@ function changeResultsPage(page_n, length) {
     }
     show_results.removeClass('hidden-result');
     $('.extractor-2').find('th').parent().removeClass('hidden-result');
-    window.scrollTo(0, 0);
+    $('html, body').animate({ scrollTop: $('.form_row.block_field.import-form').offset().top-100 }, 800);
 }
 
 ///////////////////////

@@ -35,27 +35,50 @@ $var main_lang = main_lang
 		</form>
 		<button onclick="window.location.href='setup'" title="setup" class="menu_btn">Setup <i class="fas fa-cogs"></i></button>
 		<section class="btn-group">
-			<button id="showTemplates" title="form template" class="menu_btn dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Templates</button>
-			<section class="dropdown-menu gradient_dropbox" aria-labelledby="showTemplates" role="menu">
-			$if len(templates) == 0:
-				<p class="res_class_small">there are no templates yet</p>
-			$else:
-				$for t in templates:
-				$if 'status' not in t:
-					<p><a href="template-$t['short_name']">$t["name"]</a></p>
-			</section>
+			<button id="showTemplateClassButton" title="form template" class="menu_btn">Templates <i class="fas fa-angle-down"></i></button>
 		</section>
 		<section class="btn-group">
-			<button id="selectTemplateClassButton" title="create a new template" class="menu_btn">Create a new template <i class="fas fa-plus"></i></button>
+			<button id="selectTemplateClassButton" title="create a new template" class="menu_btn">New template <i class="fas fa-plus"></i></button>
 		</section>
+		<section class="btn-group">
+			<button onclick="window.location.href='charts-template'" title="visualization template" class="menu_btn">Charts <i class="fas fa-chart-area"></i></button>
 		</section>
 	</section>
+</section>
+
+<section id="showTemplateClassModal" aria-labelledby="showTemplateClassModal" role="menu">
+	<section>
+		<span>Available Templates  <i class='fas fa-times'></i></span>
+	</section>
+	<section class="modal-input">
+		$if len(templates) == 0:
+			<p class="res_class_small">there are no templates yet</p>
+		$else:
+			<table id="templatesList">
+				<tr>
+					<th>TEMPLATE</th>
+					<th>ACTIONS</th>
+				</tr>
+				$for t in templates:
+					$if 'status' not in t:
+						$ t_name = t['short_name']
+						<tr>
+							<td><span>$t["name"]</span></td>
+							<td>
+								<button class="btn btn-dark delete" data-toggle="modal" data-target="#popup" name="action" value="template-$t['short_name']" type="submit" title="delete"><i class="far fa-trash-alt"></i></button>
+								<button onclick="window.location.href='template-$t_name'" class="btn btn-dark" title="modify template"><i class="far fa-edit"></i></button>
+							</td>
+						</tr>
+			</table>
+	</section>
+</section>
+
 <section id="selectTemplateClassModal" aria-labelledby="selectTemplateClassButton" role="menu">
 	<form id="selectTemplateClass" name="selectTemplateClass" class="" method="POST">
 		<section>
 			<span>New Template  <i class='fas fa-times'></i></span>
 		</section>
-			<section class="modal-input">
+		<section class="modal-input">
 			<span class="label">Name</span><br><span class="comment">choose a name for this template</span>
 			<input type="text" name="class_name" value="" placeholder="e.g.: Work of art">
 		</section>
@@ -94,7 +117,7 @@ $var main_lang = main_lang
 					$ result[6].sort()
 					$ type = "undefined"
 					$for t in templates:
-						$for s in t["subclasses"]:
+						$for s in t["subclasses"].keys():
 							$if s in result[6]:
 								$ result[6].remove(s)
 					$ type = [t["name"] for t in templates if t["type"] == result[6]]

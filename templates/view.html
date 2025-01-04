@@ -155,13 +155,13 @@ $if inverses_by_class != {} and inverses_by_properties != {}:
 						<br>
 						<section class="inverse-results-container">
 						$for property,results in inverses_by_class[res_type]['results'].items():
-							$ property_url, property_short, property_label = property.split(',')
+							$ property_url, property_short, property_label = property.split(',',2)
 							<section class="inverse-property">
 								<span><h4 class="articleSubtitle">$property_label</h4><br><a href="$property_url">$property_short</a></span>
 							</section>
 							<section class="inverse-property">
 								$for result in results:
-									$ result_uri, result_label = result.split(',')
+									$ result_uri, result_label = result.split(',',1)
 									<span><label>$result_label</label> <a href="$result_uri"><i class="fas fa-external-link-alt"></i></a></span><br>
 							</section>
 						</section>
@@ -169,7 +169,7 @@ $if inverses_by_class != {} and inverses_by_properties != {}:
 			</section>
 			<section class="inverse-section" id="inverse-section-property" style="display: none;">
 				$for property,results in inverses_by_properties.items():
-					$ property_url, property_short = property.split(',')
+					$ property_url, property_short = property.split(',',1)
 					<section class="inverse-properties">
 						<span class="inverse-subtitle">$property_short</span>
 						<br>
@@ -179,7 +179,7 @@ $if inverses_by_class != {} and inverses_by_properties != {}:
 							</section>
 							<section class="inverse-property">
 								$for result in results:
-									$ result_uri, result_label = result.split(',')
+									$ result_uri, result_label = result.split(',',1)
 									<span><label>$result_label</label> <a href="$result_uri"><i class="fas fa-external-link-alt"></i></a></span><br>
 							</section>
 						</section>

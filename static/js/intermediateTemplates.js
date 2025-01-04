@@ -134,7 +134,7 @@ function createSubrecord(subtemplateFieldId,label,el,dataReuse=false,subrecordId
                 var inputId = cloneElement.find('textarea, select, input:not([type="hidden"]):not(label.switch input)').attr('id');
                 cloneElement.find('textarea, select, input:not([type="hidden"]):not(label.switch input)').attr('id', inputId+"_"+subrecordId.toString());
                 cloneElement.find('textarea, select, input:not([type="hidden"]):not(label.switch input)').attr('name', inputId+"_"+subrecordId.toString());
-                
+
                 // SET LITERAL INPUT FIELDS
                 if (cloneElement.find('[lang]').length > 0) {
                     // remove all inner inputs except for the first one
@@ -142,11 +142,11 @@ function createSubrecord(subtemplateFieldId,label,el,dataReuse=false,subrecordId
                     var literalInput = cloneElement.find('[lang]');
                     var newLiteralInputId = literalInput.attr('id').split("_")[0] + "_" + mainLang + "_" + subrecordId.toString();
                     var hiddenMainLangId = literalInput.attr('id').split("_")[0] + "_mainLang_" + subrecordId.toString();
-                    literalInput.attr('id', newLiteralInputId).attr('name',newLiteralInputId).attr('lang',mainLang);
+                    literalInput.attr('id', newLiteralInputId).attr('name',newLiteralInputId).attr('lang',mainLang).show().removeClass("hidden");
 
                     // language list section
                     var languageListSection = literalInput.prev().empty();
-                    var languageItem = $('<a class="lang-item main-lang" title="text language: '+mainLang.toUpperCase()+'"\
+                    var languageItem = $('<a class="lang-item selected-lang" title="text language: '+mainLang.toUpperCase()+'"\
                         onclick="show_lang(\''+newLiteralInputId+'\')">'+mainLang.toUpperCase()+'</a>');
                     languageListSection.append(languageItem);
 
@@ -234,9 +234,13 @@ function createSubrecord(subtemplateFieldId,label,el,dataReuse=false,subrecordId
                     cloneElement.find('.input_or_select').eq(0).append(clonedElementValues);
                     console.log(subrecordForm)
                 }
+                if (cloneElement.find('[data-subclass]:not([data-subclass=""])').length > 0 ) { cloneElement.hide()};
+
                 subrecordForm.append(cloneElement);
 
             }
+
+
         
         })
     })
@@ -343,7 +347,6 @@ function activateTemplateSelection(select,subrecordId) {
 
 function saveSubrecordClass(selectElement,subrecordId,singleOption=false) {
     // store the selected subtemplate class as a hidden input value
-    console.log("HERE", subrecordId)
     var selectedClass;
     selectedClass = singleOption 
                 ? selectElement.find('option:last').val() 

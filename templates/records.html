@@ -1,4 +1,4 @@
-$def with (user, data, title,r_base,alll,filters,is_git_auth,project,main_lang)
+$def with (user,data,subclass_data,title,r_base,alll,filters,is_git_auth,project,main_lang)
 
 $var user = user
 $var is_git_auth = is_git_auth
@@ -32,10 +32,18 @@ $var main_lang = main_lang
 		$if len(data_val) > 0:
 			$ res_id = res_class.replace(' ','_').lower()
 			$ attributes = "show active" if first_class == res_class else ""
-			$ res_owl_class = list(data_val)[0][6] if len(data_val) > 0 else None
+			$ res_owl_class = list(data_val)[0][6].strip() if len(data_val) > 0 else None
 			<div class="tab-pane fade $attributes" id="tab_$res_id" role="tabpanel" aria-labelledby="$res_id">
 				<section class="row articleBox">
 					<section class="col-md-12 col-sm-12">
+						$if res_class in subclass_data:
+							<section class="row change_background">
+								<section class="homeheading col-md-12 col-sm-12">
+									<button class="filter_btn active" value="" onclick="filterBySubclass(this)">All ($alll[res_class])</button>
+									$for res_subclass_uri,subclass_info in subclass_data[res_class].items():
+										<button class="filter_btn" value="$res_subclass_uri" onclick="filterBySubclass(this)">$subclass_info["label"] ($subclass_info["count"])</button>
+								</section>
+							</section>
 						$if res_class in filters and len(filters[res_class]) > 0:
 							$for filter in filters[res_class]:
 								<section class="row change_background">
@@ -53,7 +61,7 @@ $var main_lang = main_lang
 														$if record[5] != 'not modified':
 															$ new_id = res_id+"_"+upper(record[1][0])
 															<section class="list $new_id" id="$new_id">
-																<a href="view-$record[0].rsplit('/')[-2]" class="resource_collapse">$record[1]</a>
+																<a href="view-$record[0].rsplit('/')[-2]" class="resource_collapse" data-subclass="$record[7]">$record[1]</a>
 															</section>
 
 												</section>

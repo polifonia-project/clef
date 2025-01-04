@@ -503,7 +503,6 @@ class Index:
 
 		# create a new template
 		elif actions.action.startswith('createTemplate'):
-			print('create template:', actions)
 			is_git_auth = github_sync.is_git_auth()
 			res_type = sorted([ urllib.parse.unquote(actions[class_input].strip()) for class_input in actions if class_input.startswith("uri_class")]) 
 			res_type = conf.main_entity if res_type == [] else res_type
@@ -943,19 +942,26 @@ class Records:
 		with open(TEMPLATE_LIST,'r') as tpl_file:
 			templates = json.load(tpl_file)
 
-		records_by_template , count_by_template , filters_by_template = {} , {} , {}
+		records_by_template , count_by_template , count_by_subclass , filters_by_template = {} , {} , {} , {}
 		for template in templates:
 			if not (is_git_auth==False and template["hidden"] =='True'):
 				res_class=template["type"]
-				res_subclasses = template["subclasses"]
+				res_subclass_dict = template["subclasses"]
+				res_subclasses = list(res_subclass_dict.keys())
 				records = queries.getRecords(res_class,res_subclasses)
 				records_by_template[template["name"]] = records
-				alll = queries.countAll(res_class,False)
+				alll = queries.countAll(res_class,res_subclasses,False,False)
 				count_by_template[template["name"]] = alll
+				if len(res_subclasses) > 0:
+					count_by_subclass[template["name"]] = {}
+				for res_subclass in res_subclasses:
+					subclass_list = [res_subclass]
+					count_subclass = queries.countAll(res_class,subclass_list,True,False)
+					count_by_subclass[template["name"]][res_subclass] = {"label": res_subclass_dict[res_subclass], "count": count_subclass}
 				filtersBrowse = queries.getBrowsingFilters(template["template"])
 				filters_by_template[template["name"]] = filtersBrowse
 		return render.records(user=session['username'], data=records_by_template,
-							title='Latest resources', r_base=conf.base,
+							subclass_data=count_by_subclass,title='Latest resources', r_base=conf.base,
 							alll=count_by_template, filters=filters_by_template,
 							is_git_auth=is_git_auth,project=conf.myProject,
 							main_lang=conf.mainLang)
@@ -1048,6 +1054,8 @@ class View(object):
 		except Exception as e:
 			pass
 
+		print("inverse_by_properties:", properties_sorted, "\nby class:", new_dict_classes)
+
 		return render.view(user=session['username'], graphdata=data_labels,
 						graphID=name, title=title, stage=stage, base=base,properties=properties,
 						is_git_auth=is_git_auth,project=conf.myProject,knowledge_extractor=extractions_data,
@@ -1106,10 +1114,10 @@ class Term(object):
 			res_templates = json.load(tpl_list)
 		for res_uri in appears_in:
 			res_class = sorted(queries.getClass(res_uri))
-			res_type = next(t["name"] for t in res_templates if t["type"] == res_class)
+			res_type = next((t["name"] for t in res_templates if t["type"] == res_class),None)
 			if res_type in results_by_class:
 				results_by_class[res_type]['results'].append(res_uri)
-			else:
+			elif res_type != None:
 				results_by_class[res_type] = {'class':res_class, 'results':[res_uri]}
 
 		count = len(appears_in)
@@ -1117,7 +1125,8 @@ class Term(object):
 		
 		return render.term(user=session['username'], label=label, count=count,
 						is_git_auth=is_git_auth,project=conf.myProject,base=conf.base,
-						uri=uri,name=name,results=results_by_class,map=map_coordinates)
+						uri=uri,name=name,results=results_by_class,map=map_coordinates,
+						main_lang=conf.mainLang)
 
 	def POST(self,name):
 		""" controlled vocabulary term web page
@@ -1249,7 +1258,8 @@ class sparql:
 		if query_str_decoded is None or query_str_decoded.strip() == "":
 			is_git_auth = github_sync.is_git_auth()
 			return render.sparql(active, user=session['username'],
-								is_git_auth=is_git_auth,project=conf.myProject)
+								is_git_auth=is_git_auth,project=conf.myProject,
+								main_lang=conf.mainLang)
 
 		if re.search("updates?", query_str_decoded, re.IGNORECASE) is None:
 			if "query" in parsed_query:

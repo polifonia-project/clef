@@ -32,7 +32,7 @@ def hello_blazegraph(q):
 
 def getRecords(res_class=None,res_subclasses=None):
 	""" get all the records created by users to list them in the backend welcome page """
-	extended_class_list = res_subclasses.extend(res_class) if res_subclasses != None and res_class != None else None
+	extended_class_list = res_subclasses + res_class if res_subclasses != None and res_class != None else res_class if res_class != None else None
 	filter_class_exists = "\n".join([f"FILTER EXISTS {{ ?s a <{cls}> }}" for cls in res_class]) if res_class != None else ""
 	filter_class_not_exists = f"FILTER (NOT EXISTS {{ ?s a ?other_class FILTER (?other_class NOT IN ({', '.join([f'<{cls}>' for cls in extended_class_list])})) }})" if extended_class_list != None else ""
 
@@ -72,8 +72,12 @@ def getRecords(res_class=None,res_subclasses=None):
 
 	for result in results["results"]["bindings"]:
 		classes = result["classes"]["value"].split("; ")
-		subclass = next((single_class for single_class in classes if single_class not in res_class),None) 
-		records.add( (result["g"]["value"], result["title"]["value"], result["userLabel"]["value"], result["modifierLabel"]["value"], result["date"]["value"], result["stage"]["value"], result["classes"]["value"], subclass))
+		subclass = next((single_class for single_class in classes if single_class not in res_class), None)
+		if subclass:
+			classes.remove(subclass)
+		subclass = subclass.strip() if subclass != None else subclass
+		classes = "; ".join(classes)
+		records.add( (result["g"]["value"], result["title"]["value"], result["userLabel"]["value"], result["modifierLabel"]["value"], result["date"]["value"], result["stage"]["value"], classes, subclass))
 	return records
 
 
@@ -153,9 +157,11 @@ def getCountings(filterRecords=''):
 	return all, notreviewed, underreview, published
 
 
-def countAll(res_class=None, exclude_unpublished=False):
-	filter_class_exists = "\n".join([f"FILTER EXISTS {{ ?s a <{cls}> }}" for cls in res_class]) if res_class != None else ""
-	filter_class_not_exists = f"FILTER (NOT EXISTS {{ ?s a ?other_class FILTER (?other_class NOT IN ({', '.join([f'<{cls}>' for cls in res_class])})) }})" if res_class != None else ""
+def countAll(res_class=None,res_subclasses=None,by_subclass=False,exclude_unpublished=False):
+	include_class_list = res_subclasses + res_class if res_subclasses != None and res_class != None and by_subclass else res_class
+	exclude_class_list = res_subclasses + res_class if res_subclasses != None and res_class != None else res_class if res_class != None else None
+	filter_class_exists = "\n".join([f"FILTER EXISTS {{ ?s a <{cls}> }}" for cls in include_class_list]) if include_class_list != None else ""
+	filter_class_not_exists = f"FILTER (NOT EXISTS {{ ?s a ?other_class FILTER (?other_class NOT IN ({', '.join([f'<{cls}>' for cls in exclude_class_list])})) }})" if exclude_class_list != None else ""
 
 	exclude = "" if exclude_unpublished is False \
 		else "?g <http://dbpedia.org/ontology/currentStatus> ?anyValue . FILTER (isLiteral(?anyValue) && lcase(str(?anyValue))= 'published') ."

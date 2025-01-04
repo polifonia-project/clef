@@ -198,7 +198,6 @@ function addCounter(element, fieldId) {
         </section>\
         <button class='btn btn-dark' type='button' onclick='saveCounter(this,\""+fieldId+"\")'>Save counter</button>\
     </section></li>");
-    
 
     $(element).parent().parent().replaceWith(block);
     yasqe = YASQE(document.getElementById("newYasqe"), {
@@ -209,11 +208,17 @@ function addCounter(element, fieldId) {
     });
 }
 
-function saveCounter(element,fieldId) {
-    // retrieve the label and the query
+function saveCounter(element,fieldId,modify=false) {
     var item = $(element).closest("li");
-    var itemsList = $(element).closest("ul");
-    var itemIndex = itemsList.find("li").length - 1;
+    let itemIndex;
+
+    // retrieve the label and the query
+    if (modify) {
+        itemIndex = modify
+    } else {
+        var itemsList = $(element).closest("ul");
+        itemIndex = itemsList.find("li").length - 1;
+    }
     var label = item.find("[name='description']").val();
     var query = getYASQEQuery(item);
 
@@ -225,7 +230,10 @@ function saveCounter(element,fieldId) {
     // add the new counter to the DOM and remove input fields
     item.after("<li>\
         <label>"+label+" <i class='far fa-edit' onclick='modifyCounter(this)'></i> <i class='far fa-trash-alt' onclick='removeCounter(this)'></i></label>\
-        <input type='hidden' name='"+fieldId+"__"+itemIndex+"__"+label+"' value='"+query+"'/>\
+        <input type='hidden' name='"+fieldId+"__counter"+itemIndex+"_"+label.replace(" ","_")+"__"+fieldId+"' value='"+query+"'/>\
+    </li>\
+    <li>\
+        <label class='add-option'>Add new counter <i class='fas fa-plus-circle' onclick='addCounter(this, \""+fieldId+"\")'></i></label>\
     </li>");
     item.remove();
 
@@ -236,11 +244,43 @@ function saveCounter(element,fieldId) {
 } 
 
 function modifyCounter(element) {
+    // retrieve counter's data
+    const input = $(element).parent().next("input");
+    var fieldId = input.attr("name").split("__")[0]
+    var idx = input.attr("name").split("__")[1].split("_")[0].replace("counter","")
+    var rawTitle = input.attr("name").split("__")[1].split("_");
+    var title = rawTitle.slice(1, rawTitle.length).join(' ');
+    var query = input.val()
 
+    var block = $("<li class='col-md-12'><hr><section class='col-md-12'>\
+        <section class='row'>\
+            <label class='inner-label col-md-12'>New counter name</label>\
+            <input type='text' id='description' class='col-md-12 align-self-start' name='description'>\
+        </section>\
+        <section class='row'>\
+            <label class='inner-label col-md-12'>Query</label>\
+            <div id='newYasqe' class='yasqe-max'></div>\
+        </section>\
+        <button class='btn btn-dark' type='button' onclick='saveCounter(this,\""+fieldId+"\",\""+idx+"\")'>Save counter</button>\
+    </section></li>");
+    
+    $(block).find("input").val(title.replace("_"," "));
+    $(element).closest("ul").find("li:last-of-type").replaceWith(block);
+    $(element).closest("li").remove();
+    yasqe = YASQE(document.getElementById("newYasqe"), {
+        sparql: {
+        showQueryButton: false,
+        endpoint: myPublicEndpoint,
+        }
+    });
+    yasqe.setValue(query);
+    $('html, body').animate({
+        scrollTop: block.offset().top - 100
+    }, 800);
 }
 
 function removeCounter(element) {
-
+    $(element).closest("li").remove();
 } 
 
 

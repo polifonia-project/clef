@@ -108,9 +108,7 @@ def split_uri(term):
 
 def get_LOV_labels(term, term_type=None):
 	""" get class/ property labels from the form"""
-	print("TERM:",term)
 	term, label = term, split_uri(term)
-	print("TERM2:",term, label)
 	lov_api = "https://lov.linkeddata.es/dataset/lov/api/v2/term/search?q="
 	t = "&type="+term_type if term_type else ''
 	label_en = "http://www.w3.org/2000/01/rdf-schema#label@en"
@@ -118,7 +116,6 @@ def get_LOV_labels(term, term_type=None):
 
 	if req.status_code == 200:
 		res = req.json()
-		print(res)
 		for result in res["results"]:
 			if result["uri"][0] in [term, term.replace("https","http")]:
 				label = result["highlight"][label_en][0] \
@@ -170,7 +167,7 @@ def fields_to_json(data, json_file, skos_file):
 	list_dicts = defaultdict(dict)
 	#list_ids = sorted([k.split("__")[0] for k in data.keys()])
 	template_config = {'hidden': 'True',
-					'subclasses': []}
+					'subclasses': {}}
 
 	for k,v in data.items():
 		if k != 'action' and '__template__' not in k:
@@ -194,7 +191,7 @@ def fields_to_json(data, json_file, skos_file):
 		# set subclasses
 		if "subclass" in d:
 			d["subclass"] = "True"
-			template_config["subclasses"] = [subclass for subclass in d["values"].keys()]
+			template_config["subclasses"] = d["values"]
 		else:
 			d["subclass"] = "False"
 		d["restricted"] = "None" if d["subclass"] == "True" else d["restricted"] if "restricted" in d else "None" # do not restrict the subclass field
@@ -346,6 +343,7 @@ def updateTemplateList(res_name=None,res_type=None,remove=False):
 		res["type"] = res_type
 		res["template"] = RESOURCE_TEMPLATES+'template-'+res_name.replace(' ','_').lower()+'.json'
 		res["hidden"] = "False"
+		res["subclasses"] = {}
 		data.append(res)
 
 		with open(TEMPLATE_LIST,'w') as tpl_file:
@@ -673,8 +671,9 @@ def charts_to_json(charts_file, data):
 		counters = [{
 			"id": str(idx)+"__"+viz+"__"+str(idx),
 			"query": params[viz],
-			"title": viz.split("_")[1]
+			"title": " ".join(viz.split("_")[1:])
 		} for viz in params if viz.startswith("counter")]
+		counters = sorted(counters, key=lambda x: x["id"])
 		params["counters"] = counters
 
 		# sorted
@@ -684,7 +683,7 @@ def charts_to_json(charts_file, data):
 			params["sorted"] = "x"
 
 		#legend
-		params["legend"] == "True" if "legend" in params else "False"		
+		params["legend"] = "True" if "legend" in params else "False"		
 
 	# sort viz by index
 	ordict = OrderedDict(sorted(list_dicts.items()))

@@ -62,11 +62,15 @@ $var main_lang = main_lang
 				$for t in templates:
 					$if 'status' not in t:
 						$ t_name = t['short_name']
+						$ t_class_str = "; ".join(t['type'])
 						<tr>
-							<td><span>$t["name"]</span></td>
+							<td><span class="tip" data-toggle="tooltip" data-placement="bottom" title="$t_class_str"><i class="fas fa-info-circle"></i></span>
+								<span>$t["name"]</span></td>
 							<td>
-								<button class="btn btn-dark delete" data-toggle="modal" data-target="#popup" name="action" value="template-$t['short_name']" type="submit" title="delete"><i class="far fa-trash-alt"></i></button>
-								<button onclick="window.location.href='template-$t_name'" class="btn btn-dark" title="modify template"><i class="far fa-edit"></i></button>
+								<form method="POST">
+									<button class="btn btn-dark delete" name="action" value="deleteTemplate$t_name" type="submit" title="modify" value="template-$t['short_name']" type="submit" title="delete"><i class="far fa-trash-alt"></i></button>
+									<button onclick="window.location.href='template-$t_name'" class="btn btn-dark" type="button" title="modify template"><i class="far fa-edit"></i></button>
+								</form>
 							</td>
 						</tr>
 			</table>

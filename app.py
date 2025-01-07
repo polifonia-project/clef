@@ -518,6 +518,15 @@ class Index:
 			res_n, adress = (actions.class_name, res_name) if (res_type not in types and res_name not in names) else (actions.class_name+'_'+now_time, res_name+'_'+now_time)
 			u.updateTemplateList(res_n,res_type)
 			raise web.seeother(prefixLocal+'template-'+adress)
+		
+		# delete existing template
+		elif actions.action.startswith('deleteTemplate'):
+			is_git_auth = github_sync.is_git_auth()
+			res_name = actions.action.replace('deleteTemplate','')
+			template_path = RESOURCE_TEMPLATES+'template-'+res_name+'.json'
+			u.updateTemplateList(res_name,None,remove=True) # update tpl list
+			u.update_ask_class(template_path, res_name,remove=True) # update ask_class
+			raise web.seeother(prefixLocal+'/welcome-1')
 
 		# login or create a new record
 		else:

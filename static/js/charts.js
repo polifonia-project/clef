@@ -7,10 +7,27 @@ to create or modify explorative charts
 $(document).ready(function() {
 
     // generate preview
-    $('.preview').on('click', function(e) {
+    // generate preview using event delegation
+    $(document).on('click', '.preview', function(e) {
         e.preventDefault();
-        var url = "http://localhost:8080/charts";
-        var modal = $("<div class='modal-previewMM'><span class='previewTitle'>This is a preview of your multimedia file:<br><a href=''>"+url+"</a></span><span class='closePreview'></span><iframe src='" + url + "'></div>")
+        var blockField = $(this).closest(".block_field");
+        blockField.find(".charts-yasqe").each(function() {
+            var query = getYASQEQuery($(this));
+            var queryIdx = $(this).attr("id").split("__")[0];
+            var queryId = queryIdx + "__query__" + queryIdx;
+            blockField.append($("<input type='hidden' name='"+queryId+"' value='"+query+"'/>"));
+            $(this).find("textarea").remove();
+        });
+
+        var url = "http://localhost:8080/charts-visualization?action=preview";
+        blockField.find('input, select').each(function() {
+            url += "&" + encodeURIComponent($(this).attr("name")).replace(/'/g, '%27') + "=" + encodeURIComponent($(this).val()).replace(/'/g, '%27');
+        });
+        blockField.find('textarea').each(function() {
+            console.log($(this).text());
+            url += "&" + encodeURIComponent($(this).attr("name")).replace(/'/g, '%27') + "=" + encodeURIComponent($(this).text()).replace(/'/g, '%27');
+        });
+        var modal = $("<div class='modal-previewMM'><span class='previewTitle'>This is a preview of your data visualization<br></span><span class='closePreview'></span><iframe src='" + url + "'></div>")
         $(this).after(modal);
     });
 
@@ -53,21 +70,19 @@ function generateYASQE(elementId,query=null) {
 }
 
 // add a new Visualization block to define a new Visualization
-function addVisualization(visualizationType) {
+function addVisualization(visualizationType, changeIndex=null) {
 
 
     // get last visualization block index
     const lastVisualization = $(".sortable .block_field:last-child");
     var index = lastVisualization.data("index");
-    console.log(index)
 
     // set the new block HTML code    
-    var newIndex = index + 1;
-    var newId = Date.now().toString();
+    var newIndex = changeIndex != null ? changeIndex : index + 1;
     var newFieldBlock = "<section class='block_field' data-index='"+newIndex+"'>\
         <section class='row'>\
             <label class='col-md-3'>TYPE</label>\
-            <select onchange='changeVisualization(this)' class='col-md-8 custom-select' name='type__"+newId+"' id='type__"+newId+"'>\
+            <select onchange='changeVisualization(this)' class='col-md-8 custom-select' name='type__"+newIndex+"' id='type__"+newIndex+"'>\
                 <option value='None'>Select a visualization type</option>\
                 <option value='counter'>Counter</option>\
                 <option value='chart'>Chart</option>\
@@ -76,26 +91,26 @@ function addVisualization(visualizationType) {
         </section>\
         <section class='row'>\
             <label class='col-md-3'>TITLE</label>\
-            <input type='text' id='title__"+newId+"' class='col-md-8 align-self-start' name='title__"+newId+"'/>\
+            <input type='text' id='title__"+newIndex+"' class='col-md-8 align-self-start' name='title__"+newIndex+"'/>\
         </section>\
         <section class='row'>\
             <label class='col-md-3'>DESCRIPTION</label>\
-            <textarea id='description__"+newId+"' class='col-md-8 align-self-start' name='description__"+newId+"'></textarea>\
+            <textarea id='description__"+newIndex+"' class='col-md-8 align-self-start' name='description__"+newIndex+"'></textarea>\
         </section>";
 
     var countersLits = "<section class='row'>\
         <label class='col-md-3'>COUNTERS<br><span class='comment'>define one or multiple counters</span></label>\
         <section class='col-md-8'>\
-            <ul class='col-md-12 charts-list' id='counters__"+newId+"'>\
+            <ul class='col-md-12 charts-list' id='counters__"+newIndex+"'>\
                 <li><label class='inner-label col-md-12'>Counters list</label></li>\
-                <li><label class='add-option'>Add new counter <i class='fas fa-plus-circle' onclick='addCounter(this,\""+newId+"\")'></i></label></li>\
+                <li><label class='add-option'>Add new counter <i class='fas fa-plus-circle' onclick='addCounter(this,\""+newIndex+"\")'></i></label></li>\
             </ul>\
         </section>\
     </section>";
 
-    var chartType =  "<section class='row'>\
-        <label class='col-md-3'>TYPE</label>\
-        <select onchange='changeChart(this)' class='col-md-8 custom-select' name='chartType__"+newId+"' id='chartType__"+newId+"'>\
+    var chartType = "<section class='row'>\
+        <label class='col-md-3'>CHART TYPE</label>\
+        <select onchange='changeChart(this)' class='col-md-8 custom-select' name='chartType__"+newIndex+"' id='chartType__"+newIndex+"'>\
             <option value='None'>Select a chart type</option>\
             <option value='bar'>Bar Chart</option>\
             <option value='pie'>Pie Chart</option>\
@@ -104,75 +119,140 @@ function addVisualization(visualizationType) {
         </select>\
     </section>";
 
-    var yasqeField = "<section class='row'>\
+    var chartYasqeField = "<section class='row'>\
         <label class='col-md-3'>QUERY<br><span class='comment'>set a SPARQL query to retrieve data (two variables required)</span></label>\
         <section class='col-md-8 align-self-start'>\
-            <div id='yasqe-"+newId+"' class='col-md-12 charts-yasqe'></div>\
+            <div id='yasqe-"+newIndex+"' class='col-md-12 charts-yasqe'></div>\
         </section>\
     </section>";
 
     var chartLegend = "<section class='row'>\
-        <label class='left col-md-11 col-sm-6' for='legend__"+newId+"'>Show legend</label>\
-        <input type='checkbox' id='legend__"+newId+"' name='legend__"+newId+"'>\
+        <label class='left col-md-11 col-sm-6' for='legend__"+newIndex+"'>Show legend</label>\
+        <input type='checkbox' id='legend__"+newIndex+"' name='legend__"+newIndex+"'>\
     </section>";
 
-    var fieldButtons = "<a href='#' class='up'><i class='fas fa-arrow-up'></i></a> <a href='#' class='down'><i class='fas fa-arrow-down'></i></a><a href='#' class='trash'><i class='far fa-trash-alt'></i></a>"
+    var mapType = "<section class='row'>\
+        <label class='col-md-3'>MAP TYPE</label>\
+        <select onchange='changeMapType(this)' class='col-md-8 custom-select' name='mapType__"+newIndex+"' id='mapType__"+newIndex+"'>\
+            <option value='None'>Select a map type</option>\
+            <option value='common-map'>Simple Map</option>\
+            <option value='drilldown-map'>Drill-down Map</option>\
+        </select>\
+    </section>";
+
+    var mapYasqeField = "<section class='row'>\
+        <label class='col-md-3'>QUERY<br><span class='comment'>set a SPARQL query to retrieve data, where locations can be represented either as GeoNames entities or as latitude-longitude pairs</span></label>\
+        <section class='col-md-8 align-self-start'>\
+            <div id='yasqe-"+newIndex+"' class='col-md-12 charts-yasqe'></div>\
+        </section>\
+    </section>";
+
+    var fieldButtons = "<a href='#' class='up'><i class='fas fa-arrow-up'></i></a> <a href='#' class='down'><i class='fas fa-arrow-down'></i></a> <a href='#' class='preview'><i class='fas fa-eye'></i></a> <a href='#' class='trash'><i class='far fa-trash-alt'></i></a>"
 
     // add Type related fields
     if (visualizationType === "counter") {
         newFieldBlock += countersLits ;
     } else if (visualizationType === "chart") {
-        newFieldBlock += chartType + yasqeField + chartLegend ;
+        newFieldBlock += chartType + chartYasqeField + chartLegend ;
     } else if (visualizationType === "map") {
-        
+        newFieldBlock += mapType + mapYasqeField ;
     }
     
     newFieldBlock += fieldButtons + "</section>"
     // add the new block
     lastVisualization.after($(newFieldBlock));
-    $("#type__"+newId+" > option[value='"+visualizationType+"']").attr("selected","selected");
+    generateYASQE("yasqe-"+newIndex);
+
+    if (changeIndex === null) {
+        updateindex();
+        moveUpAndDown();
+    }
     
-    generateYASQE("yasqe-"+newId);
-    
+    $(".trash").click(function(e){
+        e.preventDefault();
+        $(this).parent().remove();
+    });
 }
 
-
+// change visualization type
 function changeVisualization(select) {
+    var newViz = $(select).val();
+    var currentIndex = $(select).closest(".block_field").data("index");
+    
+    addVisualization(newViz, currentIndex); // create a new viz block
+    const newVizBlock = $(".sortable .block_field:last-child");
+    const oldVizBlock = $(select).closest(".block_field");
 
+    // check if required values have already been provided within the original viz block
+    newVizBlock.find("input, select, textarea, .charts-yasqe").each(function() {
+        var existingValues = oldVizBlock.find("[id*='__"+$(this).attr("id")+"']");
+        if (existingValues.length > 0 && $(this).attr("id") !== undefined) {
+            $(this).closest("section.row").replaceWith(existingValues.eq(0).closest("section.row"));
+        }
+    });
+
+    // check the comment to the SPARQL input
+    const commentSpan = newVizBlock.find(".charts-yasqe").closest(".row").find(".comment");
+    if (newViz === "chart") { commentSpan.text("set a SPARQL query to retrieve data (two variables required)") }
+    else if (newViz === "map") { commentSpan.text("set a SPARQL query to retrieve data, where locations can be represented either as GeoNames entities or as latitude-longitude pairs") }
+
+    // move the new block to right position
+    oldVizBlock.replaceWith(newVizBlock);
+    updateindex();
+    moveUpAndDown();
 } 
 
 /* CHARTS */
 function changeChart(select) {
-    var chartAxes = "<section class='row'>\
-        <label class='col-md-3'>X-AXIS<br><span class='comment'>set the SPARQL variable to be shown in the X-Axis</span></label>\
-        <section class='col-md-3'>\
-            <label class='inner-label'>SPARQL variable</label>\
-            <input type='text' id='x-var__$id' name='x-var__$id' value='$chart['x-axis'].split(',',1)[0]'/>\
+    var value = $(select).val();
+    var index = $(select).attr("name").split("chartType__")[1];
+    let newClass, firstVar, secondVar;
+    if (value === "bar") {
+        newClass = "chart-axes";
+        firstVar = '<label class="col-md-3">X-AXIS<br><span class="comment">set the SPARQL variable to be shown in the X-Axis</span></label>';
+        secondVar = '<label class="col-md-3">Y-AXIS<br><span class="comment">set the SPARQL variable to be shown in the Y-Axis</span></label>'
+    } else if (["donut", "pie", "semi-circle"].includes(value)) {
+        newClass = "chart-variables";
+        firstVar = '<label class="col-md-3">1st VARIABLE<br><span class="comment">set a SPARQL variable</span></label>';
+        secondVar = '<label class="col-md-3">2nd VARIABLE<br><span class="comment">set a SPARQL variable</span></label>';
+    } else {
+        newClass = null; firstVar = null; secondVar = null;
+    }
+
+    // remove existing fields then add new ones
+    $(select).closest("section.block_field").find(".chart-axes, .chart-variables").remove();
+    if (newClass !== null) {
+        var chartAxes = "<section class='row "+newClass+"'>"+firstVar+"\
+            <section class='col-md-3'>\
+                <label class='inner-label'>SPARQL variable</label>\
+                <input type='text' id='x-var__"+index+"' name='x-var__"+index+"'/>\
+            </section>\
+            <section class='col-md-3'>\
+                <label class='inner-label'>Display name</label>\
+                <input type='text' id='x-name__"+index+"' name='x-name__"+index+"'/>\
+            </section>\
+            <section class='col-md-2 center-checkbox'>\
+                <label class='inner-label'>Sort by</label>\
+                <input type='checkbox' id='x-sort__"+index+"' name='x-sort__"+index+"' onclick='sortChart('"+index+"')'/>\
+            </section>\
         </section>\
-        <section class='col-md-3'>\
-            <label class='inner-label'>Display name</label>\
-            <input type='text' id='x-name__$id' name='x-name__$id' value='$chart['x-axis'].split(',',1)[1]'/>\
-        </section>\
-        <section class='col-md-2 center-checkbox'>\
-            <label class='inner-label'>Sort by</label>\
-            <input type='checkbox' id='x-sort__$id' name='x-sort__$id' onclick='sortChart('$id')'/>\
-        </section>\
-    </section>\
-    <section class='row'>\
-        <label class='col-md-3'>Y-AXIS<br><span class='comment'>set the SPARQL variable to be shown in the Y-Axis</span></label>\
-        <section class='col-md-3'>\
-            <label class='inner-label'>SPARQL variable</label>\
-            <input type='text' id='y-var__$id' name='y-var__$id' value='$chart['y-axis'].split(',',1)[0]'/>\
-        </section>\
-        <section class='col-md-3'>\
-            <label class='inner-label'>Display name</label>\
-            <input type='text' id='y-name__$id' name='y-name__$id' value='$chart['y-axis'].split(',',1)[1]'/>\
-        </section>\
-        <section class='col-md-2 center-checkbox'>\
-            <label class='inner-label'>Sort by</label>\
-            <input type='checkbox' id='y-sort__$id' name='y-sort__$id' onclick='sortChart('$id')'/>\
-        </section>\
-    </section>"
+        <section class='row "+newClass+"'>"+secondVar+"\
+            <section class='col-md-3'>\
+                <label class='inner-label'>SPARQL variable</label>\
+                <input type='text' id='y-var__"+index+"' name='y-var__"+index+"'/>\
+            </section>\
+            <section class='col-md-3'>\
+                <label class='inner-label'>Display name</label>\
+                <input type='text' id='y-name__"+index+"' name='y-name__"+index+"'/>\
+            </section>\
+            <section class='col-md-2 center-checkbox'>\
+                <label class='inner-label'>Sort by</label>\
+                <input type='checkbox' id='y-sort__"+index+"' name='y-sort__"+index+"' onclick='sortChart('"+index+"')'/>\
+            </section>\
+        </section>";
+
+        $(select).closest("section.row").next().after(chartAxes); // add new configuration input fields
+    }
 }
 
 function sortChart(element, fieldId) {
@@ -241,7 +321,7 @@ function saveCounter(element,fieldId,modify=false) {
     $('html, body').animate({
         scrollTop: itemsList.offset().top - 100
     }, 800);
-} 
+}
 
 function modifyCounter(element) {
     // retrieve counter's data

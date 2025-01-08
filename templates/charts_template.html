@@ -84,7 +84,7 @@ $var main_lang = main_lang
                                     </script>
                                     <!-- QUERY -->
                                     <section class="row">
-                                        <label class="col-md-3">QUERY<br><span class="comment">set a SPARQL query to retrieve data (two variables required)</span></label>
+                                        <label class="col-md-3">QUERY<br><span class="comment">set a SPARQL query to retrieve data, where locations can be represented either as GeoNames entities or as latitude-longitude pairs</span></label>
                                         <section class="col-md-8 align-self-start">
                                             <div id="yasqe-$id" class="col-md-12 charts-yasqe"></div>
                                         </section>
@@ -223,17 +223,20 @@ $var main_lang = main_lang
         <p>You can create your charts template for data visualization in few easy steps! Select the visualization type you prefer and provide some information to shape your data.<br>Thanks to the preview function, you can check your visualizations in advance. Additionally, you can customize your captions by using HTML tags (e.g.:<code>&lt;a href=""&gt;&lt;/a&gt;</code> for links).</p>
 		<h5>Counter</h5>
         <p>Enter one or multiple SPARQL queries to retrieve counts of key entities within the Knowledge Graph. Each counter will include a label along with the total number of items retrieved by the query.</p>
-        <h5>Charts</h5>
+        <p><em>Suggestion:</em> to retrieve the desired counter value, assign the name <code>?count</code> to your SPARQL variable.</p>
+        <h5>Chart</h5>
         <p>customize your data by choosing your preferred visualization. Multiple solutions are available, each of them including optional features, such as a legend and value sorting:</p>
         <p><code>Bar Chart</code>: display your data in a bar chart format. Provide a query to retrieve a categorical variable and a quantitative one. You can assign each variable to either the X-axis or Y-axis. Results can also be sorted based on the values of an axis.</p>
         <p><code>Pie Chart</code>: showcase your data in a pie chart. Provide a query to obtain a categorical variable, representing the labels and the counts of each slices, and a quantitative variable to determine slice sizes.</p>
         <p><code>Donut Chart</code>: visualize your data with a donut chart. Like the pie chart, use a SPARQL query to retrieve a categorical variable for slice labels and counts, and a quantitative variable for slice sizes. The donut's central radius is fixed by default.</p>
         <p><code>Semi-circle Chart</code>: similar to a donut chart, a semi-circle chart represents data in a half-circle format, displaying values within a semi-circular arc. Use a query to retrieve a categorical variable for slice labels and counts, along with a quantitative variable for slice sizes.</p>
+        <p><em>Suggestion:</em> assign the names <code>?label</code> and <code>?count</code> to your SPARQL variables to distinguish between retrieving categorical values and quantitative values.</p>
         <h5>Map</h5>
         <p>Maps allow displaying data points distribution and locations.</p>
         <p><code>Map</code>: the basic map option displays data point on a map independently of their counts. A SPARQL query must be provided to retrieve a set of locations and their labels. Multiple occurrences will be ignored, as this map type does not support quantitative data. Use your query to either retrieve geonames entities or coordinates</p>  
         <p><code>Drill-down Map</code>: this advanced option supports quantitative analysis for locations. Use a SPARQL query to retrieve geographical coordinates (latitude and longitude) or geonames locations, enabling detailed exploration of data points by location.</p>
-	</section>
+        <p><em>Suggestion:</em> you can retrieve geographical locations either as GeoNames URIs (using <code>?geonames</code>) or as latitude-longitude pairs (using <code>?lat</code> and <code>?long</code>). Corresponding labels (<code>?label</code>) are mandatory, while the number of occurrences (<code>?count</code>) is only required for Drill-down Maps.</p>
+    </section>
     <section style="display:none; width:90vw; position:absolute; height: 70vh; overflow:scroll; z-index: 3000;">
         <iframe src="/charts" style="width: 100vw;overflow: scroll;height: 100%;"></iframe>
     </section>

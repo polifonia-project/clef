@@ -1305,7 +1305,6 @@ class Nlp(object):
 		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
 
 		query_string = web.input()
-		print(query_string)
 		try:
 			query_str_decoded = query_string.q.decode('utf-8').strip()
 		except Exception as e:
@@ -1330,8 +1329,6 @@ class Sparqlanything(object):
 		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
 
 		query_string = web.input()
-		print(query_string)
-
 		try:
 			query_str_decoded = query_string.q.decode('utf-8').strip()
 		except Exception as e:
@@ -1396,8 +1393,16 @@ class Charts(object):
 		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
 
 		is_git_auth = github_sync.is_git_auth()
-		with open(conf.charts) as chart_file:
-			charts = json.load(chart_file)
+		query_viz = web.input()
+		viz = {urllib.parse.unquote(k): urllib.parse.unquote(v) for k, v in query_viz.items()}
+		if "action" in query_viz:
+			try:
+				charts = u.charts_to_json(conf.charts, viz, False)
+			except Exception as e:
+				charts = {}
+		else:
+			with open(conf.charts) as chart_file:
+				charts = json.load(chart_file)
 		
 		for chart in charts["charts"]:
 			if chart["type"] == "counter":

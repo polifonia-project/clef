@@ -650,7 +650,7 @@ def get_query_templates(res_tpl):
 
 
 # CHARTS CONFIG
-def charts_to_json(charts_file, data):
+def charts_to_json(charts_file, data, update_json=True):
 
 	# initialize a blank list of dictionaries
 	charts = {"charts": []}
@@ -667,7 +667,6 @@ def charts_to_json(charts_file, data):
 	
 	for idx,params in list_dicts.items():
 		# counters
-		print([viz for viz in params if viz.startswith("counter")])
 		counters = [{
 			"id": str(idx)+"__"+viz+"__"+str(idx),
 			"query": params[viz],
@@ -690,8 +689,12 @@ def charts_to_json(charts_file, data):
 	ordlist = [d for k,d in ordict.items()]
 	charts["charts"] = ordlist
 
-	with open(charts_file, 'w') as fout:
-		fout.write(json.dumps(charts, indent=4))
+	# save json
+	if update_json:
+		with open(charts_file, 'w') as fout:
+			fout.write(json.dumps(charts, indent=4))
+	else:
+		return charts 
 
 def delete_charts(charts_file):
 	with open(charts_file, 'w') as fout:

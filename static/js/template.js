@@ -133,7 +133,6 @@ function add_field(field, res_type, backend_file=null) {
     var is_subclass_active = Object.keys(subclasses).length === 0 ? false : true; 
     var contents = "";
     var temp_id = Date.now().toString(); // to be replaced with label id before submitting
-    console.log(temp_id)
 
     var field_type = "<section class='row'>\
         <label class='col-md-3'>FIELD TYPE</label>\
@@ -370,7 +369,7 @@ function change_fields(sel) {
         console.log(index, label);
         if (index !== -1 && index !== 0) {
             // N.B.: index = -1 means that an input field included in the original field form is not included in the new one.
-            // N.B.: index = 0 refers to the <select> element to change the field. If included it would show the previous field value.
+            // N.B.: index = 0 refers to the <select> element for changing field type. If included it would show the previous field value.
             const replacementSection = previous_field_sections.eq(index).clone();
             $(this).replaceWith(replacementSection);
         } else {
@@ -455,7 +454,7 @@ function add_disambiguate(temp_id, el) {
         $("input[id*='browse__"+temp_id+"']").parent().remove();
         $("section[id*='addons__"+temp_id+"']").after(field_browse);
         updateindex();
-        moveUpAndDown() ;
+        moveUpAndDown();
     }
   
 };

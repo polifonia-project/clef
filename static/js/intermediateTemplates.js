@@ -146,9 +146,10 @@ function createSubrecord(subtemplateFieldId,label,el,dataReuse=false,subrecordId
 
                     // language list section
                     var languageListSection = literalInput.prev().empty();
-                    var languageItem = $('<a class="lang-item selected-lang" title="text language: '+mainLang.toUpperCase()+'"\
+                    var languageItem = $('<a class="lang-item selected-lang main-lang" title="text language: '+mainLang.toUpperCase()+'"\
                         onclick="show_lang(\''+newLiteralInputId+'\')">'+mainLang.toUpperCase()+'</a>');
                     languageListSection.append(languageItem);
+                    languageListSection.attr("id",languageListSection.attr("id")+"_"+subrecordId.toString());
 
                     // main lang hidden input
                     if (cloneElement.find('input.disambiguate')) {

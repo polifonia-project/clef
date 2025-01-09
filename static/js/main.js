@@ -604,7 +604,7 @@ function languageForm(el) {
     var field_id = input.attr('id');
 
     // set a variable to modify the subrecord's list of fields in case the textbox is part of a subtemplate
-    var subform = $('#'+field_id).data('subform');
+    var subform = input.data('subform');
     var modify_subform = subform ? subform : null
     
 
@@ -613,8 +613,7 @@ function languageForm(el) {
     const add_language = $('<section class="form_row"><label>Add another language:</label><input type="textbox" class="custom-select" placeholder="Select a new language" onclick="activateFilter(this)"><div class="language-options"></input></div></section>')
     const main_lang = $('<section class="form_row"><label>Set this field primary language:</label><select class="custom-select"></select></section>');
     main_lang.find('select').on('change', function() {changeMainLang(this,modify_subform)});
-    const remove_lang = $('<section class="form_row"><label>Remove current language: </label> <i class="far fa-trash-alt" onclick="removeCurrentLanguage(this,'+modify_subform+')"></i></section>');
-    remove_lang.on('click', function() {remove_lang(this,modify_subform)});
+    const remove_lang = $('<section class="form_row"><label>Remove current language: </label> <i class="far fa-trash-alt" onclick="removeCurrentLanguage(this,\''+modify_subform+'\')"></i></section>');
     $.ajax({
       type: 'GET',
       url: "https://raw.githubusercontent.com/mattcg/language-subtag-registry/master/data/json/registry.json",
@@ -631,11 +630,12 @@ function languageForm(el) {
               // prepare the 'Change Language' and 'Add Language' options
               var change_select = $("<a href='#"+tag+"' lang='"+lang+"'>"+lang+" ("+tag+")</a>");
               var add_select = $("<a href='#"+tag+"' lang='"+lang+"'>"+lang+" ("+tag+")</a>");
-              change_select.on("click", function() {
+              change_select.on("click", function(e) {
+                e.preventDefault();
                 changeCurrentLanguage(this,modify_subform);
               });
-              add_select.on("click", function() {
-                console.log(modify_subform)
+              add_select.on("click", function(e) {
+                e.preventDefault();
                 addNewLanguage(this,modify_subform)
               });
               if (tag === current_lang) {
@@ -698,116 +698,135 @@ function activateFilter(el){
 }
 
 function addNewLanguage(el,record) {
-  console.log(record)
-  var new_lang = $(el).attr('href').replace("#","");
-  var last_lang_id = $(el).parent().parent().parent().attr('data-input');
-  const new_lang_input = $('#'+last_lang_id).clone();
-  var new_lang_input_id = last_lang_id.split('_')[0] + "_" + new_lang;
-  if (record) {new_lang_input_id += '_' + record}
-  $('#languages-'+last_lang_id.split('_')[0]).find('.selected-lang').removeClass('selected-lang');
-  $('#languages-'+last_lang_id.split('_')[0]).append("<a class='lang-item selected-lang' title='text language: "+new_lang.toUpperCase()+"' onclick='show_lang(\""+new_lang_input_id+"\")'>"+new_lang.toUpperCase()+"</a>");
+  var newLang = $(el).attr('href').replace("#",""); // selected lang
+  var lastLangInputId = $("#lang-form").data("input"); // last language input id
+  var inputBaseId = lastLangInputId.split('_')[0]; // base id of the input field
+
+  const newLangInput = $('#'+lastLangInputId).clone();
+  var newLangInputId = inputBaseId + "_" + newLang;
+  var languagesDivId = '#languages-'+inputBaseId;
+  if (record) {newLangInputId += '_' + record; languagesDivId += '_' + record} // subrecord only
+  $(languagesDivId).find('.selected-lang').removeClass('selected-lang');
+  $(languagesDivId).append("<a class='lang-item selected-lang' title='text language: "+newLang.toUpperCase()+"' onclick='show_lang(\""+newLangInputId+"\")'>"+newLang.toUpperCase()+"</a>");
   
-  new_lang_input.attr('id', new_lang_input_id);
-  new_lang_input.attr('name', new_lang_input_id);
-  new_lang_input.attr('lang', new_lang);
-  new_lang_input.val('');
-  if (new_lang_input.is('textarea')) {
-    new_lang_input.on('click', function() {
-        nlpText(new_lang_input_id);
+  newLangInput.attr('id', newLangInputId);
+  newLangInput.attr('name', newLangInputId);
+  newLangInput.attr('lang', newLang);
+  newLangInput.val('');
+  if (newLangInput.is('textarea')) {
+    newLangInput.on('click', function() {
+        nlpText(newLangInputId);
     });
   }
 
-  $('[id^="'+last_lang_id.split('_')[0]+'"]').hide(); 
-  $('#'+last_lang_id).after(new_lang_input);
-  $(el).parent().parent().parent().remove();
+  $('#'+lastLangInputId).hide(); 
+  $('#'+lastLangInputId).after(newLangInput);
+  $("#lang-form").remove();
 }
 
 function changeCurrentLanguage(el,record) {
-  var new_lang = $(el).attr('href').replace("#","");
-  var id = $(el).parent().parent().parent().attr('data-input');
-  var current_lang = $('#languages-'+id.split('_')[0]).find('.selected-lang').eq(0);
-  var current_lang_field_id =  id.split('_')[0] +"_"+current_lang.text().toLowerCase();
-  if (current_lang.text().toLowerCase() !== new_lang) {
-    var new_id = id.split('_')[0] + '_'  + new_lang;
-    if (record) {
-      new_id += '_' + record;
-      current_lang_field_id += '_' + record;
-      console.log(current_lang_field_id)
-    }
-    var title = 'text language: '+new_lang.toUpperCase();
-    current_lang.attr('title',title);
-    current_lang.attr('onclick','show_lang("'+new_id+'")');
-    current_lang.text(new_lang.toUpperCase());
-    $('#'+current_lang_field_id).attr('name',new_id);
-    $('#'+current_lang_field_id).attr('id',new_id);
-    $('#'+new_id).attr('lang',new_lang);
-    $(el).parent().parent().parent().remove();
+  var newLang = $(el).attr('href').replace("#",""); // selected new lang
+  var lastLangInputId = $("#lang-form").data("input"); // last language input id
+  var inputBaseId = lastLangInputId.split('_')[0]; // base id of the input field
+  
+  let languagesDivId = '#languages-'+inputBaseId; 
+  let newLangInputId = inputBaseId + "_" + newLang; // set the new id based on the selected language
+  if (record) {newLangInputId += '_' + record; languagesDivId += '_' + record} // subrecord only
+  var currentLangTag = $(languagesDivId).find('.selected-lang').eq(0);
+
+  if (currentLangTag.text().toLowerCase() !== newLang) {
+    var title = 'text language: '+newLang.toUpperCase();
+    currentLangTag.attr('title',title);
+    currentLangTag.attr('onclick','show_lang("'+newLangInputId+'")');
+    currentLangTag.text(newLang.toUpperCase());
+    $('#'+lastLangInputId).attr('name',newLangInputId);
+    $('#'+lastLangInputId).attr('id',newLangInputId);
+    $('#'+newLangInputId).attr('lang',newLang);
+    $("#lang-form").remove();
 
     // check whether this value is the primary key of a subrecord 
-    $('[value*="'+id+'"]').each(function() {
-      var new_value = $(this).val().replace(id,new_id);
-      $(this).val(new_value);
+    $('[value*="'+lastLangInputId+'"]').each(function() {
+      var newValue = $(this).val().replace(lastLangId,newLangInputId);
+      $(this).val(newValue);
     });
   } 
-  if (current_lang.hasClass('main-lang')) {
-    var main_lang_id = '#'+id.split('_')[0]+'_mainLang';
-    if (record) {
-      main_lang_id += '_' + record;
-    }
-    $(main_lang_id).val(new_lang);
+  if (currentLangTag.hasClass('main-lang')) {
+    let mainLangInputId = '#'+inputBaseId+'_mainLang';
+    if (record) { mainLangInputId += '_' + record; }
+    $(mainLangInputId).val(newLang);
   }
-
   
 }
 
 function changeMainLang(el,record) {
   var langForm = $(el).closest("#lang-form");
-  var id = langForm.data("input");
-  let baseId = id.split('_')[0];
+  var lastLangInputId = langForm.data("input");
+  let baseId = lastLangInputId.split('_')[0];
   var newMainLang = $(el).val(); // new selected lang
   langForm.remove();
 
   // modify the current main language with the new one
-  $('#languages-'+baseId).find('.main-lang').removeClass('main-lang'); 
-  $('#languages-'+baseId).find('[title="text language: '+newMainLang.toUpperCase()+'"]').addClass('main-lang');
-  var mainLangInputId = '#'+baseId+'_mainLang';
-  if (record) {mainLangInputId+='_'+record}
+  let languagesDivId = '#languages-'+baseId;
+  let mainLangInputId = '#'+baseId+'_mainLang'
+  if (record) { languagesDivId += '_' + record; mainLangInputId+='_'+record; }
+  $(languagesDivId).find('.main-lang').removeClass('main-lang'); 
+  $(languagesDivId).find('[title="text language: '+newMainLang.toUpperCase()+'"]').addClass('main-lang');
   $(mainLangInputId).val(newMainLang);
 }
 
 function removeCurrentLanguage(el,record) {
-  var current_field = $(el).parent().parent().attr('data-input');
-  let baseId = current_field.split('_')[0];
-  var current_lang_tag = $('#languages-'+baseId).find('.selected-lang');
-  if (current_lang_tag.next('a').length > 0) {
-    current_lang_tag.next('a').addClass('selected-lang');
-    var next_lang = current_lang_tag.next('a').text().toLowerCase();
-    current_lang_tag.remove();
-    $('#'+current_field).remove();
-    console.log('#'+baseId+'_'+next_lang)
-    $('#'+baseId+'_'+next_lang).show();
-  } else if (current_lang_tag.prev('a').length > 0) {
-    current_lang_tag.prev('a').addClass('selected-lang');
-    var prev_lang = current_lang_tag.prev('a').text().toLowerCase();
-    current_lang_tag.remove();
-    $('#'+current_field).remove();
-    var show_lang_id = '#'+baseId+'_'+prev_lang;
-    if (record) {show_lang_id+='_'+record}
-    $(show_lang_id).show();
+  var langForm = $(el).closest("#lang-form");
+  var lastLangInputId = langForm.data("input");
+  let baseId = lastLangInputId.split('_')[0];
+  let languagesDivId = '#languages-'+baseId;
+  if (record) { console.log(record); languagesDivId += '_' + record; }
+
+  var currentLangTag = $(languagesDivId).find('.selected-lang'); // get selected lang to remove it
+  console.log(currentLangTag)
+  if (currentLangTag.hasClass("main-lang")) {
+    // cannot change primary language
+    alert('Not allowed. Change primary language, instead');
+  } else if (currentLangTag.next('a').length > 0 && !currentLangTag.hasClass("main-lang")) {
+    // switch to next language then remove current one
+    currentLangTag.next('a').addClass('selected-lang');
+    var nextLang = currentLangTag.next('a').text().toLowerCase();
+    let nextLangInputId = '#'+baseId+'_'+nextLang;
+    if (record) {nextLangInputId+='_'+record} 
+    currentLangTag.remove();
+    $('#'+lastLangInputId).remove();
+    $(nextLangInputId).show();
+  } else if (currentLangTag.prev('a').length > 0 && !currentLangTag.hasClass("main-lang")) {
+    // switch to previous language then remove current one
+    currentLangTag.prev('a').addClass('selected-lang');
+    var prevLang = currentLangTag.prev('a').text().toLowerCase();
+    let prevLangInputId = '#'+baseId+'_'+prevLang;
+    if (record) {prevLangInputId+='_'+record} 
+    currentLangTag.remove();
+    $('#'+lastLangInputId).remove();
+    $(prevLangInputId).show();
   } else {
     alert('Not allowed. Change current language, instead');
   }
-  $('[data-input="'+current_field+'"]').remove();
+
+  // close form
+  langForm.remove();
 }
 
-function show_lang(field_id) {
-  let baseId = field_id.split('_')[0];
-  $('[id^="'+baseId+'_"]').hide();
-  $('#'+field_id).show();
-  var target_lang = field_id.split('_')[1];
-  $('#languages-'+baseId).find('.selected-lang').removeClass('selected-lang');
-  console.log('[title="text language: '+target_lang.toUpperCase()+'"]')
-  $('#languages-'+baseId).find('[title="text language: '+target_lang.toUpperCase()+'"]').addClass('selected-lang')
+function show_lang(fieldId) {
+  let baseId = fieldId.split('_')[0];
+  let subrecordId = fieldId.split('_').length === 3 ? fieldId.split('_')[2] : "";
+  var languagesDivId = subrecordId === "" ? '#languages-'+baseId : '#languages-'+baseId+'_'+subrecordId;
+  $('[id^="'+baseId+'_"]').each(function() {
+    if (subrecordId !== "" && $(this).attr("id").endsWith(subrecordId)) {
+      $(this).hide();      
+    } else if (subrecordId === "" && $(this).attr("id").split("_").length === 2) {
+      $(this).hide();      
+    }
+  });
+  $('#'+fieldId).show();
+  var targetLang = fieldId.split('_')[1];
+  $(languagesDivId).find('.selected-lang').removeClass('selected-lang');
+  $(languagesDivId).find('[title="text language: '+targetLang.toUpperCase()+'"]').addClass('selected-lang');
 }
 
 /////////////////////////
@@ -941,7 +960,7 @@ function addTemplate(subtemplate=null) {
   $("#selectTemplateClassModal").toggleClass('open-modal');
   $('body').append($("<div class='modal-bg'>"));
 
-  // check class_name 
+  // check class_name
   $("#selectTemplateClass [name='class_name']").on('click', function() {
     // show error message in case a name is already in use
     var templatesNames = templatesObject.map(obj => obj.name.toLowerCase());

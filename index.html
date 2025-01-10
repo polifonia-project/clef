@@ -120,9 +120,10 @@
         <h5>Setup</h5>
         <h6 id="setup">Default setup</h6>
         <p>You can modify the default configuration of the application from the Member area > Setup. Changes to the configuration have immediate effect (no need to restart the application). </p>
-        <img style="max-width:100%;" src="docs/2setup.png" alt="">
+        <img style="max-width:100%;" src="docs/3setup.png" alt="">
         <p>What you can modify:</p>
         <p><strong>PROJECT (SHORT) NAME:</strong> Personalise the project name and the payoff, which appear in the homepage and the menu across pages.</p>
+        <p><strong>MAIN LANGUAGE:</strong> The default language used to display cataloged data.</p>
         <p><strong>MY ENDPOINT:</strong> The local SPARQL endpoint runs on port 3000. Changes are disabled. To modify the default port you'll have to modify the following files:</p>
         <ul>
           <li>change <code>myEndpoint</code> in <code>conf.py</code>, in the root folder of the application.</li>
@@ -185,21 +186,21 @@
         <p>Templates are interfaces designed to setup the web forms for data collection. Each template corresponds to a topic of interest to be described (an entity). Templates can be created, modified, and deleted from the Member area. </p>
         <h6>Resource templates</h6>
         <section class='row'>
-          <section class='col-md-4 col-sm-4'>
-            <img src="docs/2createtemplate.png" style='max-width:100%;' alt="">
+          <section class='col-md-5 col-sm-5'>
+            <img src="docs/3createtemplate.png" style='max-width:100%;' alt="">
           </section>
-          <p class='col-md-7 col-sm-7'>To create a new template, click on <strong>Create a new template</strong> in the Member area.
+          <p class='col-md-6 col-sm-6'>To create a new template, click on <strong>Create a new template</strong> in the Member area.
             First, you must provide a meaningful unique name (e.g. <code>Book</code>, <code>Person</code>) and the URI of a OWL class (e.g. <code>http://xmlns.com/foaf/spec/#term_Person</code>). Notice that <span class='red'>name and class cannot be modified</span>
             in later stages (you can only delete and start a new template). </p>
 
         </section>
         <p>Once filled in name and class, you are redirected to a dedicated webpage for customizing the template.
           Templates are lists of fields, each corresponding to a RDF property having as a subject an instance of the class already specified.</p>
-        <img src="docs/2createtpl.png" style="max-width:100%;" alt="">
-        <p>You can create new fields choosing between: textboxes (short texts), text areas (long texts), dropdown (select 1 term from list), and checkbox (multiple terms from list). </p>
+        <img src="docs/3createtpl.png" style="max-width:100%;" alt="">
+        <p>You can create new fields choosing between: textbox (short texts), text area (long texts), dropdown (select 1 term from list), checkbox-(multiple terms from list), date (date values), multimedia (embed multimedia files), vocabulary (controlled terms from taxonomies and SKOS thesauri), website preview (embed iframes), knowledge extraction (retrieve key entities from multiple sources), subclass (ontological subclasses via checkboxes), and subtemplate (a subform with additional fields from another Template).</p>
         <section class='row'>
           <section class='col-md-7 col-sm-7'>
-            <img src="docs/2textbox.png" style='max-width:100%;' alt="">
+            <img src="docs/3textbox.png" style='max-width:100%;' alt="">
           </section>
           <p class='col-md-4 col-sm-4'>For each new field you are asked to fill in a few details, like: display name (to be shown in the final web form for data entry), a description (that will appear next to the field), the RDF property associated to the field, values type or list (see below), and placeholder (an example value of the field). </p>
           </section>
@@ -218,7 +219,7 @@
         <p>A text area can include a long textual description. </p>
         <section class='row'>
           <section class='col-md-7 col-sm-7'>
-            <img src="docs/2textarea.png" style='max-width:100%;' alt="">
+            <img src="docs/3textarea.png" style='max-width:100%;' alt="">
           </section>
           <p class='col-md-5 col-sm-5'>In this field you can automatically extract Named Entities (powered by <a href="https://spacy.io/">SpaCy</a>). After filling in the field, press return and wait for suggestions to appear at the bottom of the text area. Suggested entities (people, places, organisations, etc.) are matched to Wikidata entities and are stored as <strong>keywords</strong> associated to the record (<code>schema:keywords</code>) - not as values of the field. You can accept or reject suggestions.</p>
         </section>
@@ -226,7 +227,7 @@
         <p>Dropdown and checkboxes behave similarly. These allow the final user to choose one or more terms from a list of controlled values. Specifically, dropdowns restrict the selection to one term from the list, while checkboxes allow multiple choice selections.</p>
         <section class='row'>
           <section class='col-md-7 col-sm-7'>
-            <img src="docs/2checkbox.png" style='max-width:100%;' alt="">
+            <img src="docs/3checkbox.png" style='max-width:100%;' alt="">
           </section>
           <p class='col-md-5 col-sm-5'>In the field <strong>VALUES</strong> you must provide a comma-separated list of terms to fill in the final list in dropdown or checkbox. List of terms are URIs associated with a label. Both internal and external vocabularies can be used (and mixed). In each line, write the URI of a resource, followed by comma and the label.</p>
         </section>
@@ -234,7 +235,7 @@
         <p>Date fields allow the final user to insert a date in a predefined format.</p>
         <section class='row'>
           <section class='col-md-7 col-sm-7'>
-            <img src="docs/2date.png" style='max-width:100%;' alt="">
+            <img src="docs/3date.png" style='max-width:100%;' alt="">
           </section>
           <p class='col-md-5 col-sm-5'>Specifically, the format must be chosen among the available options in the field <strong>CALENDAR</strong>, which include: YYYY/MM/DD (Full Date: <code>xsd:gDate</code>), YYYY/MM (Month and Year: <code>xsd:gYearMonth</code>), YYYY (Year: <code>xsd:gYear</code>). The first two formats will be displayed as a calendar input, while the last one will function as a textbox, generating a dropdown of suggestions based on user input.</p>
         </section>
@@ -242,7 +243,7 @@
         <p>The Multimedia and Website preview fields operate similarly, enabling end users to insert links to external resources: Image, Audio and Video for the former, Webpages for the latter. A preview of the chosen resources will be displayed in the final record.</p>
         <section class='row'>
           <section class='col-md-7 col-sm-7'>
-            <img src="docs/2multimedia.png" style='max-width:100%;' alt="">
+            <img src="docs/3multimedia.png" style='max-width:100%;' alt="">
           </section>
           <p class='col-md-5 col-sm-5'>Multimedia fields have an extra parameter, <strong>MULTIMEDIA TYPE</strong>, which permits the selection of the desired type of multimedia resource, namely: Image (".jpg", ".jpeg", ".png", ".gif", ".ico", ".svg", etc.), Audio (".mp3", ".wav", ".ogg"), Video (".mp4", ".ogg", ".webm"), or All (including all the formats mentioned before). </p>
         </section>
@@ -250,22 +251,38 @@
         <p>A Vocabulary field behaves similarly to Entity URI (Text Box), i.e. suggestions are provided while typing. In this case, suggestions are terms gathered from available SKOS vocabularies.</p>
         <section class='row'>
           <section class='col-md-7 col-sm-7'>
-            <img src="docs/2vocabulary.png" style='max-width:100%;' alt="">
+            <img src="docs/3vocabulary.png" style='max-width:100%;' alt="">
           </section>
           <p class='col-md-5 col-sm-5'>A collection of predefined SKOS vocabularies is already available (<strong>VOCABULARIES LIST</strong>), which include <a href="https://vocabs.dariah.eu/tadirah/en/">TaDiRAH</a>, <a href="https://op.europa.eu/en/web/eu-vocabularies/dataset/-/resource?uri=http://publications.europa.eu/resource/dataset/data-theme">Data theme</a>, <a href="https://op.europa.eu/en/web/eu-vocabularies/dataset/-/resource?uri=http://publications.europa.eu/resource/dataset/file-type">File type</a>, <a href="https://op.europa.eu/en/web/eu-vocabularies/dataset/-/resource?uri=http://publications.europa.eu/resource/dataset/access-right">Access right</a>, <a href="https://op.europa.eu/en/web/eu-vocabularies/concept-scheme/-/resource?uri=http://publications.europa.eu/resource/authority/language">Language</a>, <a href="https://schema.gov.it/lodview/controlled-vocabulary/licences">Licenses</a>, <a href="https://op.europa.eu/en/web/eu-vocabularies/dataset/-/resource?uri=http://publications.europa.eu/resource/dataset/frequency">Frequency</a>. Still, you can add a new vocabulary by clicking on the <span class='red'>ADD A NEW VOCABULARY</span> button. To add a new vocabulary you must provide a label, a link to the vocabulary webpage, a SPARQL endpoint, and a SPARQL query to retrieve terms. The query must return two default variables, i.e. ?uri and ?label, which respectively return the URI and a string label for the term. Once added, the new vocabulary will be saved and made available for later reuse. Additionally, it is possible to specify whether the final user can select more than one term for that particular field (<strong>NUMBER OF TERMS</strong>).</p>
         </section>
         <p><strong>KNOWLEDGE EXTRACTION</strong></p>
-        <p>A Knowledge Extraction field enables automatically extracting key Named Entities (URI-label pairs). To perform this task, users must provide one or more queries to be sent to specific APIs and SPARQL endpoints or to parse Static Files.</p>
+        <p>A Knowledge Extraction field enables automatically extracting key Named Entities (URI-label pairs). To perform this task, users must provide one or more queries to be sent to specific APIs and SPARQL endpoints or to parse Static Files (.csv, .json, and .xml formats are allowed).</p>
         <section class="row">
           <section class="col-md-7 col-sm-7">
-            <img src="docs/2extractor.png" style="max-width: 100%;" alt ="">
+            <img src="docs/3extractor.png" style="max-width: 100%;" alt ="">
           </section>
           <p class='col-md-5 col-sm-5'>Unlike other fields, this prototypical Knowledge Extraction tool does not allow specifying custom parameters. However, a much higher degree of flexibility is provided to Record creators.</p>
+        </section>
+        <p><strong>SUBTEMPLATE</strong></p>
+        <p>Subtemplate fields enable the creation of multiple interconnected Records through a single Web Form. Instead of a standard input field, imported Subtemplates are displayed as nested sub-forms within the main one, removing the need for users to create separate resources and link them manually.</p>
+        <section class="row">
+          <section class="col-md-7 col-sm-7">
+            <img src="docs/3subtemplate.png" style="max-width: 100%;" alt ="">
+          </section>
+          <p class='col-md-5 col-sm-5'>Subtemplate fields can import any Template, including the same Template for which the field is set. New options can be created during configuration, and multiple Templates can be imported at once, giving users flexibility in choosing the best fit. The Cardinality option allows limiting the creation of sub-records to a single instance. Meanwhile, the Data Inheritance option ensures that when the parent Template and the Subtemplate have input fields with the same RDF Property, the Subtemplate field automatically adopts the value chosen for the parent field.</p>
+        </section>
+        <p><strong>SUBCLASS</strong></p>
+        <p>A Subclass field behaves similarly to checkboxes, presenting end-users with a list of values corresponding to ontological classes. Users can select one or more terms that best align with the entity being described. Depending on the chosen values, additional input fields are dynamically displayed, enabling more precise and tailored solutions for Records description and exploration.</p>
+        <section class="row">
+          <section class="col-md-7 col-sm-7">
+            <img src="docs/3subclass.png" style="max-width: 100%;" alt ="">
+          </section>
+          <p class='col-md-5 col-sm-5'>In the field SUBCLASSES you must provide a list of terms to fill in the final list in checkbox. These terms are the URIs of ontological classes, each paired with an associated label. Once at least one Subclass is defined, an additional configuration option becomes available for each field, enabling you to associate any field within the same Template with a specific Subclass.</p>
         </section>
         <h6>Data model</h6>
         <section class='row'>
           <section class='col-md-7 col-sm-7'>
-            <img src="docs/2datamodel.png" style='max-width:100%;' alt="">
+            <img src="docs/3datamodel.png" style='max-width:100%;' alt="">
           </section>
           <p class='col-md-5 col-sm-5'>In CLEF it is not possible to import ontologies and vocabularies. Instead, the data model is created from the classes and properties specified in templates. The final data model is documented in a dedicated web page called <strong>Data Model</strong>, available from the footer of every web page. For each template, class, and property, the <a href="https://lov.linkeddata.es/">LOV</a> catalogue is queried to retrieve original labels associated with the URI. If the class or property is not indexed in LOV, the local label (the display name) is shown instead.</p>
         </section>
@@ -277,6 +294,7 @@
         <ul>
           <li><strong>Homepage</strong> a landing page presenting the project. Title and payoff can be changed from the Setup page. Instead, the page content can be only changed manually by modifying the HTML file <code>templates/login.html</code></li>
           <li><strong>Explore</strong> an automatically generated index of resources. For each template a tab is created for exploring resources of the specified class. Properties selected as filters in their respective templates are here used to create sections for exploration. For each template an alphabetical index is displayed. Other filters (i.e. those having Entity URI, locations, or controlled lists, as values) are shown sorted by distribution (i.e. most recurring values are shown first).</li>
+          <li><strong>Charts</strong> a page entirely dedicated to catalogue exploration through data visualization solutions powered by <a href="https://www.amcharts.com/">amCharts</a>. It offers visual representations of catalogue data, helping users identify patterns, trends, and distributions across resources. Project maintainers can customize this page by combining Maps, Charts, Counters, and textual descriptions to tailor the visualization experience to their needs.</li>
           <li><strong>Member area</strong> the backend of the application. Can be accessed via github authentication or, if not applicable, in anonymous mode. The welcome page shows the list of created records, and the actions possible on those (modify / publish / delete). From here, users can modify the Setup of the application and the form template.</li>
           <li><strong>Add a resource</strong> create a new record in anonymous mode. To create a record with user credentials, access the member area via github authentication first.</li>
         </ul>
@@ -288,7 +306,7 @@
           </ul>
         <p>Moreover, each record has a dedicated webpage, permanently identified by its URI. Likewise, terms from <em>internal</em> controlled vocabularies and new entities referenced in records (e.g. new entities created in Free text fields) have a dedicated webpage. External terms do not have dedicated page. Rather, a link to the source is provided (e.g. Wikidata items)</p>
         <h6>Create a record</h6>
-        <img src="docs/2create.png" style='max-width:100%;' alt="">
+        <img src="docs/3create.png" style='max-width:100%;' alt="">
         <p>Users can create a new record in two modalities: anonymous or authenticated mode.</p>
 
         <ul>
@@ -296,11 +314,11 @@
           <li><strong>Authenticated users</strong> should first access the `Member area` from the menu to authenticate via Github. The user is redirected to Github authentication mask, where they are asked to give CLEF permissions to read/write repositories on their behalf. From the Member area, they can use the button <code>Create a new record</code>. <em>NB. Only users that are collaborators of the organisation and/or repository associated to the project can use this method (see Setup)</em>.</li>
         </ul>
         <p>The first step to create a new record is to select the template for the resource to be created.</p>
-        <img src="docs/2select.png" style='max-width:100%;' alt="">
-        <p>After selecting the template the user is redirected to the data entry interface. The page shows the fields specified in the associated template. On the top-right, a light bulb icon shows a shortcut to the editorial guidelines, including tips for data entry. Click on the icon to toggle the helper.</p>
+        <img src="docs/3select.png" style='max-width:100%;' alt="">
+        <p>After selecting the template the user is redirected to the data entry interface. The page shows the fields specified in the associated template. On the bottom-right, a light bulb icon shows a shortcut to the editorial guidelines, including tips for data entry. Click on the icon to toggle the helper.</p>
         <section class='row'>
           <section class='col-md-7 col-sm-7'>
-            <img src="docs/2new.png" style='max-width:100%;' alt="">
+            <img src="docs/3new.png" style='max-width:100%;' alt="">
           </section>
           <p class='col-md-5 col-sm-5'>Each field includes three elements: label, description (<code>i</code> icon), and input area. A tooltip shows a description of the expected value when hovering with the mouse. Likewise, a placeholder in the input area can show an example value. The input area can be a free-text field, a dropdown, or a checkbox.</p>
         </section>
@@ -308,7 +326,7 @@
         <p><strong>TEXT FIELD</strong></p>
         <p>If the label is followed by <span class='red'>*</span>, the field is mandatory and it is used to associate a title to the record. While typing, a lookup service searches the catalogue to show whether records with a similar title already exist and prevents from data duplication. However, the lookup does not enforce any behaviour (duplicates <em>could</em> be created).</p>
         <p>If followed by the Wikidata icon (a bar code), an autocomplete service is called while typing. The user is encouraged to reuse terms from Wikidata. If no matches with the input text are found in Wikidata, terms from the catalogue are also suggested, to encourage reuse and consistency of data.</p>
-        <img src="docs/autosuggest.png" style='max-width:100%;' alt="">
+        <img src="docs/3autosuggest.png" style='max-width:100%;' alt="">
         <p>To accept a suggestion, click on the link in the result (e.g. <code>Federico Fellini</code>). The selected value appears under the input area (highlighted in violet). Users can reject all suggestions and create a new value: press enter and the new value will appear under the input area (highlighted in orange). Multiple values are allowed in this type of field.</p>
         <p>Text areas allow longer descriptions to be included and can be expanded vertically. </p>
         <section class='row'>
@@ -320,7 +338,7 @@
         <p></p>
         <h6>Manage records</h6>
         <p>Records are accessible via the member area to authenticated users. Records are paginated and sorted by date (from the most recent to the oldest).</p>
-        <img src="docs/2backend.png" style='max-width:100%;' alt="">
+        <img src="docs/3backend.png" style='max-width:100%;' alt="">
         <p>The list of records can be filtered by publication status:</p>
         <ul>
           <li><code>not reviewed</code> correspond to records created and never opened/modified. In the table of records, these records are flagged with <strong>STAGE: not modified</strong></li>
@@ -329,20 +347,47 @@
         </ul>
         <p>In the column <code>ACTIONS</code>, the button <code>modify</code> allows a reviewer to modify a record. When clicking, the template is shown filled in with data, and values can be modified. After saving changes, the reviewer's name (if Gitub authentication is enabled) appears in the backend in the column <code>modified by</code>, and the status of the record changes to <code>modified</code>. Once it is reviewed at least once, the record appears in the Explore page.</p>
         <p><em>NB. Before being reviewed, records do not appear in the Explore page. Records must be reviewed at least once before being published. Once a record has been published it cannot be temporarily removed from the Explore page (e.g. modifying a published record). Rather, the record keeps appearing in the Explore page, and the title is flagged with the label </em><code>draft</code>.</p>
-        <img src="docs/2draft.png" style='max-width:100%;' alt="">
+        <img src="docs/3draft.png" style='max-width:100%;' alt="">
         <p>The button <code>review</code> allows a reviewer to modify a record and, if the review process is deemed over, to publish it straightaway. When modifying the record, the reviewer may decide to save the changes without publishing the record. After publication, the status changes to <code>published</code> and the label <code>draft</code> is removed from the title of published records.</p>
         <p>To remove the record from the Explore page, it must be deleted. The button <code>delete</code> in the column <code>ACTIONS</code> allows a reviewer to delete a record permanently. If Github synchronisation is enabled, the action affects also the file stored in the repository.</p>
 
         <h6>Visualize records</h6>
         <p>New records are available at <code>{YOURDOMAIN}/view-{RESOURCEID}></code>. The web page shows fields in the same order as in the template.
         When clicking on values, the website can redirect users to Wikidata pages (e.g. <code>Department of classical philology</code>), geonames pages (e.g. <code>Bologna</code>) or to internal pages describing terms belonging to controlled vocabularies (e.g. <code>female</code>).</p>
-        <img src="docs/2record.png" style='max-width:100%;' alt="">
+        <img src="docs/3record.png" style='max-width:100%;' alt="">
         <h6>Explore and search</h6>
         <p>Records can be browsed in the page <code>Explore</code>. Records are grouped by template in tabs, also showing the number of records falling uder that cetegory. In each tab, sections are shown for each field specified as a filter in the template. </p>
         <p>By default, an initial filter is created for the text field defined as <strong>primary label</strong>, and records are sorted alphabetically. Filters based on entities (i.e. text fields referencing entity URIs and locations, or dropdwon and checkboxes referencing controlled vocabularies) are grouped by frequency of values, and then sorted alphabetically.</p>
-        <img src="docs/2explore.png" style='max-width:100%;' alt="">
+        <img src="docs/3explore.png" style='max-width:100%;' alt="">
         <p>The top-right search bar in the menu looks into the catalogue for resources titles. The search is performed on the <em>primary label</em> of records. Suggestions are shown while typing.</p>
         <img src="docs/2search.png" style='max-width:100%;' alt="">
+
+        <h6>Data visualization</h6>
+        <p>CLEF offers a comprehensive suite of tools designed to facilitate the exploration of resources within the Catalogue. You can access a variety of customizable data visualization options through the dedicated page in the Member Area. By providing SPARQL queries, you can extract meaningful entities and statistics from your data, enabling a deeper and more insightful exploration of the Catalogue's contents.</p>
+        <p>Each visualization usually include a Title and a customizable Description, which can be further enriched through HTML tags and related attributes, allowing you to incorporate links, colorful captions, and other interactive elements. Available visualization options include Counters (retrieve counts of key entities within the Knowledge Graph), Charts (graphical representation of your data), and Maps (highlight geographical distributions of recorded entities).</p>
+        <p><strong>COUNTERS</strong></p>
+        <section class="row">
+          <section class="col-md-7 col-sm-7">
+            <img src="docs/3counter.png" style="max-width: 100%;" alt ="">
+          </section>
+          <p class='col-md-5 col-sm-5'>You can create your own list of COUNTERS, each paired with a Label and a Count value generated by a SPARQL query. New counters can be added through the designed button: to ensure your SPARQL query works properly, make sure it returns a single numeric value assigned to the variable <code>?count</code>.</p>
+        </section>
+        <p><strong>CHARTS</strong></p>
+        <p>CLEF offers four Charts solutions powered by the JS library <a href="https://www.amcharts.com/">amCharts</a>: Bar Charts, Pie charts, Donut Charts, and Semi-circle Charts. These tools are designed to effectively visualize the relationship between a categorical variable (e.g., the name of an element class) and a numeric variable (e.g., the number of instances within that class). Both these values must be retrieved through a specific SPARQL query.</p>
+        <section class="row">
+          <section class="col-md-7 col-sm-7">
+            <img src="docs/3chart.png" style="max-width: 100%;" alt ="">
+          </section>
+          <p class='col-md-5 col-sm-5'>To ensure your SPARQL query works properly, it should return a literal value assigned to the variable <code>?label</code> and a numeric value assigned to the variable <code>?count</code>. For improved readability, you can provide a label for each variable and choose to sort the returned elements either alphabetically or numerically. Moreover, you can optionally decide to enrich your visualization with an automatically generated legend.</p>
+        </section>
+        <p><strong>MAPS</strong></p>
+        <p>CLEF offers two Maps solutions -powered by the JS library <a href="https://www.amcharts.com/">amCharts</a>- for displaying geographical locations (Simple Map) and clusters of elements (Drill-down Map) within an interactive map or globe.</p>
+        <section class="row">
+          <section class="col-md-7 col-sm-7">
+            <img src="docs/3map.png" style="max-width: 100%;" alt ="">
+          </section>
+          <p class='col-md-5 col-sm-5'>To ensure your SPARQL query works correctly, it must return at least locations, with an optional numeric value assigned to the variable <code>?count</code>. Locations can be represented either as GeoNames entities (using the variable <code>?geonames</code>) or as pairs of latitude and longitude values (using the variables <code>?lat</code> and <code>?long</code>). In both cases, each location should be associated with a label assigned to the variable <code>?label</code>.</p>
+        </section>
 
         <h6>Data access</h6>
         <p><strong>THE DATASET</strong></p>

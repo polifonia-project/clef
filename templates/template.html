@@ -33,7 +33,7 @@ $else:
 			<section class="row">
 				<section class="sortable homeheading col-md-12 col-lg-12 col-sm-12">
 					$if f:
-						$ subclass_field = next((field for field in f if "subclass" in field and field["subclass"] == "True"), None)
+						$ subclass_field = next((field for field in f if "type" in field and field["type"] == "Subclass"), None)
 						$for field in f:
 							$ hidden_style = "style=opacity:0.6" if "hidden" in field and field["hidden"] == "True" else ""
 							$ id = field["id"]
@@ -51,8 +51,9 @@ $else:
 									<option value="Multimedia">Multimedia (audio, image, video)</option>
 									<option value="Skos">Vocabulary (SKOS)</option>
 									<option value='WebsitePreview'>Website Preview (iframe)</option>
-									<option value='Subtemplate'>Subtemplate</option>
 									<option value='KnowledgeExtractor'>Knowledge Extraction</option>
+									<option value='Subclass'>Subclass</option>
+									<option value='Subtemplate'>Subtemplate</option>
 									</select>
 									<script type="text/javascript">
 										$$("#type__$id option[value$$=$field['type']]").attr("selected","selected");
@@ -264,58 +265,73 @@ $else:
 												$$("#service__$id option[value$$=$field['service']]").attr("selected","selected");
 											</script>
 										</section>
-									$elif field['type'] == 'Dropdown':
+									$elif field['type'] in ['Dropdown', 'Checkbox']:
 										<!-- VALUES -->
 										<section class="row">
-											<label class='col-md-3'>VALUES <br><span class="comment">write one pair uri, label (comma separated) per row</span></label>
-											$ num_rows = len(field["values"])*2
-											<textarea id='values__$id' class='col-md-8 values_area' name='values__$id' rows="$num_rows">
-											$for uri,lab in field["values"].items():
-												$uri.strip(), $:lab.strip()
-											</textarea>
+											<label class='col-md-3'>VALUES <br><span class="comment">define values as URI, label pairs</span></label>
+											<section class="col-md-8">
+												<ul id="values__$id" class="col-md-12 values-list">
+													<li><label class="inner-label col-md-12">Values List</label></li>
+													$ idx = 0
+													$for uri,lab in field["values"].items():
+														$ idx +=1
+														$ value_id = "value" + str(idx) + "__" + id
+														<li>
+															<label>$lab.strip() <i class="far fa-edit" onclick="modifyLabelURI(this)"></i> <i class="far fa-trash-alt" onclick="removeLabelURI(this)"></i></label>
+															<input type="hidden" id="$value_id" name="$value_id" value="$uri.strip(),$lab.strip()">
+														</li>
+													<li><label class="add-option">ADD NEW VALUE <i class="fas fa-plus-circle" onclick="addLabelURI(this, '$id')"></i></label></li>
+												</ul>
+											</section>
 										</section>
-									$elif field['type'] == 'Checkbox':
+									$elif field['type'] == 'Subclass':
 										<!-- VALUES -->
 										<section class="row">
-											<label class='col-md-3'>VALUES <br><span class="comment">write one pair uri, label (comma separated) per row</span></label>
-											$ num_rows = len(field["values"])*2
-											<textarea id='values__$id' class='col-md-8 values_area' name='values__$id' rows="$num_rows">
-											$for uri,lab in field["values"].items():
-												$uri.strip(), $:lab.strip()
-											</textarea>
+											<label class='col-md-3'>SUBCLASSES <br><span class="comment">define values as URI, label pairs</span></label>
+											<section class="col-md-8">
+												<ul id="subclass__$id" class="col-md-12 values-list">
+													<li><label class="inner-label col-md-12">Subclasses List</label></li>
+													$ idx = 0
+													$for uri,lab in field["values"].items():
+														$ idx +=1
+														$ value_id = "value" + str(idx) + "__" + id
+														<li>
+															<label>$lab.strip() <i class="far fa-edit" onclick="modifyLabelURI(this)"></i> <i class="far fa-trash-alt" onclick="removeLabelURI(this)"></i></label>
+															<input type="hidden" id="$value_id" name="$value_id" value="$uri.strip(),$lab.strip()">
+														</li>
+													<li><label class="add-option">ADD NEW VALUE <i class="fas fa-plus-circle" onclick="addLabelURI(this, '$id')"></i></label></li>
+												</ul>
+											</section>
 										</section>
-									$if subclass_field and ("id" in subclass_field and subclass_field["id"] != id):
+									$if subclass_field and id != subclass_field["id"]:
 										<!-- SUBCLASS RESTRICTION -->
-										<section class="row subclass-dropdown">
+										<section class="row subclass">
 											<label class='col-md-3'>SUBCLASS RESTRICTED <br><span class="comment">make this field available once a subclass has been selected</span></label>
-											<select id='restricted__$id' name='restricted__$id' class='custom-select col-md-8'>
-												<option value='None'>Select a subclass</option>
-											</select>
+											<section class='col-md-8'>
+												<ul id='restricted__$id' name='restricted__$id'>
+													<label class="inner-label col-md-12">Subclasses List</label>
+												</ul>
+											</section>
 										</section>
 										<script type="text/javascript">
 											subclasses = JSON.parse('$subclass_field["values"]'.replace(/&#39;/g, '"'));
-											var selectedSubclass = '$field["restricted"]';
+											var rawSelectedSubclass = '$field["restricted"]';
+											var selectedSubclass = rawSelectedSubclass.replace(/^\[&#39;|&#39;\]$$/g, "").split(/&#39;, &#39;/); 
+											var idx = 1;
 											$$.each(subclasses, function(uri, label) {
-												var encodedURI = encodeURIComponent(uri)
-												var option = $$("<option></option>").attr("value", encodedURI).text(label);
-												console.log('$field["restricted"]', encodedURI)
-												if (selectedSubclass === encodedURI) {
-													option.attr("selected","selected");
-													console.log('tris')
+												var encodedURI = encodeURIComponent(uri);
+												var id = "subclass" + idx + "__" + "$id";
+												idx+=1;
+												var ck = $$("<label for='"+id+"'>"+label+"</label> <input type='checkbox' name='"+id+"' id='"+id+"' value='"+encodedURI+"' />");
+												let subclassURIs = selectedSubclass.map(item => item.split(",")[0]);
+
+												if (subclassURIs.includes(uri)) {
+													ck.prop("checked", true);
 												}
-												$$('#restricted__$id').append(option);
+												var li = $$("<li>").append(ck);
+												$$('#restricted__$id').append(li);
 											});
 										</script>
-									$if field['type'] == 'Dropdown':
-										<!-- SUBCLASS BUTTON -->
-										<section class="row">
-											<label class='col-md-11 col-sm-6' for='subclass__$id'>Use this value as <em>Subclass</em></label>\
-											<input type='checkbox' onClick='disable_other_subclass_dropdown(this)' id='subclass__$id' name='subclass__$id'>\
-										</section>
-										$if 'subclass' in field and field['subclass'] == 'True':
-											<script type="text/javascript">
-												$$("#subclass__$id").prop("checked",true);
-											</script>
 									$if 'value' in field and field['value'] == 'URI':
 										<!-- BROWSE -->
 										<section class="row">
@@ -358,7 +374,8 @@ $else:
 					<a class="link_btn" onclick="add_field('Skos','$res_type', '$skos_thesauri')" name="add_vocabulary">Add Vocabulary</a>
 					<a class="link_btn" onclick="add_field('WebsitePreview','$res_type')" name="add_preview">Add Website Preview</a>
 					<a class="link_btn" onclick="add_field('KnowledgeExtractor','$res_type')" name="add_extractor">Add Knowledge Extraction</a>
-					<a class="link_btn" onclick="add_field('Subtemplate','$res_type')" name="add_extractor">Add Subtemplate</a>
+					<a class="link_btn" onclick="add_field('Subclass','$res_type')" name="add_subclass">Add Subclass</a>
+					<a class="link_btn" onclick="add_field('Subtemplate','$res_type')" name="add_subtemplate">Add Subtemplate</a>
 					<script type="text/javascript">
 						var available_skos_vocabularies = '$skos_thesauri';
 					</script>
@@ -368,7 +385,7 @@ $else:
 				<button id="updateTemplate" name="action" value="updateTemplate-$res_name" class="btn btn-dark" type="submit">Save</button>
 				<button class="btn btn-dark delete_template" data-toggle="modal" data-target="#popup" name="action" value="deleteTemplate-$res_name" type="submit" title="delete">Delete <i class="far fa-trash-alt"></i></button>
 				<div class="hide-container">    
-					<span class="toggle-comment">Show this template to users</span>    
+					<span class="toggle-comment">Show this Template to users</span>    
 					<label class="switch">      
 						<input id="hidden__template__input" name="hidden__template__input" type="checkbox">      
 						<span class="slider round"></span>    
@@ -406,7 +423,7 @@ $else:
 			You will be able to accept or reject suggestions, and these will be automatically added to your data (by means of <code>schema:keywords</code>)</p>
 		<h5>Dropdown and checkbox</h5>
 		<p>Create your own controlled vocabulary in <code>VALUES</code>.
-			For each line include the full URI and the label of a term separated by comma. URIs can be from external vocabularies or reuse the URI base that you <a href="setup">setup</a>.</p>
+			For each value, include the full URI and the label of a term. URIs can be from external vocabularies or reuse the URI base that you <a href="setup">setup</a>.</p>
 		<h5>Date</h5>
 		<p><code>Full Date</code>: a complete date corresponding to the <code>xsd:Date</code> type, i.e.: YYYY/MM/DD. You can select the value from a calendar.</p>
 		<p><code>Month and Year</code>: a date corresponding to the <code>xsd:gYearMonth</code> type, i.e.: YYYY/MM. You can select the value from a calendar.</p>
@@ -424,9 +441,13 @@ $else:
 		<p>Provide the url to embed a webpage's preview within a record.</p>
 		<h5>Knowledge Extraction</h5>
 		<p>Automatic extraction of Key Entities through queries (API, SPARQL, Static Files). Extracted entities will be stored in a new named graph, connected to the Record by means of the provided RDF property.</p>
+		<h5>Subclass</h5>
+		<p>Create your own list of additional ontological classes in <code>SUBCLASSES</code>.
+			For each value, include the full URI and its corresponding label. Once a new value has been added, the <code>SUBCLASS RESTRICTED</code> option becomes available for each input, allowing you to pair fields with one or more subclass values. This approach ensures that fields become accessible only after a specific subclass has been selected.
+		</p>
 		<h5>Subtemplate</h5>
 		<p>Select one or multiple templates to add their input fields to the main form, enabling the simultaneous creation of linked records. In case multiple templates are selected, a dropdown menu will allow users to choose the most suitable one for describing a new entity.</p>
-		<p>If <code>Data Inheritance</code> is set to <code>Allowed</code>, any field in a subtemplate that shares an RDF property with a field in the main template will not be displayed. Instead, corresponding data will be automatically inherited from the top-level form.</p>
+		<p>If <code>Data Inheritance</code> is set to <code>Allowed</code>, any field in a subtemplate that shares an RDF property with a field in the main template will not be displayed. Instead, corresponding data will be automatically inherited from the parent form.</p>
 	</section>
 
 	<!-- CREATE SUBTEMPLATE FORM -->

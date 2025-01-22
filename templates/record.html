@@ -48,20 +48,19 @@ $if alert == False:
 						$for idx,input in enumerate(record_form.inputs):
 							$ id = input.get_default_id()
 							$if type(input) == Checkbox:
-								$if type(record_form.inputs[idx-1]) != Checkbox:
+								$if type(record_form.inputs[idx-1]) != Checkbox or record_form.inputs[idx-1].get_default_id().split("-")[0] != id.split("-")[0]:
 									<section class=" form_row block_field">
 										$:input.pre
 										$ i = 0
 										$ length_input_list = len(record_form.inputs)
-										$while idx+i < length_input_list and type(record_form.inputs[idx+i]) == Checkbox :
+										$while idx+i < length_input_list and type(record_form.inputs[idx+i]) == Checkbox and record_form.inputs[idx+i].get_default_id().split("-")[0] == id.split("-")[0]:
 											<section class="col-md-12 col-sm-12 col-lg-12">
 												$:record_form.inputs[idx+i].render()
 												$:record_form.inputs[idx+i].description
 											</section>
 											$ i+=1	
 											<script type="text/javascript">
-												console.log("$id".split('-')[0])
-												var elements = $$("#"+"$id".split('-')[0])[0].attributes;
+												var elements = $$("[id='"+"$id".split('-')[0]+"']")[$i-1].attributes;
 												var attrsToChange = [];
 			
 												$$.each(elements, function(index, attr) {
@@ -71,8 +70,8 @@ $if alert == False:
 												});
 												$$.each(attrsToChange, function(index, attr) {
 													var newName = attr.name.replace("data_", "data-");
-													$$('#$id'.split('-')[0]).attr(newName, attr.value);
-													$$('#$id'.split('-')[0]).removeAttr(attr.name);
+													$$("[id='"+"$id".split('-')[0]+"']").eq($i-1).attr(newName, attr.value);
+													$$("[id='"+"$id".split('-')[0]+"']").eq($i-1).removeAttr(attr.name);
 												});
 											</script>
 									</section>

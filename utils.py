@@ -182,19 +182,26 @@ def fields_to_json(data, json_file, skos_file):
 			
 	list_dicts = dict(list_dicts)
 	for n,d in list_dicts.items():
-		# cleanup existing k,v
-		if 'values' in d:
-			values_pairs = d['values'].replace('\r','').strip().split('\n')
-			d["value"] = "URI"
-			d['values'] = { pair.split(",")[0].strip():pair.split(",")[1].strip() for pair in values_pairs } if values_pairs[0] != "" else {}
 		
+		# Previous code:
+		#if 'values' in d:
+			#values_pairs = d['values'].replace('\r','').strip().split('\n')
+			#d["value"] = "URI"
+			#d['values'] = { pair.split(",")[0].strip():pair.split(",")[1].strip() for pair in values_pairs } if values_pairs[0] != "" else {}
+			
+		if d["type"] in ["Subclass", "Dropdown", "Checkbox"]:
+			values = [d[value_key] for value_key in d if value_key.startswith("value")]
+			print("b",values)
+			d["value"] = "URI"
+			d["values"] = { urllib.parse.unquote(pair.split(",")[0]).strip():urllib.parse.unquote(pair.split(",")[1]).strip() for pair in values } if len(values) > 0 else {}
+			print("a:",d["values"])
+
 		# set subclasses
-		if "subclass" in d:
-			d["subclass"] = "True"
+		if d["type"] == "Subclass":
+			d["restricted"] = []
 			template_config["subclasses"] = d["values"]
 		else:
-			d["subclass"] = "False"
-		d["restricted"] = "None" if d["subclass"] == "True" else d["restricted"] if "restricted" in d else "None" # do not restrict the subclass field
+			d["restricted"] = [urllib.parse.unquote(d[subclass_key]) for subclass_key in d if subclass_key.startswith("subclass")] 
 		
 		d["disambiguate"] = "True" if 'disambiguate' in d else "False"
 		d["browse"] = "True" if 'browse' in d else "False"

@@ -1342,7 +1342,7 @@ function sortList(ul) {
 function getPropertyValue(elemID, prop, typeProp, typeField, elemClass='', elemSubclass='') {
   if (elemClass.length) {var class_restriction = "?s a <"+elemClass+"> . "} else {var class_restriction = ''};
   if (elemSubclass.length) {class_restriction += "?s a <"+elemSubclass+"> . "};
-  if ((typeProp == 'URI' || typeProp == 'Place' || typeProp == 'URL') && (typeField == 'Textbox' || typeField == 'Dropdown'|| typeField == 'Checkbox' || typeField == 'Subtemplate') ) {
+  if ((typeProp == 'URI' || typeProp == 'Place' || typeProp == 'URL') && (typeField == 'Textbox' || typeField == 'Dropdown'|| typeField == 'Checkbox' || typeField == 'Subtemplate' || typeField == 'Subclass') ) {
     var query = "select distinct ?o ?oLabel (COUNT(?s) AS ?count) "+inGraph+" where { GRAPH ?g { ?s <"+prop+"> ?o. "+class_restriction+" ?o rdfs:label ?oLabel . } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } GROUP BY ?o ?oLabel ORDER BY DESC(?count) lcase(?oLabel)";
   } else if (typeProp == 'URI' && typeField == 'Skos') {
     var query = "select distinct ?o ?oLabel (COUNT(?s) AS ?count) "+inGraph+" where { GRAPH ?g { ?s <"+prop+"> ?o. "+class_restriction+" ?o <http://www.w3.org/2004/02/skos/core#prefLabel> ?oLabel . } ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } GROUP BY ?o ?oLabel ORDER BY DESC(?count) lcase(?oLabel)";
@@ -1456,7 +1456,7 @@ function filterBySubclass(btn) {
   // hide excluded alphabet filters
   if (subclassURI !== "") {
     tab.find(".list > a.resource_collapse[data-subclass]").each(function() {
-      if ($(this).data("subclass") !== subclassURI) {
+      if (! $(this).data("subclass").split("; ").includes(subclassURI)) {
         $(this).parent().addClass("hidden");
         if ($(this).closest(".toBeWrapped").find(".list:not(.hidden)").length == 0) {
           var target = $(this).parent().attr("id");

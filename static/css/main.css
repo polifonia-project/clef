@@ -90,6 +90,7 @@ input.btn,
 
 button:hover {
   background-position: 100% 0;
+  cursor: pointer;
 }
 
 .link_btn,
@@ -146,6 +147,14 @@ button:hover {
 
 .menu_btn:focus {
   border: none !important;
+}
+
+button.filter_btn {
+  background-image: none;
+  background-color: white !important;
+  color: black;
+  box-shadow: 3px 4px black;
+  padding: 0.4em 1em;
 }
 
 button.active {
@@ -227,6 +236,10 @@ footer a:hover {
 
 nav * {
   margin: auto 5px;
+}
+
+#updateTemplate, #addChart {
+  margin-right: 1%;
 }
 
 /* footer, .push {height: 450px;} */
@@ -604,6 +617,118 @@ article p {
 .delete_template:hover,
 .discard:hover {
   background-color: rgba(255, 10, 10, 1) !important;
+}
+
+.delete i {
+  color: white !important;
+}
+
+/* templates access */
+#selectTemplateClassModal,#showTemplateClassModal {
+  display: none;
+}
+
+#selectTemplateClassModal.open-modal, #showTemplateClassModal.open-modal {
+  display: block;
+  position: fixed;
+  background-color: #F5F6FA !important;
+  z-index: 1022;
+  width: 600px;
+  height: 550px;
+  top: 50%;
+  left: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  overflow-y: auto !important; 
+  position: fixed;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+#selectTemplateClassModal > form > section:first-of-type, #showTemplateClassModal > section:first-of-type {
+  width: 100%;
+  padding: 15px 10px 10px 7%;
+  border-bottom: 3px solid rgba(100, 23, 180, 1);
+  color: rgba(100, 23, 180, 1);
+  font-weight: 500;
+  font-size: 22px;
+}
+
+#showTemplateClassModal p {
+  font-weight: 500 !important;
+}
+
+#showTemplateClassModal table {
+  margin: 5%;
+  width: 90%;
+}
+
+#showTemplateClassModal table th:nth-child(2), #showTemplateClassModal table td:nth-child(2) {
+  width: 25%;
+}
+
+#selectTemplateClassModal .modal-input {
+  width: 86%;
+  margin-left: 7%;
+  background-color: inherit;
+}
+
+#selectTemplateClassModal .modal-input .label {
+  display: inline-block;
+  margin-bottom: 5px;
+  font-size: 18px;
+  color: #231F20;
+  border-bottom:  none !important;
+  height: auto !important;
+}
+
+#selectTemplateClassModal .modal-input .comment {
+  font-size: 14px;
+}
+
+#selectTemplateClassModal .modal-input input {
+  margin-top: 10px;
+}
+
+#selectTemplateClassModal .modal-input:is(:nth-of-type(2), :nth-of-type(3)) { 
+  margin-top: 40px;
+}
+
+#selectTemplateClassModal .fa-times, #showTemplateClassModal .fa-times  {
+  position: absolute;
+  right: 7%;
+  margin-top: 6px;
+  color: rgba(100, 23, 180, 1);
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+#selectTemplateClass button {
+  border: none;
+  outline: none;
+  display: inline-block;
+  margin: 10px 10px 0px 0px !important;
+  left: 60%;
+  position: relative;
+}
+
+#uri-container {
+  height: 100px;
+  max-height: 100px;
+  overflow-y: auto;
+  border-bottom: 1pt #acacac solid;
+}
+
+#uri-container::before {
+  content: 'press return to add a URI';
+  font-size: 0.7em;
+  color: grey;
+  display: block;
+}
+
+button#showTemplates {
+  border: none;
+  outline: none;
 }
 
 /* records table */
@@ -1957,6 +2082,16 @@ select-selected.select-arrow-active:after {
   margin-left: 0 !important;
 }
 
+.block_field .row ul {
+  padding-left: 0;
+  list-style: none;
+}
+
+.block_field .row ul .fa-edit {
+  color: rgb(100, 23, 180) !important;
+  cursor: pointer;
+}
+
 .comment {
   color: grey;
   font-size: 0.8em;
@@ -3002,9 +3137,15 @@ h4.subrecord-title.closed-title {
   cursor: pointer;
 }
 
+/* Swal buttons */
+.swal2-actions > button {
+  margin: 0.2em;
+}
+
 /* extra */
-.material-icons, .fa-plus-circle, .fa-eye, .fa-trash, .fa-trash-alt, .fa-external-link-alt{color: rgba(100,23,180,1); cursor: pointer;}
-.material-icons {font-size: 1.5em;}
+span > .material-icons, .fa-plus-circle, .fa-eye, .fa-trash, .fa-trash-alt, .fa-external-link-alt{color: rgba(100,23,180,1); cursor: pointer;}
+span > .material-icons {font-size: 1.5em;}
+.material-icons {font-size: 1em !important}
 .link_btn, .btn {white-space: nowrap; font-weight: 500;}
 .add_fields .link_btn {display: inline-block; margin-bottom: 8px}
 .leaflet-popup-close-button,.leaflet-control-zoom-in,.leaflet-control-zoom-out {text-decoration: none !important;}
@@ -3033,16 +3174,6 @@ h4.subrecord-title.closed-title {
 
 .center-checkbox input {
   margin: 0 !important;
-}
-
-
-.charts-list {
-  list-style: none;
-}
-
-.charts-list .fa-edit {
-  color: rgb(100, 23, 180) !important;
-  cursor: pointer;
 }
 
 .charts-yasqe {

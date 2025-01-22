@@ -85,39 +85,44 @@ $(document).ready(function() {
         $(this).closest("section.form_row.block_field").hide();
     });
 
-    $("[data-subclassdropdown='True']").each(function() {
-
+    $("[data-subclassck='True']").each(function() {
+        var checked = $(this).prop("checked");
+        console.log(checked)
         // on change function
-        $(this).on("change", function() {
-            var selectedValue = $(this).val();
-            var subclass = encodeURIComponent(selectedValue.trim());
+        $(this).on("click", function() {
+            var checked = $(this).prop("checked");
+            var selectedValue = $(this).val().split(",")[0];
+            var subclass = selectedValue.trim();
             var supertemplate = $(this).data("supertemplate"); // warning: check whether this must be changed to data("subrecord");
-    
-            // hide unrequired fields
-            $("[data-subclass][data-supertemplate='"+supertemplate+"']:not([data-subclass='"+subclass+"']):not([data-subclass=''])").closest("section.form_row.block_field").each(function() {
-                $(this).fadeOut(400);
-                var inputId = $(this).find("input, textarea, select").first().attr("id");
-                $("li[data-id='"+inputId+"']").fadeOut(400);
-            })
-    
-            // show required fields
-            $("[data-supertemplate='"+supertemplate+"'][data-subclass='"+subclass+"']").closest("section.form_row.block_field").each(function() {
-                $(this).fadeIn(400);
-                var inputId = $(this).find("input, textarea, select").first().attr("id");
-                $("li[data-id='"+inputId+"'").fadeIn(400);
-            });
+            
+            console.log(checked,subclass)
+
+            if (checked) {
+                // show required fields
+                $("[data-supertemplate='"+supertemplate+"'][data-subclass*='"+subclass+"']").closest("section.form_row.block_field").each(function() {
+                    $(this).fadeIn(400);
+                    var inputId = $(this).find("input, textarea, select").first().attr("id");
+                    $("li[data-id='"+inputId+"'").fadeIn(400);
+                });
+            } else {
+                // hide unrequired fields
+                $("[data-supertemplate='"+supertemplate+"'][data-subclass*='"+subclass+"']").closest("section.form_row.block_field").each(function() {
+                    $(this).fadeOut(400);
+                    var inputId = $(this).find("input, textarea, select").first().attr("id");
+                    $("li[data-id='"+inputId+"']").fadeOut(400);
+                })
+            }
         });
 
         // trigger the on change function to show subclass restricted fields (modify and review page)
         if ($("#modifyForm").length > 0) {
-            if ($(this).val() !== "None" && $(this).val() !== "") {
-                var selectedValue = $(this).val();
-                console.log(selectedValue)
-                var subclass = encodeURIComponent(selectedValue.trim());
-                var supertemplate = $(this).data("supertemplate"); 
+            if ($(this).prop("checked") === true) {
+                var selectedValue = $(this).val().split(",")[0];
+                var subclass = selectedValue.trim();
+                var supertemplate = $(this).data("supertemplate");
 
                 // show required fields
-                $("[data-supertemplate='"+supertemplate+"'][data-subclass='"+subclass+"']").closest("section.form_row.block_field").each(function() {
+                $("[data-supertemplate='"+supertemplate+"'][data-subclass*='"+subclass+"']").closest("section.form_row.block_field").each(function() {
                     $(this).fadeIn(400);
                     var inputId = $(this).find("input, textarea, select").first().attr("id");
                     $("li[data-id='"+inputId+"'").fadeIn(400);
@@ -130,8 +135,10 @@ $(document).ready(function() {
     // table of contents: input fields
     $('section.label.col-12').each(function() {
         var section = $(this);
-        if (section.next('.input_or_select').find('[data-supertemplate="None"]').length > 0) {
-            var itemTitle = $(this).find(".title").contents().filter(function() {
+        console.log(section)
+        if (section.next('.input_or_select').find('[data-supertemplate="None"]').length > 0 || section.hasClass("checkbox_group_label")) {
+            console.log(section)
+            var itemTitle = section.find(".title").contents().filter(function() {
                 return this.nodeType === 3;
             }).text().trim();
             var itemId = section.next('.input_or_select').find("input, textarea, select").first().attr("id");

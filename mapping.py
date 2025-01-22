@@ -51,7 +51,11 @@ def getValuesFromFields(fieldPrefix, recordData, fields=None, field_type=None):
 				values = value.split(',', 1)
 				results.add(( values[0].strip(), urllib.parse.unquote(values[1]) )) # (id, label)
 		else:
+			# TODO: check the if statement
 			if key.startswith(fieldPrefix+'_') and ',' in value: # multiple values from text box (entities) and URL 
+				values = value.split(',', 1)
+				results.add(( values[0].strip(), urllib.parse.unquote(values[1]) )) # (id, label)
+			elif key.startswith(fieldPrefix+'-') and ',' in value: # multiple values from checkbox group
 				values = value.split(',', 1)
 				results.add(( values[0].strip(), urllib.parse.unquote(values[1]) )) # (id, label)
 			elif key == fieldPrefix: # uri from dropdown (single value from controlled vocabulary) and URL
@@ -64,6 +68,7 @@ def getValuesFromFields(fieldPrefix, recordData, fields=None, field_type=None):
 					for url in value.split(','):
 						results.add(( url.strip(), url.strip() ))
 	result_dict['results'] = results
+	print("resdict:", result_dict)
 	return result_dict
 
 def getLiteralValuesFromFields(fieldPrefix, recordData):
@@ -103,13 +108,16 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 		tpl_list = json.load(tpl_file)
 
 	resource_class = next(t["type"] for t in tpl_list if t["template"] == tpl_form)
-	resource_subclass_field = next((f["id"] for f in fields if f.get("subclass") == "True"), None)
-	resource_subclass = urllib.parse.quote(getRightURIbase(recordData[resource_subclass_field]),safe='') if resource_subclass_field != None else resource_subclass_field
-	print("resource_subclass:", resource_subclass)
+	resource_subclass_field = next((f for f in fields if f.get("type") == "Subclass"), None)
+	resource_subclass_field_values = resource_subclass_field["values"] if resource_subclass_field != None else resource_subclass_field
+	resource_subclass_input_ids = [resource_subclass_field["id"]+"-"+str(idx) for idx in list(range(len(resource_subclass_field_values)))] if resource_subclass_field_values != None else []
+	resource_subclass_input_values = [recordData[input_id].split(",")[0] for input_id in resource_subclass_input_ids if input_id in recordData]
+
+	# exclude hidden input fields and unrequired ones (based on subclasses)
 	fields = [
 		input_field for input_field in fields 
 		if input_field["hidden"] == "False" and 
-		("restricted" not in input_field or input_field["restricted"] in ["None", resource_subclass])
+		(input_field["restricted"] == [] or any(resource_subclass in resource_subclass_input_values for resource_subclass in input_field["restricted"]) )
 	]
 
 	# CREATE/MODIFY A NAMED GRAPH for each new record
@@ -206,12 +214,14 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 							valueURL = URL[1] if URL[1].startswith("http") else "http://" + URL[1]
 							wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(valueURL) ))
 				elif value['type'] == 'URI': #object properties
+					print("FFFF")
 					rdf_property = SKOS.prefLabel if field['type'] == 'Skos' else RDFS.label
 					for entity in value['results']:
+						print(entity)
 						entityURI = getRightURIbase(entity[0]) # Wikidata or new entity 
 						wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(entityURI) ))
 						wd.add(( URIRef( entityURI ), rdf_property, Literal(entity[1].lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
-						if "subclass" in field and field["subclass"] != "False": # Subclass
+						if field["type"] == "Subclass": # Subclass
 							wd.add(( URIRef(base+graph_name), RDF.type, URIRef(entityURI) ))
 				elif value['type'] == 'Literal': #multi-language Literals
 					for literal in value['results']:

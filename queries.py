@@ -71,13 +71,13 @@ def getRecords(res_class=None,res_subclasses=None):
 	results = sparql.query().convert()
 
 	for result in results["results"]["bindings"]:
-		classes = result["classes"]["value"].split("; ")
-		subclass = next((single_class for single_class in classes if single_class not in res_class), None)
-		if subclass:
+		classes = [cls.strip() for cls in result["classes"]["value"].split("; ")]
+		subclasses = [single_class for single_class in classes if single_class not in res_class]
+		for subclass in subclasses:
 			classes.remove(subclass)
-		subclass = subclass.strip() if subclass != None else subclass
+		subclasses = "; ".join(subclasses) if len(subclasses) > 0 else ""
 		classes = "; ".join(classes)
-		records.add( (result["g"]["value"], result["title"]["value"], result["userLabel"]["value"], result["modifierLabel"]["value"], result["date"]["value"], result["stage"]["value"], classes, subclass))
+		records.add( (result["g"]["value"], result["title"]["value"], result["userLabel"]["value"], result["modifierLabel"]["value"], result["date"]["value"], result["stage"]["value"], classes, subclasses))	
 	return records
 
 
@@ -158,7 +158,7 @@ def getCountings(filterRecords=''):
 
 
 def countAll(res_class=None,res_subclasses=None,by_subclass=False,exclude_unpublished=False):
-	include_class_list = res_subclasses + res_class if res_subclasses != None and res_class != None and by_subclass else res_class
+	include_class_list = by_subclass + res_class if res_subclasses != None and res_class != None and by_subclass else res_class
 	exclude_class_list = res_subclasses + res_class if res_subclasses != None and res_class != None else res_class if res_class != None else None
 	filter_class_exists = "\n".join([f"FILTER EXISTS {{ ?s a <{cls}> }}" for cls in include_class_list]) if include_class_list != None else ""
 	filter_class_not_exists = f"FILTER (NOT EXISTS {{ ?s a ?other_class FILTER (?other_class NOT IN ({', '.join([f'<{cls}>' for cls in exclude_class_list])})) }})" if exclude_class_list != None else ""
@@ -203,7 +203,49 @@ def getRecordCreator(graph_name):
 	return creatorIRI, creatorLabel
 
 
-# TRIPLE PATTERNS FROM THE FORM
+# UPDATE SUBCLASS VALUES TO AVOID INCONSISTENCIES
+def updateSubclassValue(data):
+	print("DATA:", data)
+
+	old_uri = urllib.parse.unquote(data.olduri)
+	insert_clause = ""
+	if "update" in data and data["update"] == "modify":
+		new_label = urllib.parse.unquote(data.newlabel)
+		new_uri = urllib.parse.unquote(data.newuri)
+		insert_clause = """INSERT { 
+				GRAPH ?g {
+					?s ?p <"""+new_uri+"""> .
+					<"""+new_uri+"""> rdfs:label '"""+new_label+"""'^^xsd:string . 
+				}
+			}"""
+
+	update_query = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+		PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+		DELETE {
+			GRAPH ?g {
+				?s ?p <"""+old_uri+"""> .
+				<"""+old_uri+"""> rdfs:label ?oldLabel .
+			}
+		}
+		"""+insert_clause+"""
+		WHERE {
+			GRAPH ?g {
+				?s ?p <"""+old_uri+"""> .
+				<"""+old_uri+"""> rdfs:label ?oldLabel .
+			}
+		}
+		"""
+	
+	print("update query:", update_query)
+	try:
+		sparql = SPARQLWrapper(conf.myEndpoint)
+		sparql.setQuery(update_query)
+		sparql.setMethod("POST")
+		sparql.query()
+	except Exception as e:
+		print(f"Error executing update: {e}")
+	return None
 
 
 

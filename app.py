@@ -238,6 +238,9 @@ class Template:
 
 		# display template
 		is_git_auth = github_sync.is_git_auth()
+		data = web.input()
+		if 'action' in data and 'updateSubclass' in data.action:
+			queries.updateSubclassValue(data)
 
 		with open(TEMPLATE_LIST,'r') as tpl_file:
 			tpl_list = json.load(tpl_file)
@@ -353,6 +356,7 @@ class Index:
 		results = queries.getRecordsPagination(page)
 
 		records = list(reversed(sorted(results, key=lambda tup: u.key(tup[4][:-5]) ))) if len(results) > 0 else []
+		print("records:", records)
 
 		with open(TEMPLATE_LIST,'r') as tpl_file:
 			tpl_list = json.load(tpl_file)
@@ -686,6 +690,7 @@ class Modify(object):
 			extractor = u.has_extractor(res_template)
 			previous_extractors = u.has_extractor(res_template, name)
 			extractions_data = queries.retrieve_extractions(previous_extractors)
+			print("data:", data)
 
 			return render.modify(graphdata=data, pageID=recordID, record_form=f,
 							user=session['username'],ids_dropdown=ids_dropdown,
@@ -964,11 +969,11 @@ class Records:
 				if len(res_subclasses) > 0:
 					count_by_subclass[template["name"]] = {}
 				for res_subclass in res_subclasses:
-					subclass_list = [res_subclass]
-					count_subclass = queries.countAll(res_class,subclass_list,True,False)
+					count_subclass = queries.countAll(res_class,res_subclasses,[res_subclass],False)
 					count_by_subclass[template["name"]][res_subclass] = {"label": res_subclass_dict[res_subclass], "count": count_subclass}
 				filtersBrowse = queries.getBrowsingFilters(template["template"])
 				filters_by_template[template["name"]] = filtersBrowse
+		print("res  by templ:", records_by_template)
 		return render.records(user=session['username'], data=records_by_template,
 							subclass_data=count_by_subclass,title='Latest resources', r_base=conf.base,
 							alll=count_by_template, filters=filters_by_template,
@@ -1176,7 +1181,7 @@ class DataModel:
 					res_data_model["props_labels"] = props_labels
 				res_data_models.append(res_data_model)
 		return render.datamodel(user=session['username'], data=res_data_models,is_git_auth=is_git_auth,
-								project=conf.myProject)
+								project=conf.myProject,main_lang=conf.mainLang)
 
 	def POST(self):
 		""" Data model page """

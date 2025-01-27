@@ -1105,6 +1105,7 @@ function deleteUrlInput(el) {
 
 // expand URLs input value 
 function expandUrlInput(event, el) {
+  console.log(event)
   event.preventDefault();
   // retrieve the resource url
   var url = $(el).parent().parent('tr').find('span').text();
@@ -1123,6 +1124,8 @@ function expandUrlInput(event, el) {
     var modal = $("<div class='modal-previewMM'><span class='previewTitle'>This is a preview of your multimedia file:<br><a href='"+url+"'>"+url+"</a></span><span class='closePreview'></span><audio controls><source src='" + url + "'></audio></div>");
   } else if (mediaType == 'iframe') {
     var modal = $("<div class='modal-previewMM'><span class='previewTitle'>This is a preview of your website:<br><a href='"+url+"'>"+url+"</a></span><span class='closePreview'></span><iframe  src='" + url + "'></iframe></div>");
+  } else if (mediaType == 'open-url') {
+    window.open(url, '_blank');
   }
   $(el).after(modal);
   $('#showRight').hide();
@@ -1177,7 +1180,6 @@ function nlpText(searchterm) {
 // lookup when creating new records
 function checkPriorRecords(elem) {
   $('.'+elem).keyup(function(e) {
-	  $("#lookup").show();
 	  var q = $('.'+elem).val();
     var classes = $(this).attr('class');
     var expression =  /\(([^)]+)\)/i;
@@ -1188,31 +1190,40 @@ function checkPriorRecords(elem) {
     var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s ?o "+inGraph+" where { ?s "+res_class+" rdfs:label ?o . ?o bds:search '"+q+"' .} LIMIT 5"
     var encoded = encodeURIComponent(query);
 
+    var tooltip_save = '<span class="lookup-records" \
+      data-toggle="popover" \
+      data-container="body"\
+    ></span>';
+
     $.ajax({
   	    type: 'GET',
   	    url: myPublicEndpoint+'?query=' + encoded,
   	    headers: { Accept: 'application/sparql-results+json; charset=utf-8'},
   	    success: function(returnedJson) {
-  	    	$("#lookup").empty();
   			  if (!returnedJson.results.bindings.length) {
-          //$("#lookup").append("<h3>We found the following resources that are similar to the one you mention.</h3>")
+            $(".popover").remove();
+            $(".lookup-records").remove();  
     			} else {
-            $("#lookup").append("<div>We already have some resources that match with yours. If this is the case, consider suggesting a different resource!</div>")
+            $(".popover").remove();
+            $(".lookup-records").remove();  
+            let suggestRecords = "";
             for (i = 0; i < returnedJson.results.bindings.length; i++) {
 
-                // exclude named graphs from results
-                var myUrl = returnedJson.results.bindings[i].s.value;
-                if ( myUrl.substring(myUrl.length-1) != "/") {
-                  var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1)
-                  $("#lookup").append("<div class='wditem'><a class='blue orangeText' target='_blank' href='view-"+resID+"'><i class='fas fa-external-link-alt'></i></a> <a class='orangeText' data-id=" + returnedJson.results.bindings[i].s.value + "'>" + returnedJson.results.bindings[i].o.value + "</a></div>");
-                };
+              // exclude named graphs from results
+              var myUrl = returnedJson.results.bindings[i].s.value;
+              if ( myUrl.substring(myUrl.length-1) != "/") {
+                var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1)
+                suggestRecords += "<div class='wditem'><a class='blue orangeText' target='_blank' href='view-"+resID+"'><i class='fas fa-external-link-alt'></i></a> <a class='orangeText' data-id=" + returnedJson.results.bindings[i].s.value + "'>" + returnedJson.results.bindings[i].o.value + "</a></div>";
+              };
             };
-            $("#lookup").append("<span id='close_section' class='btn btn-dark'>Ok got it!</span>")
-            // close lookup suggestions
-            $('#close_section').on('click', function() {
-              var target = $(this).parent();
-              target.hide();
-            });
+            $('.'+elem).parent().prepend(tooltip_save);
+            $('.'+elem).popover({
+              html: true,
+              title: "<h4>We already have some resources that match with yours.</h4>",
+              content: "<p>If this is the case, consider suggesting a different resource!</p>" + suggestRecords,
+              placement: "bottom",
+              container: 'body'
+            }).popover('show');
     			};
   	    }
   	});

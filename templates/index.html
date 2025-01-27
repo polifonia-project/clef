@@ -158,7 +158,7 @@ $var main_lang = main_lang
 				$ total = int(all)//int(pagination)
 				$ remainder = int(all) % int(pagination)
 				$if remainder > 0:
-				$ total = total + 1
+					$ total = total + 1
 				<form id="paginate" action="" method='POST'>
 				$for n in range(0,total):
 					$ n = n + 1

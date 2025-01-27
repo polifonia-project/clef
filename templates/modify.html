@@ -148,6 +148,22 @@ $if query_templates!=None:
 													<iframe allow='autoplay' class='col-md-11 iframePreview' src='$:k_v[1]' crossorigin></iframe>
 													<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>
 													<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
+										<script type="text/javascript">
+											console.log('$id')
+											var elements = $$('#$id')[0].attributes;
+											var attrsToChange = [];
+			
+											$$.each(elements, function(index, attr) {
+												if (attr.name.startsWith("data_")) {
+													attrsToChange.push(attr);
+												}
+											});
+											$$.each(attrsToChange, function(index, attr) {
+												var newName = attr.name.replace("data_", "data-");
+												$$('#$id').attr(newName, attr.value);
+												$$('#$id').removeAttr(attr.name);
+											});
+										</script>
 									$else:
 										$:input.render()
 										$if type(input) == Dropdown:

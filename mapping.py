@@ -214,11 +214,9 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 							valueURL = URL[1] if URL[1].startswith("http") else "http://" + URL[1]
 							wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(valueURL) ))
 				elif value['type'] == 'URI': #object properties
-					print("FFFF")
 					rdf_property = SKOS.prefLabel if field['type'] == 'Skos' else RDFS.label
 					for entity in value['results']:
-						print(entity)
-						entityURI = getRightURIbase(entity[0]) # Wikidata or new entity 
+						entityURI = getRightURIbase(entity[0]) # Wikidata or new entity
 						wd.add(( URIRef(base+graph_name), URIRef(field['property']), URIRef(entityURI) ))
 						wd.add(( URIRef( entityURI ), rdf_property, Literal(entity[1].lstrip().rstrip(), datatype="http://www.w3.org/2001/XMLSchema#string") ))
 						if field["type"] == "Subclass": # Subclass
@@ -274,7 +272,8 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 
 				
 				# process extracted keywords
-				extracted_keywords = [item for item in recordData if item.startswith("keyword_"+recordID+"_"+field['id']+"-"+extraction_num)]
+				print("EXTRACT:", "keyword_"+recordID+"-"+field['id']+"-"+extraction_num)
+				extracted_keywords = [item for item in recordData if item.startswith("keyword_"+recordID+"-"+field['id']+"-"+extraction_num)]
 				print(field["id"], extracted_keywords)
 				if len(extracted_keywords) > 0:
 					# link the extraction graph to main Record graph
@@ -293,7 +292,7 @@ def inputToRDF(recordData, userID, stage, graphToClear=None,tpl_form=None):
 					
 					# store the extraction output
 					for keyword in extracted_keywords:
-						label = keyword.replace("keyword_"+recordID+"_"+field['id']+"-"+extraction_num+"_","")
+						label = keyword.replace("keyword_"+recordID+"-"+field['id']+"-"+extraction_num+"_","")
 						wd_extraction.add(( URIRef(urllib.parse.unquote(recordData[keyword])), RDFS.label,  Literal(label)))
 					
 					# save the extraction graph

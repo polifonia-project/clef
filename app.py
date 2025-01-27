@@ -971,6 +971,9 @@ class Records:
 				for res_subclass in res_subclasses:
 					count_subclass = queries.countAll(res_class,res_subclasses,[res_subclass],False)
 					count_by_subclass[template["name"]][res_subclass] = {"label": res_subclass_dict[res_subclass], "count": count_subclass}
+				for template_name in count_by_subclass:
+					count_by_subclass[template_name] = dict(sorted(count_by_subclass[template_name].items(), key=lambda item: item[1]['count'], reverse=True))
+
 				filtersBrowse = queries.getBrowsingFilters(template["template"])
 				filters_by_template[template["name"]] = filtersBrowse
 		print("res  by templ:", records_by_template)

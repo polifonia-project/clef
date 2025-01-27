@@ -587,7 +587,7 @@ def retrieve_extractions(res_uri_list, view=False):
 			for n in range(len(res_dict[uri_id][field_id])):
 				graph_uri = res_dict[uri_id][field_id][n]["graph"]
 				idx = graph_uri.split('/extraction-')[-1][:-1]
-				res_dict[uri_id][field_id][n]["internalId"] = idx
+				res_dict[uri_id][field_id][n]["internalId"] = idx.replace(field_id+"-","")
 				retrieve_graph = """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 					SELECT DISTINCT ?uri ?label WHERE {GRAPH <"""+graph_uri+""">
 					{	?uri rdfs:label ?label .  }}"""

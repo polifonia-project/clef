@@ -256,6 +256,16 @@ function add_field(field, res_type, backend_file=null) {
         </section>\
     </section>";
 
+    var field_reconciliation = "<section class='row'>\
+        <label class='col-md-3'>URI RECONCILIATION <br><span class='comment'>select an entity reconciliation service for missing URIs</span></label>\
+        <select class='col-md-8 ("+res_type+") custom-select' id='service__"+temp_id+"' name='service__"+temp_id+"'>\
+        <option value='None'>Select</option>\
+        <option value='wd'>Wikidata</option>\
+        <option value='viaf'>VIAF</option>\
+        <option value='geonames'>Geonames</option>\
+        </select>\
+    </section>"
+
     var field_browse = "<section class='row'>\
         <label class='col-md-11 col-sm-6' for='browse__"+temp_id+"'>Use this value as a filter in <em>Explore</em> page</label>\
         <input type='checkbox' id='browse__"+temp_id+"' name='browse__"+temp_id+"'>\
@@ -347,7 +357,7 @@ function add_field(field, res_type, backend_file=null) {
     else if (field =='WebsitePreview') { contents += field_placeholder + field_subclass_restriction + field_mandatory + field_hide; }
     else if (field =='Subtemplate') { contents += field_subtemplate_import + field_cardinality + field_data_inheritance + field_subclass_restriction + field_mandatory + field_hide + field_browse; }
     else if (field =='Subclass') { contents += field_subclass_values + field_mandatory + field_hide; }
-    else if (field =='KnowledgeExtractor') { contents += open_addons + field_subclass_restriction; }
+    else if (field =='KnowledgeExtractor') { contents += open_addons + field_reconciliation + field_subclass_restriction; }
     else {contents += field_values + field_subclass_restriction + field_mandatory + field_hide + field_browse; };
     contents += close_addons + up_down;
     $(".sortable").append("<section class='block_field' data-id='"+temp_id+"'>"+contents+"</section>");

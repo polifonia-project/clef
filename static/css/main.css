@@ -1,5 +1,10 @@
 
 /* general */
+:root {
+  --primary-color: rgba(100, 23, 180, 1);
+  --secondary-color: rgb(255, 0, 0);
+}
+
 .se-pre-con {
   position: fixed;
   left: 0px;
@@ -38,7 +43,7 @@ p {
 
 header {
   width: 100% !important;
-  background: linear-gradient(35deg, rgba(100, 23, 180, 1) 0%, rgb(255, 0, 0) 100%), no-repeat center center fixed;
+  background: linear-gradient(35deg, var(--primary-color) 0%, var(--secondary-color) 100%), no-repeat center center fixed;
   -webkit-background-size: cover;
   -moz-background-size: cover;
   -o-background-size: cover;
@@ -81,7 +86,7 @@ input.btn,
   border: solid 1px black !important;
   box-shadow: 3px 4px black !important;
   transition: background 0.7s linear;
-  background-image: linear-gradient(to left, rgba(255, 0, 0, 1), rgba(100, 23, 180, 1), rgba(100, 23, 180, 1), rgba(100, 23, 180, 1));
+  background-image: linear-gradient(to left, var(--secondary-color), var(--primary-color), var(--primary-color), var(--primary-color));
   background-size: 300%;
   background-position: 0 0;
   -webkit-appearance: none !important;
@@ -90,11 +95,12 @@ input.btn,
 
 button:hover {
   background-position: 100% 0;
+  cursor: pointer;
 }
 
 .link_btn,
 .btn {
-  background-color: rgba(100, 23, 180, 1);
+  background-color: var(--primary-color);
   padding: 0.4em 1em;
 }
 
@@ -106,7 +112,7 @@ button:hover {
 
 .link_btn:hover {
   cursor: pointer;
-  background-color: rgba(255, 0, 0, 1);
+  background-color: var(--secondary-color);
   -webkit-transition-duration: 0.4s;
   transition-duration: 0.4s;
   text-decoration: none;
@@ -148,8 +154,16 @@ button:hover {
   border: none !important;
 }
 
+button.filter_btn {
+  background-image: none;
+  background-color: white !important;
+  color: black;
+  box-shadow: 3px 4px black;
+  padding: 0.4em 1em;
+}
+
 button.active {
-  background-color: rgba(100, 23, 180, 1) !important;
+  background-color: var(--primary-color) !important;
   border: solid 1px black !important;
   box-shadow: 3px 4px black !important;
   color: white;
@@ -157,7 +171,7 @@ button.active {
 }
 
 .nav-tabs {
-  border-bottom: 2px solid rgba(100, 23, 180, 0.12);
+  border-bottom: 2px solid rgba(27, 27, 27, 0.12);
   margin-top: 3%;
 }
 
@@ -178,22 +192,22 @@ button.active {
 }
 
 .nav-tabs a.nav-link.active {
-  color: rgba(100, 23, 180, 1) !important;
+  color: var(--primary-color) !important;
   text-decoration: none !important;
   background-color: #F5F6FA !important;
-  border-color: #F5F6FA #F5F6FA rgba(100, 23, 180, 1);
+  border-color: #F5F6FA #F5F6FA var(--primary-color);
 }
 
 .nav-tabs a.dark-nav.nav-link.active {
   text-decoration: none !important;
   background-color: #f5f6fa3a !important;
-  border-color: rgba(100, 23, 180, 1);
+  border-color: var(--primary-color);
 }
 
 .logo_header {
   display: inline-block;
   padding: 5px;
-  color: rgba(100, 23, 180, 1);
+  color: var(--primary-color);
   font-size: 35px;
   text-transform: uppercase
 }
@@ -214,19 +228,23 @@ nav {
 
 nav a {
   margin-right: 2em;
-  color: rgba(100, 23, 180, 1) !important;
+  color: var(--primary-color) !important;
   text-decoration: none !important;
 }
 
 nav a:hover,
 footer a:hover {
-  color: rgba(255, 0, 0, 1) !important;
-  border-color: rgba(255, 0, 0, 1) !important;
+  color: var(--secondary-color) !important;
+  border-color: var(--secondary-color) !important;
   text-decoration: none;
 }
 
 nav * {
   margin: auto 5px;
+}
+
+#updateTemplate, #addChart {
+  margin-right: 1%;
 }
 
 /* footer, .push {height: 450px;} */
@@ -279,10 +297,10 @@ footer img {
 #create_form button,
 .gradient_dropbox {
   border: none;
-  background: rgb(255, 0, 0);
-  background: -moz-linear-gradient(35deg, rgba(255, 0, 0, 1) 0%, rgba(100, 23, 180, 1) 100%);
-  background: -webkit-linear-gradient(35deg, rgba(255, 0, 0, 1) 0%, rgba(100, 23, 180, 1) 100%);
-  background: linear-gradient(35deg, rgba(255, 0, 0, 1) 0%, rgba(100, 23, 180, 1) 100%);
+  background: var(--secondary-color);
+  background: -moz-linear-gradient(35deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+  background: -webkit-linear-gradient(35deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+  background: linear-gradient(35deg, var(--secondary-color) 0%, var(--primary-color) 100%);
   cursor: pointer;
 }
 
@@ -306,7 +324,7 @@ footer img {
 
 /* search bar menu */
 .searchmenu {
-  color: rgba(100, 23, 180, 1);
+  color: var(--primary-color);
 }
 
 .searchmenu * {
@@ -337,7 +355,7 @@ footer img {
   content: 'scroll to view more results';
   height: 33px;
   color: white;
-  background-color: rgba(100, 23, 180, 1);
+  background-color: var(--primary-color);
   padding: 5px;
 }
 
@@ -351,7 +369,7 @@ h3 {
 
 h2,
 h3 {
-  color: rgba(100, 23, 180, 1) !important;
+  color: var(--primary-color) !important;
   font-weight: 600 !important;
   margin: 0.5em 0px !important;
 }
@@ -359,7 +377,7 @@ h3 {
 h2 span {
   font-size: 0.2em;
   display: inline-block;
-  background-color: rgba(100, 23, 180, 1);
+  background-color: var(--primary-color);
   color: white;
   padding: 0.3em;
   vertical-align: super;
@@ -379,7 +397,7 @@ article h4 {
 article h3 {
   font-size: 2em;
   opacity: 100%;
-  border-bottom: 2px solid rgba(100, 23, 180, 1);
+  border-bottom: 2px solid var(--primary-color);
   /* width: 12%; */
   margin-bottom: 3% !important;
   padding-bottom: 0.5%;
@@ -408,7 +426,7 @@ article p {
 }
 
 .top-border {
-  border-top: solid 2px rgba(100, 23, 180, 1);
+  border-top: solid 2px var(--primary-color);
   margin-right: 0.5em;
   padding-top: 1em;
 }
@@ -431,7 +449,7 @@ article p {
   padding: 2em !important;
 }
 
-/* .dropdown-menu a {color: rgb(255,0,0) !important;} */
+/* .dropdown-menu a {color: var(--secondary-color) !important;} */
 .field-wrap label {
   width: 100%;
   margin-top: 0.5em;
@@ -444,7 +462,7 @@ article p {
 
 /* homepage */
 .homepage {
-  background: linear-gradient(35deg, rgba(255, 0, 0, 1) 0%, rgba(100, 23, 180, 1) 100%), no-repeat center center fixed;
+  background: linear-gradient(35deg, var(--secondary-color) 0%, var(--primary-color) 100%), no-repeat center center fixed;
   -webkit-background-size: cover;
   -moz-background-size: cover;
   -o-background-size: cover;
@@ -482,7 +500,7 @@ article p {
 }
 
 .box:nth-child(even) {
-  background-color: rgba(100, 23, 180, 1);
+  background-color: var(--primary-color);
 }
 
 .box:nth-child(odd) {
@@ -539,8 +557,8 @@ article p {
 }
 
 .caption {
-  color: rgba(100, 23, 180, 1);
-  border-bottom: solid 2px rgba(100, 23, 180, 1);
+  color: var(--primary-color);
+  border-bottom: solid 2px var(--primary-color);
   padding: 5px;
   font-size: 25px;
 }
@@ -597,13 +615,125 @@ article p {
 .delete,
 .delete_template,
 .discard {
-  background: rgba(255, 0, 0, 1) !important;
+  background: rgba(255, 10, 10, 1) !important;
 }
 
 .delete:hover,
 .delete_template:hover,
 .discard:hover {
   background-color: rgba(255, 10, 10, 1) !important;
+}
+
+.delete i {
+  color: white !important;
+}
+
+/* templates access */
+#selectTemplateClassModal,#showTemplateClassModal {
+  display: none;
+}
+
+#selectTemplateClassModal.open-modal, #showTemplateClassModal.open-modal {
+  display: block;
+  position: fixed;
+  background-color: #F5F6FA !important;
+  z-index: 1022;
+  width: 600px;
+  height: 550px;
+  top: 50%;
+  left: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  overflow-y: auto !important; 
+  position: fixed;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+#selectTemplateClassModal > form > section:first-of-type, #showTemplateClassModal > section:first-of-type {
+  width: 100%;
+  padding: 15px 10px 10px 7%;
+  border-bottom: 3px solid var(--primary-color);
+  color: var(--primary-color);
+  font-weight: 500;
+  font-size: 22px;
+}
+
+#showTemplateClassModal p {
+  font-weight: 500 !important;
+}
+
+#showTemplateClassModal table {
+  margin: 5%;
+  width: 90%;
+}
+
+#showTemplateClassModal table th:nth-child(2), #showTemplateClassModal table td:nth-child(2) {
+  width: 25%;
+}
+
+#selectTemplateClassModal .modal-input {
+  width: 86%;
+  margin-left: 7%;
+  background-color: inherit;
+}
+
+#selectTemplateClassModal .modal-input .label {
+  display: inline-block;
+  margin-bottom: 5px;
+  font-size: 18px;
+  color: #231F20;
+  border-bottom:  none !important;
+  height: auto !important;
+}
+
+#selectTemplateClassModal .modal-input .comment {
+  font-size: 14px;
+}
+
+#selectTemplateClassModal .modal-input input {
+  margin-top: 10px;
+}
+
+#selectTemplateClassModal .modal-input:is(:nth-of-type(2), :nth-of-type(3)) { 
+  margin-top: 40px;
+}
+
+#selectTemplateClassModal .fa-times, #showTemplateClassModal .fa-times  {
+  position: absolute;
+  right: 7%;
+  margin-top: 6px;
+  color: var(--primary-color);
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+#selectTemplateClass button {
+  border: none;
+  outline: none;
+  display: inline-block;
+  margin: 10px 10px 0px 0px !important;
+  left: 60%;
+  position: relative;
+}
+
+#uri-container {
+  height: 100px;
+  max-height: 100px;
+  overflow-y: auto;
+  border-bottom: 1pt #acacac solid;
+}
+
+#uri-container::before {
+  content: 'press return to add a URI';
+  font-size: 0.7em;
+  color: grey;
+  display: block;
+}
+
+button#showTemplates {
+  border: none;
+  outline: none;
 }
 
 /* records table */
@@ -631,17 +761,17 @@ th {
   padding-bottom: 15px;
 }
 
-#recordsList td {
+#recordsList td, #templatesList td {
   font-weight: 300;
   border-top: solid 1px grey;
   vertical-align: super;
 }
 
-#recordsList td form button {
+#recordsList td form button, #templatesList td form button {
   margin-top: 12px;
 }
 
-#recordsList td:nth-of-type(1) {
+#recordsList td:nth-of-type(1), #templatesList td:nth-of-type(1) {
   font-weight: 500 !important;
 }
 
@@ -665,7 +795,7 @@ th {
   text-align: center;
 }
 
-#paginate button {
+#paginate button, #paginate > input {
   background: white;
   margin: 0.5em 0.1em;
   color: black;
@@ -712,7 +842,7 @@ th {
 
 /* hidden input fields titles */
 .sectionTitle {
-  color: rgba(100, 23, 180, 1);
+  color: var(--primary-color);
   font-size: 2em;
   width: 100%;
   margin: 1em 2rem;
@@ -725,13 +855,13 @@ th {
 
 /* modify record */
 .label {
-  color: rgb(100, 23, 180);
+  color: var(--primary-color);
   font-family: 'Karla', sans-serif;
   font-size: 1.3em;
   font-weight: 600;
   text-transform: uppercase;
   margin: 0.5em 0px 5% 0px;
-  border-bottom: 2px solid rgb(100, 23, 180);
+  border-bottom: 2px solid var(--primary-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -768,11 +898,6 @@ th {
   display: inline;
 }
 
-.popover {
-  margin-top: 50px;
-  margin-left: 30%;
-}
-
 /* both forms */
 .tip {
   width: 35px;
@@ -790,7 +915,7 @@ th {
 }
 
 .blue {
-  color: rgba(100, 23, 180, 1) !important;
+  color: var(--primary-color) !important;
   cursor: pointer;
   font-weight: 500;
 }
@@ -815,7 +940,7 @@ nav .wditem, nav .viafitem {
 /*.orange {background-color: #FF8C00 !important; cursor: pointer;}
 .orange:hover {background-color: #cc7000 !important;}
 .orangeText {color: #FF8C00 !important;}*/
-/*.tag {display: inline-block; cursor: pointer; color: white; background-color: rgba(100,23,180,1); border-radius: 2px; padding: 0.2em; margin: 0.2em 0.2em 0.2em 35px;}
+/*.tag {display: inline-block; cursor: pointer; color: white; background-color: var(--primary-color); border-radius: 2px; padding: 0.2em; margin: 0.2em 0.2em 0.2em 35px;}
 */
 .tags-nlp {
   margin-top: 0.2em !important;
@@ -846,8 +971,8 @@ span[class^='tag MD']:hover {
 }
 
 span[class^='tag Q']:hover {
-  border-color: rgba(100, 23, 180, 1) !important;
-  color: rgba(100, 23, 180, 1) !important;
+  border-color: var(--primary-color) !important;
+  color: var(--primary-color) !important;
 }
 
 .tags-nlp::before {
@@ -929,7 +1054,7 @@ span[class^='tag Q']:hover {
 }
 
 input:checked + .slider {
-  background-color: rgb(100, 23, 180);
+  background-color: var(--primary-color);
 }
 
 input:checked + .slider:before {
@@ -972,7 +1097,7 @@ input:checked + .slider:before {
 
 input[type='checkbox'],
 input[type='radio'] {
-  accent-color: rgb(100, 23, 180);
+  accent-color: var(--primary-color);
 }
 
 input[type='text'],
@@ -982,7 +1107,7 @@ textarea {
   padding-left: 0.4em !important;
   padding-bottom: 0.5em;
   border: none;
-  border-bottom: 2px solid rgba(100, 23, 180, 0.12);
+  border-bottom: 2px solid rgba(27, 27, 27, 0.12);
   width: 100%;
   background-color: #F5F6FA;
   font-weight: 300;
@@ -993,7 +1118,7 @@ input[type='date']:focus,
 input[type='month']:focus,
 textarea:focus {
   outline: none !important;
-  border-bottom: solid 2px rgba(100, 23, 180, 1);
+  border-bottom: solid 2px var(--primary-color);
   -webkit-transition-duration: 0.4s;
   transition-duration: 0.4s;
   padding-left: 0.6em !important;
@@ -1005,12 +1130,12 @@ textarea.error-input {
 }
 
 @-webkit-keyframes border-error {
-  from { border-bottom: solid 2px rgba(100, 23, 180, 1); }
+  from { border-bottom: solid 2px var(--primary-color); }
   to { border-bottom: solid 2px rgb(200, 22, 22); }
 }
 
 @keyframes border-error {
-  from { border-bottom: solid 2px rgba(100, 23, 180, 1); }
+  from { border-bottom: solid 2px var(--primary-color); }
   to { border-bottom: solid 2px rgb(200, 22, 22); }
 }
 
@@ -1022,13 +1147,13 @@ input[value="Start review process"] {
 }
 
 input[value="Publish"] {
-  background-color: rgba(100, 23, 180, 1) !important;
-  border-color: rgba(100, 23, 180, 1);
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color);
 }
 
 input[value="Publish"]:hover {
-  background-color: rgba(100, 23, 180, 1) !important;
-  border-color: rgba(100, 23, 180, 1);
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color);
 }
 
 input.checkbox_group {
@@ -1076,11 +1201,11 @@ i.fa-exclamation-triangle {
 
 i.fa-info-circle {
   padding-left: 0.15em;
-  color: rgba(100, 23, 180, 1);
+  color: var(--primary-color);
 }
 
 i.fa-info-circle:hover {
-  color: rgba(100, 23, 180, 1);
+  color: var(--primary-color);
 }
 
 ::placeholder {
@@ -1172,14 +1297,15 @@ table.url-table i, table.extraction-table i {
 }
 
 .counterBox {
-  border: solid 2px rgb(100, 23, 180);
-  color: rgb(100, 23, 180);
+  border: solid 2px var(--primary-color);
+  color: var(--primary-color);
   padding: 1.5em 2em;
   margin: 1em;
 }
 
 .counterNum {
   font-size: 3em;
+  height: 1.5em;
 }
 
 .chart-heading {
@@ -1195,7 +1321,6 @@ table.url-table i, table.extraction-table i {
 
 .map-chart {
   width: 100%;
-  background-color: #f8f8f8;
   height: 500px;
   overflow: hidden;
   border: 1px solid #332421;
@@ -1231,6 +1356,17 @@ table.url-table i, table.extraction-table i {
 
 .counters > p, .stats-block > p {
   font-size: 1.4em;
+}
+
+.section-fade {
+  opacity: 0;
+  transform: translateY(50px);  
+  transition: opacity 1s ease-out, transform 1s ease-out;
+}
+
+.section-fade-visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .subtemplateField:last-child {
@@ -1272,7 +1408,7 @@ table.url-table i, table.extraction-table i {
 }
 
 .entryBox a:hover {
-  color: rgba(100, 23, 180, 1);
+  color: var(--primary-color);
   text-decoration: none;
 }
 
@@ -1299,7 +1435,7 @@ table.url-table i, table.extraction-table i {
 }
 
 .noImage {
-  background-color: rgba(100, 23, 180, 1);
+  background-color: var(--primary-color);
   position: relative;
   z-index: 0;
 }
@@ -1310,7 +1446,7 @@ table.url-table i, table.extraction-table i {
 }
 
 .noImage:hover .ImageCHI {
-  background-color: rgba(100, 23, 180, 1);
+  background-color: var(--primary-color);
   -webkit-transition-duration: 0.4s;
   transition-duration: 0.4s;
 }
@@ -1326,7 +1462,7 @@ table.url-table i, table.extraction-table i {
 .showRes,
 .showMore {
   margin: 20px 0px;
-  background-color: rgba(100, 23, 180, 1);
+  background-color: var(--primary-color);
   color: white;
 }
 
@@ -1356,11 +1492,10 @@ table.url-table i, table.extraction-table i {
 }
 
 .inverse-subtitle {
-  padding-left: 1em;
   padding-top: 1em;
   text-transform: uppercase;
   font-weight: 600;
-  color: rgb(100, 23, 180);
+  color: var(--primary-color);
   display: inline-block;
 }
 
@@ -1369,8 +1504,14 @@ table.url-table i, table.extraction-table i {
   flex-wrap: wrap; 
   align-items: flex-start;
   gap: 20px; 
-  border-bottom: 2px solid rgba(100, 23, 180, 0.12);
-  padding-left: 1em;
+}
+
+.inverse-template:not(:last-of-type) .inverse-results-container {
+  border-bottom: 2px solid rgba(27, 27, 27, 0.12);
+}
+
+.inverse-results-container i {
+  padding-left: 0;
 }
 
 .inverse-property {
@@ -1387,13 +1528,12 @@ table.url-table i, table.extraction-table i {
 .inverse-property span {
   font-weight: 400;
   color: #333;
-
 }
 
 .inverses {
-  margin: 3em 0 -1em 0; 
-  max-height: 1000px;
-  background-color: silver;
+  margin: 3em 0 -0.8em 0; 
+  max-height: 100%;
+  background-color: lightgray;
 }
 
 .info-bio {
@@ -1401,7 +1541,7 @@ table.url-table i, table.extraction-table i {
 }
 
 .biblio:first-of-type {
-  background-color: silver;
+  background-color: lightgray;
   color: white;
 }
 
@@ -1412,7 +1552,7 @@ table.url-table i, table.extraction-table i {
 }
 
 .biblio:nth-of-type(3) {
-  background-color: rgba(100, 23, 180, 1)
+  background-color: var(--primary-color)
 }
 
 .biblio-label {
@@ -1434,7 +1574,7 @@ table.url-table i, table.extraction-table i {
 }
 
 .onlineres {
-  background-color: rgba(100, 23, 180, 1);
+  background-color: var(--primary-color);
   color: white !important;
   padding: 1em 3em 3em 3em;
 }
@@ -1472,7 +1612,7 @@ table.url-table i, table.extraction-table i {
   text-decoration: none;
   padding: 0.4em;
   border-radius: 5px;
-  background-color: rgba(100, 23, 180, 1);
+  background-color: var(--primary-color);
   text-align: center;
   vertical-align: middle;
 }
@@ -1485,7 +1625,7 @@ table.url-table i, table.extraction-table i {
   height: 300px;
   padding: 4em;
   border-radius: 50%;
-  background-color: rgba(100, 23, 180, 1);
+  background-color: var(--primary-color);
   text-align: center;
   vertical-align: middle;
 }
@@ -1494,7 +1634,7 @@ table.url-table i, table.extraction-table i {
 .box-small:hover {
   color: white;
   text-decoration: none;
-  background-color: rgba(100, 23, 180, 1);
+  background-color: var(--primary-color);
   -webkit-transition-duration: 0.4s;
   transition-duration: 0.4s;
 }
@@ -1566,14 +1706,14 @@ table.url-table i, table.extraction-table i {
 
 .alphabet span:hover,
 .queryGroup:hover {
-  color: rgba(100, 23, 180, 1) !important;
+  color: var(--primary-color) !important;
   -webkit-transition-duration: 0.4s;
   transition-duration: 0.4s;
 }
 
 .alphaActive {
-  color: rgba(100, 23, 180, 1) !important;
-  border-color: rgba(100, 23, 180, 1) !important;
+  color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
 }
 
 .accordion-group,
@@ -1585,7 +1725,7 @@ table.url-table i, table.extraction-table i {
   font-weight: 500;
 }
 
-/* height: 300px; border-bottom: solid 1px rgba(100,23,180,1);*/
+/* height: 300px; border-bottom: solid 1px var(--primary-color);*/
 .showMore {
   margin: 5px;
 }
@@ -1610,7 +1750,7 @@ table.url-table i, table.extraction-table i {
 
 .documentation h4 {
   font-size: 1.1em;
-  color: rgba(100, 23, 180, 1);
+  color: var(--primary-color);
   margin-top: 1em;
   font-weight: bold;
 }
@@ -1741,14 +1881,14 @@ table.url-table i, table.extraction-table i {
 
 /* contents */
 .page_intro {
-  color: rgba(100, 23, 180, 1);
+  color: var(--primary-color);
   padding: 2em 3em;
   font-size: 1.8em;
   text-align: center;
 }
 
 .collectionsVizContainer {
-  background-color: rgba(100, 23, 180, 1);
+  background-color: var(--primary-color);
   padding: 2em;
 }
 
@@ -1788,18 +1928,18 @@ table.url-table i, table.extraction-table i {
 }
 
 .vis-item {
-  background-color: rgba(100, 23, 180, 1) !important;
-  border-color: rgba(100, 23, 180, 1) !important;
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
   color: white !important;
 }
 
 .vis-delete::after {
-  color: rgba(100, 23, 180, 1) !important;
+  color: var(--primary-color) !important;
 }
 
 .vis-delete:hover:after,
 .vis-delete:hover {
-  color: rgba(100, 23, 180, 1) !important;
+  color: var(--primary-color) !important;
   background-color: none !important;
 }
 
@@ -1809,6 +1949,7 @@ table.url-table i, table.extraction-table i {
   overflow-y: scroll;
   font-family: 'IBM Plex Sans', sans-serif;
   padding: 0 10px;
+  z-index: 1000;
 }
 
 .popover-header {
@@ -1826,7 +1967,7 @@ table.url-table i, table.extraction-table i {
 }
 
 .read_more {
-  background-color: rgba(100, 23, 180, 1);
+  background-color: var(--primary-color);
   color: white !important;
   text-decoration: none !important;
   display: inline-block;
@@ -1838,7 +1979,7 @@ table.url-table i, table.extraction-table i {
 }
 
 .read_more:hover {
-  background-color: rgba(100, 23, 180, 1);
+  background-color: var(--primary-color);
 }
 
 /* overwrite */
@@ -1957,6 +2098,16 @@ select-selected.select-arrow-active:after {
   margin-left: 0 !important;
 }
 
+.block_field .row ul {
+  padding-left: 0;
+  list-style: none;
+}
+
+.block_field .row ul .fa-edit {
+  color: var(--primary-color) !important;
+  cursor: pointer;
+}
+
 .comment {
   color: grey;
   font-size: 0.8em;
@@ -1966,7 +2117,7 @@ select-selected.select-arrow-active:after {
 .up,
 .down,
 .trash {
-  color: rgba(100, 23, 180, 1) !important;
+  color: var(--primary-color) !important;
   margin: 0.2em;
   text-align: center;
 }
@@ -1974,7 +2125,7 @@ select-selected.select-arrow-active:after {
 .up:hover,
 .down:hover,
 .trash:hover {
-  color: rgba(255, 0, 0, 1) !important;
+  color: var(--secondary-color) !important;
   -webkit-transition-duration: 0.4s;
   transition-duration: 0.4s;
 }
@@ -2000,7 +2151,7 @@ section.dropdown-menu.gradient_dropbox.show {
 }
 
 section.dropdown-menu.gradient_dropbox.show input[type='text'] {
-  border-bottom: 1px solid rgb(100, 23, 180);
+  border-bottom: 1px solid var(--primary-color);
   margin: 0;
   padding: 0;
   opacity: 70%;
@@ -2030,8 +2181,8 @@ section.dropdown-menu.gradient_dropbox.show input[type='text'] {
 #selectTemplateClassModal > form > section:first-of-type {
   width: 100%;
   padding: 15px 10px 10px 7%;
-  border-bottom: 3px solid rgba(100, 23, 180, 1);
-  color: rgba(100, 23, 180, 1);
+  border-bottom: 3px solid var(--primary-color);
+  color: var(--primary-color);
   font-size: 22px;
 }
 
@@ -2066,7 +2217,7 @@ section.dropdown-menu.gradient_dropbox.show input[type='text'] {
   position: absolute;
   right: 7%;
   margin-top: 6px;
-  color: rgb(100, 23, 180);
+  color: var(--primary-color);
   font-size: 0.9em;
   cursor: pointer;
 }
@@ -2131,7 +2282,7 @@ button#showTemplates {
 
 @keyframes highlightField {
   from { padding-left:  0px; color: black; font-weight: 200;}
-  to { padding-left: 0.5em; color: rgb(100, 23, 180); font-weight: 500;}  
+  to { padding-left: 0.5em; color: var(--primary-color); font-weight: 500;}  
 }
 
 
@@ -2306,7 +2457,7 @@ button#showTemplates {
 
   tr {
     margin-top: 20px;
-    border-bottom: 1px solid rgba(100, 23, 180, 0.12) !important;
+    border-bottom: 1px solid rgba(27, 27, 27, 0.12) !important;
   }
 
   tr td {
@@ -2477,7 +2628,7 @@ button#showTemplates {
   display: block;
   width: 100%;
   z-index: 1002;
-  background: linear-gradient(35deg, rgba(100, 23, 180, 1) 0%, rgb(255, 0, 0) 100%), no-repeat center center fixed;
+  background: linear-gradient(35deg, var(--primary-color) 0%, var(--secondary-color) 100%), no-repeat center center fixed;
   color: #fff;
   opacity: 80%; 
   padding: 18px;
@@ -2502,7 +2653,7 @@ button#showTemplates {
   cursor:pointer;
 }
 .MMtag i{
-  color: rgba(100,23,180,1); 
+  color: var(--primary-color); 
   position: absolute; 
   left:16px; 
   margin-top: 12px;
@@ -2519,7 +2670,7 @@ button#showTemplates {
 }
 /* skos vocabs link */
 .vocab-link{
-  color:rgba(100,23,180,1) !important; 
+  color:var(--primary-color) !important; 
   cursor: pointer; 
   font-size: 1em; 
   font-weight: 400; 
@@ -2606,8 +2757,8 @@ button#showTemplates {
 }
 
 .extraction-form-div:first-of-type {
-  color: rgb(100, 23, 180);
-  border-bottom: 1px solid rgb(100, 23, 180);
+  color: var(--primary-color);
+  border-bottom: 1px solid var(--primary-color);
   margin-top: 0.5em;
 }
 
@@ -2615,7 +2766,7 @@ button#showTemplates {
   position: absolute;
   right: 50px;
   margin-top: 12px;
-  color: rgb(100, 23, 180);
+  color: var(--primary-color);
   font-size: 0.9em;
   cursor: pointer;
 }
@@ -2649,7 +2800,7 @@ button#showTemplates {
   margin-left: 5%;
   margin-bottom: 1.2em;
   font-size: 0.8em;
-  color: rgb(100, 23, 180);
+  color: var(--primary-color);
   cursor: pointer;
 }
 
@@ -2761,7 +2912,7 @@ h4.subrecord-title {
   color: black;
   margin-bottom: 0;
   padding: 0.4em 0.7em;
-  border-bottom: solid 2px rgba(100, 23, 180, 1);
+  border-bottom: solid 2px var(--primary-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -2787,7 +2938,7 @@ h4.subrecord-title.closed-title {
 }
 
 .form_row .fa-edit, .import-form .fa-edit, .form_row .fa-trash-alt, td > .fa-check-circle {
-  color: rgba(100,23,180,1); 
+  color: var(--primary-color); 
   cursor: pointer;
 }
 
@@ -2836,7 +2987,7 @@ h4.subrecord-title.closed-title {
 }
 
 .fa-chevron-down:hover {
-  color: rgba(100, 23, 180, 1);
+  color: var(--primary-color);
   cursor: pointer;
 }
 
@@ -2853,8 +3004,8 @@ h4.subrecord-title.closed-title {
 }
 .subtemplateValueOpen > a,
 .subtemplateValue > a:hover {
-  border-color: rgba(100, 23, 180, 1) !important;
-  color: rgba(100, 23, 180, 1) !important;
+  border-color: var(--primary-color) !important;
+  color: var(--primary-color) !important;
 }
 
 /* multiple lang */
@@ -2886,7 +3037,7 @@ h4.subrecord-title.closed-title {
 }
 
 .lang-item {
-  color:rgba(100,23,180,1) !important; 
+  color:var(--primary-color) !important; 
   cursor: pointer; 
   font-size: 1em; 
   font-weight: 400; 
@@ -2901,12 +3052,12 @@ h4.subrecord-title.closed-title {
 #lang-form {
   display: block;
   position: absolute;
-  background: #ECE0FD;
+  background: white;
   width: 400px;
   padding: 20px;
-  border: solid 1px rgb(100, 23, 180);
+  border: solid 1px var(--primary-color);
   border-radius: 5px;
-  z-index: 1023;
+  z-index: 1000;
 }
 
 #lang-form:after {
@@ -2917,7 +3068,7 @@ h4.subrecord-title.closed-title {
   border-top: none;
   border-right: 10px solid transparent;
   border-left: 10px solid transparent;
-  border-bottom: 10px solid rgba(100, 23, 180, 1);
+  border-bottom: 10px solid var(--primary-color);
 }
 
 #lang-form label {
@@ -2970,7 +3121,7 @@ h4.subrecord-title.closed-title {
 }
 
 .yasqe-buttons i {
-  color: rgba(100,23,180,1); cursor: pointer;
+  color: var(--primary-color); cursor: pointer;
 }
 
 
@@ -2989,7 +3140,7 @@ h4.subrecord-title.closed-title {
   top: 15px;
   font-size: 40px;
   right: 45px;
-  color: rgb(100, 23, 180);
+  color: var(--primary-color);
   cursor: pointer;
 }
 
@@ -2998,13 +3149,23 @@ h4.subrecord-title.closed-title {
   top: 15px;
   font-size: 40px;
   right: 70px;
-  color: rgb(100, 23, 180);
+  color: var(--primary-color);
   cursor: pointer;
 }
 
+/* Swal buttons */
+.swal2-actions > button {
+  margin: 0.2em;
+}
+
+.swal2-confirm {
+  background-color: var(--primary-color);
+}
+
 /* extra */
-.material-icons, .fa-plus-circle, .fa-eye, .fa-trash, .fa-trash-alt, .fa-external-link-alt{color: rgba(100,23,180,1); cursor: pointer;}
-.material-icons {font-size: 1.5em;}
+span > .material-icons, .fa-plus-circle, .fa-eye, .fa-trash, .fa-trash-alt, .fa-external-link-alt{color: var(--primary-color); cursor: pointer;}
+span > .material-icons {font-size: 1.5em;}
+.material-icons {font-size: 1em !important}
 .link_btn, .btn {white-space: nowrap; font-weight: 500;}
 .add_fields .link_btn {display: inline-block; margin-bottom: 8px}
 .leaflet-popup-close-button,.leaflet-control-zoom-in,.leaflet-control-zoom-out {text-decoration: none !important;}
@@ -3033,16 +3194,6 @@ h4.subrecord-title.closed-title {
 
 .center-checkbox input {
   margin: 0 !important;
-}
-
-
-.charts-list {
-  list-style: none;
-}
-
-.charts-list .fa-edit {
-  color: rgb(100, 23, 180) !important;
-  cursor: pointer;
 }
 
 .charts-yasqe {

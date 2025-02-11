@@ -238,6 +238,9 @@ class Template:
 
 		# display template
 		is_git_auth = github_sync.is_git_auth()
+		data = web.input()
+		if 'action' in data and 'updateSubclass' in data.action:
+			queries.updateSubclassValue(data)
 
 		with open(TEMPLATE_LIST,'r') as tpl_file:
 			tpl_list = json.load(tpl_file)
@@ -272,7 +275,6 @@ class Template:
 		"""
 
 		data = web.input()
-		print(data)
 		if 'action' in data and 'updateTemplate' not in data.action and 'deleteTemplate' not in data.action:
 			create_record(data)
 		else:
@@ -415,7 +417,6 @@ class Index:
 
 		# filter records
 		if actions.action.startswith('filter'):
-			print(actions.action)
 			filterRecords = filter_values[actions.action]
 			filterRecords = filterRecords if filterRecords not in ['none',None] else ''
 			filterName = actions.action
@@ -964,11 +965,14 @@ class Records:
 				if len(res_subclasses) > 0:
 					count_by_subclass[template["name"]] = {}
 				for res_subclass in res_subclasses:
-					subclass_list = [res_subclass]
-					count_subclass = queries.countAll(res_class,subclass_list,True,False)
+					count_subclass = queries.countAll(res_class,res_subclasses,[res_subclass],False)
 					count_by_subclass[template["name"]][res_subclass] = {"label": res_subclass_dict[res_subclass], "count": count_subclass}
+				for template_name in count_by_subclass:
+					count_by_subclass[template_name] = dict(sorted(count_by_subclass[template_name].items(), key=lambda item: item[1]['count'], reverse=True))
+
 				filtersBrowse = queries.getBrowsingFilters(template["template"])
 				filters_by_template[template["name"]] = filtersBrowse
+
 		return render.records(user=session['username'], data=records_by_template,
 							subclass_data=count_by_subclass,title='Latest resources', r_base=conf.base,
 							alll=count_by_template, filters=filters_by_template,
@@ -998,7 +1002,7 @@ class View(object):
 		base = conf.base
 		record = base+name
 		res_class = queries.getClass(conf.base+name)
-		data, stage, title, properties, data_labels, extractions_data, new_dict_classes, properties_sorted = None, None, None, None, {}, {}, {}, {}
+		data, stage, title, properties, data_labels, extractions_data, new_dict_classes = None, None, None, None, {}, {}, {}
 		try:
 			res_template = u.get_template_from_class(res_class)
 			data = dict(queries.getData(record+'/',res_template))
@@ -1033,43 +1037,44 @@ class View(object):
 			incoming_links = queries.get_records_from_object(base+name)
 			class_sorted = {}
 			for result in incoming_links['results']['bindings']:
-				result_class = result['class']['value']
+				result_class = result['classes']['value']
 				result_property_uri = result['property']['value']
-				result_property = result_property_uri + "," + u.get_LOV_namespace(result_property_uri)
 				result_subject = result['subject']['value'] + ',' + result['label']['value']
+				result_class = "; ".join(sorted(result_class.split("; ")))
 				if result_class not in class_sorted:
-					class_sorted[result_class] = { result_property : [result_subject] }
+					class_sorted[result_class] = { result_property_uri : [result_subject] }
 				else:
-					if result_property in class_sorted[result_class]:
-						class_sorted[result_class][result_property].append(result_subject)
+					if result_property_uri in class_sorted[result_class]:
+						class_sorted[result_class][result_property_uri].append(result_subject)
 					else:
-						class_sorted[result_class][result_property] = [result_subject]
+						class_sorted[result_class][result_property_uri] = [result_subject]
+
 
 			with open(TEMPLATE_LIST) as tpl_list:
 				templates = json.load(tpl_list)
+
+
+			result_class = "; ".join(sorted(result_class.split("; ")))
 			for k in list(class_sorted.keys()):
 
-				template = next((t["name"], t["template"]) for t in templates if t["type"] == sorted(k.split("; ")))
+				# retrieve the corresponding template
+				template = next((
+					t["name"], t["template"]
+				) for t in templates if all(val in (t["type"] + list(t["subclasses"].keys())) for val in k.split("; ")))
 				template_name, template_file = template
+
 				with open(template_file) as tpl_file:
 					template_fields = json.load(tpl_file)
 				property_label = list(class_sorted[k].keys())[0]
 				property_name = next(f["label"] for f in template_fields if f["property"] == property_label.split(',',1)[0])
-				if property_label in properties_sorted:
-					properties_sorted[property_label].extend(class_sorted[k][property_label])
-				else:
-					properties_sorted[property_label] = class_sorted[k][property_label]
 				new_dict_classes[template_name] = {'class':k, 'results': { property_label+','+property_name : class_sorted[k][property_label]} }
 		except Exception as e:
 			pass
 
-		print("inverse_by_properties:", properties_sorted, "\nby class:", new_dict_classes)
-
 		return render.view(user=session['username'], graphdata=data_labels,
 						graphID=name, title=title, stage=stage, base=base,properties=properties,
 						is_git_auth=is_git_auth,project=conf.myProject,knowledge_extractor=extractions_data,
-						inverses_by_class=new_dict_classes,inverses_by_properties=properties_sorted,
-						main_lang=conf.mainLang)
+						inverses_by_class=new_dict_classes,main_lang=conf.mainLang)
 
 	def POST(self,name):
 		""" Record web page
@@ -1112,7 +1117,6 @@ class Term(object):
 					for result in data["results"]["bindings"] \
 					if (result["object"]["value"] == uri and result["object"]["type"] == 'uri') ] \
 					if data != None else []
-		
 		# look for occurrences in Extraction Graphs
 		extractions_data = queries.describe_extraction_term(uri)
 		appears_in_extractions = [result["graph"]["value"][:-1] for result in extractions_data["results"]["bindings"] ] \
@@ -1123,7 +1127,7 @@ class Term(object):
 			res_templates = json.load(tpl_list)
 		for res_uri in appears_in:
 			res_class = sorted(queries.getClass(res_uri))
-			res_type = next((t["name"] for t in res_templates if t["type"] == res_class),None)
+			res_type = next((t["name"] for t in res_templates if all(cls in (t["type"] + list(t["subclasses"].keys())) for cls in res_class)),None)
 			if res_type in results_by_class:
 				results_by_class[res_type]['results'].append(res_uri)
 			elif res_type != None:
@@ -1176,7 +1180,7 @@ class DataModel:
 					res_data_model["props_labels"] = props_labels
 				res_data_models.append(res_data_model)
 		return render.datamodel(user=session['username'], data=res_data_models,is_git_auth=is_git_auth,
-								project=conf.myProject)
+								project=conf.myProject,main_lang=conf.mainLang)
 
 	def POST(self):
 		""" Data model page """
@@ -1362,7 +1366,7 @@ class Sparqlanything(object):
 				if not (uri.startswith("http://") or uri.startswith("https://")):
 					service = query_string.service if "service" in action else "wd"
 					result["uri"]["value"] = queries.entity_reconciliation(uri,service)
-			print(results)
+
 			return json.dumps(results)
 	
 class Wikidata(object):
@@ -1393,68 +1397,41 @@ class Charts(object):
 		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
 
 		is_git_auth = github_sync.is_git_auth()
-		query_viz = web.input()
-		viz = {urllib.parse.unquote(k): urllib.parse.unquote(v) for k, v in query_viz.items()}
-		if "action" in query_viz:
-			try:
-				charts = u.charts_to_json(conf.charts, viz, False)
-			except Exception as e:
-				charts = {}
+		data = web.input()
+		viz = {urllib.parse.unquote(k): urllib.parse.unquote(v) for k, v in data.items()}
+		if "action" in data:
+			if data.action == "preview":
+				try:
+					charts = u.charts_to_json(conf.charts, viz, False)
+				except Exception as e:
+					charts = {}
 		else:
 			with open(conf.charts) as chart_file:
 				charts = json.load(chart_file)
 		
 		for chart in charts["charts"]:
-			if chart["type"] == "counter":
-				for counter in chart["counters"]:
-					counter_query = counter["query"]
-					query_results = queries.hello_blazegraph(counter_query)
-					count_result = [result["count"]["value"] for result in query_results["results"]["bindings"]]
-					count = int(count_result[0]) if len(count_result) > 0 else 0
-					counter["count"] = count
-			elif chart["type"] == "map":
+			if chart["type"] == "map":
 				chart_id = str(time.time()).replace('.','-')
-				query_results = queries.hello_blazegraph(chart["query"])["results"]["bindings"]
-				stats_result = []
-				for result in query_results:
-					if "geonames" in result:
-						geonames = result["geonames"]["value"]
-						lat, long = queries.geonames_geocoding(geonames)
-						i = 0
-						while i < int(result["count"]["value"]):
-							stats_result.append({
-								"label" : result["label"]["value"],
-								"latitude": lat,
-								"longitude": long
-							})
-							i += 1
-				chart["stats"] = json.dumps(stats_result)
 				chart["info"] = chart_id
 			elif chart["type"] == "chart":
 				chart_id = str(time.time()).replace('.','-')
-				stats_query = chart["query"]
 				x_var, x_name = chart["x-var"], chart["x-name"]
 				x_var = x_var.replace("?","")
 				y_var, y_name = chart["y-var"], chart["y-name"]
 				y_var = y_var.replace("?","")
-				query_results = queries.hello_blazegraph(stats_query)
-				stats_result = []
-				for result in query_results["results"]["bindings"]:
-					x_value = int(result[x_var]["value"]) if "datatype" in result[x_var] and result[x_var]["datatype"] == "http://www.w3.org/2001/XMLSchema#integer" else result[x_var]["value"]
-					y_value = int(result[y_var]["value"]) if "datatype" in result[y_var] and result[y_var]["datatype"] == "http://www.w3.org/2001/XMLSchema#integer" else result[y_var]["value"]
-					stats_result.append({x_name: x_value, y_name: y_value})
-				if "sorted" in chart and chart["sorted"] != "None":
-					if chart["sorted"] == "x":
-						stats_result = list(reversed(sorted(stats_result, key=lambda x: x[x_name])))
-					elif chart["sorted"] == "y":
-						stats_result = list(reversed(sorted(stats_result, key=lambda x: x[y_name])))
-				chart["stats"] = json.dumps(stats_result)
 				chart["info"] = (chart_id, x_name, y_name)
-
+			chart["json"] = json.dumps(chart)
 
 		return render.charts_visualization(user=session['username'], is_git_auth=is_git_auth,
 					   project=conf.myProject, charts=charts,
 					   main_lang=conf.mainLang)
+	
+	def POST(self):
+		web.header('Content-Type', 'application/json')
+		data = web.data()
+		json_data = json.loads(data)
+		results = queries.getChartData(json_data)
+		return json.dumps(results)
 	
 class ChartsTemplate(object):
 	def GET(self):

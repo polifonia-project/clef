@@ -160,7 +160,7 @@ $if inverses_by_class != {} and inverses_by_properties != {}:
 								<span><h4 class="articleSubtitle">$property_label</h4><br><a href="$property_url">$property_short</a></span>
 							</section>
 							<section class="inverse-property">
-								$for result in results:
+								$for result in set(results):
 									$ result_uri, result_label = result.split(',',1)
 									<span><label>$result_label</label> <a href="$result_uri"><i class="fas fa-external-link-alt"></i></a></span><br>
 							</section>
@@ -178,7 +178,7 @@ $if inverses_by_class != {} and inverses_by_properties != {}:
 								<span><a href="$property_url">$property_short</a></span>
 							</section>
 							<section class="inverse-property">
-								$for result in results:
+								$for result in set(results):
 									$ result_uri, result_label = result.split(',',1)
 									<span><label>$result_label</label> <a href="$result_uri"><i class="fas fa-external-link-alt"></i></a></span><br>
 							</section>

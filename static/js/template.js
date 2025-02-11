@@ -130,7 +130,16 @@ function is_selected(st, field) {
 function add_field(field, res_type, backend_file=null) {
     // backend_file argument is currently used to load the information about the available SKOS vocabularies
 
-    var is_subclass_active = Object.keys(subclasses).length === 0 ? false : true; 
+
+    const isSubclassSelected = $('select').filter(function() {
+        return $(this).val() === "Subclass";
+    }).length > 0;
+    if (isSubclassSelected) {
+        showErrorPopup("Subclass field already exists", "Only one Subclass field is allowed.");
+        return false;
+    }
+    
+    var is_subclass_active = Object.keys(subclasses).length === 0 ? false : true;
     var contents = "";
     var temp_id = Date.now().toString(); // to be replaced with label id before submitting
 
@@ -147,6 +156,7 @@ function add_field(field, res_type, backend_file=null) {
         <option value='Skos' "+is_selected('Skos',field)+">Vocabulary (SKOS)</option>\
         <option value='WebsitePreview' "+is_selected('WebsitePreview',field)+">Website Preview (iframe)</option>\
         <option value='KnowledgeExtractor' "+is_selected('KnowledgeExtractor',field)+">Knowledge Extraction</option>\
+        <option value='Subclass' "+is_selected('Subclass',field)+">Subclass</option>\
         <option value='Subtemplate' "+is_selected('Subtemplate',field)+">Subtemplate</option>\
         </select>\
     </section>";
@@ -235,19 +245,31 @@ function add_field(field, res_type, backend_file=null) {
     </section>";
 
     var field_values = "<section class='row'>\
-        <label class='col-md-3'>VALUES <br><span class='comment'>write one value per row in the form uri, label</span></label>\
-        <textarea id='values__"+temp_id+"' class='col-md-8 values_area align-self-start' name='values__"+temp_id+"'></textarea>\
+        <label class='col-md-3'>VALUES<br><span class='comment'>define values as URI, label pairs</span></label>\
+        <section class='col-md-8'>\
+            <ul class='col-md-12 values-list' id='values__"+temp_id+"'>\
+                <li>\
+                    <label class='inner-label col-md-12'>Values List</label>\
+                </li>\
+                <li><label class='add-option'>ADD NEW VALUE <i class='fas fa-plus-circle' onclick='addLabelURI(this, "+temp_id+")'></i></label></li>\
+            </ul>\
+        </section>\
     </section>";
+
+    var field_reconciliation = "<section class='row'>\
+        <label class='col-md-3'>URI RECONCILIATION <br><span class='comment'>select an entity reconciliation service for missing URIs</span></label>\
+        <select class='col-md-8 ("+res_type+") custom-select' id='service__"+temp_id+"' name='service__"+temp_id+"'>\
+        <option value='None'>Select</option>\
+        <option value='wd'>Wikidata</option>\
+        <option value='viaf'>VIAF</option>\
+        <option value='geonames'>Geonames</option>\
+        </select>\
+    </section>"
 
     var field_browse = "<section class='row'>\
         <label class='col-md-11 col-sm-6' for='browse__"+temp_id+"'>Use this value as a filter in <em>Explore</em> page</label>\
         <input type='checkbox' id='browse__"+temp_id+"' name='browse__"+temp_id+"'>\
     </section>";
-
-    var field_subclass = "<section class='row'>\
-        <label class='col-md-11 col-sm-6' for='subclass__"+temp_id+"'>Use this value as <em>Subclass</em></label>\
-        <input type='checkbox' onClick='disable_other_subclass_dropdown(this)' id='subclass__"+temp_id+"' name='subclass__"+temp_id+"'>\
-    </section>"
 
     var field_mandatory = "<section class='row'>\
         <label class='col-md-11 col-sm-6' for='mandatory__"+temp_id+"'>Make this value mandatory</label>\
@@ -258,7 +280,6 @@ function add_field(field, res_type, backend_file=null) {
         <label class='col-md-11 col-sm-6' for='hidden__"+temp_id+"'>Hide this field from the front-end view</label>\
         <input type='checkbox' id='hidden__"+temp_id+"' name='hidden__"+temp_id+"' onclick='hide_field(this)'>\
     </section>";
-
 
     var field_subtemplate_import = "<section class='row'>\
         <label class='col-md-3'>IMPORT TEMPLATES<br><span class='comment'>end-users can use templates among selected ones</span></label>\
@@ -293,17 +314,32 @@ function add_field(field, res_type, backend_file=null) {
         </section>\
     </section>";
 
+    var field_subclass_values = "<section class='row'>\
+        <label class='col-md-3'>SUBCLASSES <br><span class='comment'>define values as URI, label pairs</span></label>\
+        <section class='col-md-8'>\
+            <ul class='col-md-12 values-list' id='subclass__"+temp_id+"'>\
+                <li>\
+                    <label class='inner-label col-md-12'>Subclasses List</label>\
+                </li>\
+                <li><label class='add-option'>ADD NEW VALUE <i class='fas fa-plus-circle' onclick='addLabelURI(this, "+temp_id+")'></i></label></li>\
+            </ul>\
+        </section>\
+    </section>";
+
+    // todo: modify the following script
     var field_subclass_restriction = "";
     if (is_subclass_active) {
-        field_subclass_restriction = `<section class='subclass-dropdown row'>
-                <label class='col-md-3'>SUBCLASS RESTRICTED <br><span class='comment'>make this field available once a subclass has been selected</span></label>
-                <select class='custom-select col-md-8' id='restricted__${temp_id}' name='restricted__${temp_id}'>
-                    <option value='None'>Select a subclass</option>
-                    ${Object.entries(subclasses).map(([uri, label]) => `
-                        <option value='${encodeURIComponent(uri)}'>${label}</option>
-                    `).join('')}
-                </select>
+        field_subclass_restriction = `<section class='subclass row'>
+            <label class='col-md-3'>SUBCLASS RESTRICTED <br><span class='comment'>make this field available once a subclass has been selected</span></label>
+            <section class='col-md-8'>
+                <ul>
+                    <label class="inner-label col-md-12">Subclasses List</label>
+                    ${Object.entries(subclasses).map(([uri, label], index) => `<li>
+                        <label for subclass${index}__${temp_id}>${label}</label> <input type='checkbox' value='${encodeURIComponent(uri)}' name='subclass${index}__${temp_id}'/>
+                </li>`).join('')}
+                </ul>
             </section>
+        </section>
         `;
     }
 
@@ -313,14 +349,15 @@ function add_field(field, res_type, backend_file=null) {
 
     contents += field_type + field_name + field_prepend + field_property + open_addons;
     if (field =='Textbox') { contents += field_value + field_placeholder + field_subclass_restriction + field_mandatory + field_hide; }
-    else if (field =='Dropdown') { contents += field_values + field_subclass_restriction + field_mandatory + field_hide + field_subclass + field_browse }
+    else if (field =='Dropdown') { contents += field_values + field_subclass_restriction + field_mandatory + field_hide + field_browse }
     else if (field =='Textarea') { contents += field_placeholder + field_subclass_restriction + field_mandatory + field_hide; }
     else if (field =='Date') { contents += field_calendar + field_subclass_restriction + field_mandatory + field_hide + field_browse ; }
     else if (field =='Skos') { contents += field_available_vocabularies + accepted_values_vocabularies + field_placeholder + field_subclass_restriction + field_mandatory + field_hide + field_browse ; }
     else if (field =='Multimedia') { contents += field_multimedia + field_placeholder + field_subclass_restriction + field_mandatory + field_hide; }
     else if (field =='WebsitePreview') { contents += field_placeholder + field_subclass_restriction + field_mandatory + field_hide; }
     else if (field =='Subtemplate') { contents += field_subtemplate_import + field_cardinality + field_data_inheritance + field_subclass_restriction + field_mandatory + field_hide + field_browse; }
-    else if (field =='KnowledgeExtractor') { contents += open_addons + field_subclass_restriction; }
+    else if (field =='Subclass') { contents += field_subclass_values + field_mandatory + field_hide; }
+    else if (field =='KnowledgeExtractor') { contents += open_addons + field_reconciliation + field_subclass_restriction; }
     else {contents += field_values + field_subclass_restriction + field_mandatory + field_hide + field_browse; };
     contents += close_addons + up_down;
     $(".sortable").append("<section class='block_field' data-id='"+temp_id+"'>"+contents+"</section>");
@@ -329,6 +366,13 @@ function add_field(field, res_type, backend_file=null) {
 
     $(".trash").click(function(e){
         e.preventDefault();
+
+        if (field =='Subclass') {
+            $(this).parent().find("label > .fa-trash-alt").each(function() {
+                $(this).click();
+            });
+        }
+
         $(this).parent().remove();
     });
 };
@@ -484,58 +528,6 @@ function disable_other_cb(ckType) {
     $('#'+mandatory_checkbox_id).prop('checked', true); 
 };
 
-// if one subclass drodpown is checked, disable others
-function disable_other_subclass_dropdown(ckType) {
-
-    var isChecked = $(ckType).prop("checked");
-    $("input[type='checkbox'][id*=__subclass__]").prop("checked",false);
-    console.log($(".subclass-dropdown.row"))
-    $(".subclass-dropdown.row").remove();
-
-    // activate field-subclass dropdowns
-    if ($(".block_field").length > 1 && isChecked === true) {
-        $(ckType).prop("checked",true);
-
-        // prepare the dropdown
-        var rawSubclasses = $(ckType).closest(".block_field").find("textarea[id*='__values__']").val();
-        var subclassesArray = rawSubclasses.split("\n").map(function(element) {
-            return element.trim();
-        });
-        var fieldSubclassDropdown = $("<section class='subclass-dropdown row'>\
-            <label class='col-md-3'>SUBCLASS RESTRICTED <br><span class='comment'>make this field available once a subclass has been selected</span></label>\
-            <select class='custom-select col-md-8'>\
-                <option value='None'>Select a subclass</option>\
-            </select>\
-        </section>");
-        subclasses = {}
-        subclassesArray.forEach(element => {
-            var subclassParts = element.split(",");
-            if (subclassParts.length >= 2) { 
-                var value = encodeURIComponent(subclassParts[0].trim());
-                var label = subclassParts[1].trim();
-                subclasses[value] = label;
-                fieldSubclassDropdown.find("select").append(
-                    $("<option></option>").attr("value", value).text(label)
-                );
-            }
-        });
-        
-        // append it to each input field
-        var index = $(ckType).closest(".block_field").data("index");
-        $(".block_field").each(function() {
-            if ($(this).data("index") !== index) {
-                var lastInputField = $(this).find(".col-md-3:first-child").last();
-                var lastInputRow = lastInputField.closest(".row");
-                var reusableDropdown = fieldSubclassDropdown.clone(true, true);
-                var newId = $(this).data("index")+"__restricted__"+$(this).data("id");
-                reusableDropdown.find("select").attr("name", newId);
-                reusableDropdown.find("select").attr("id", newId);
-                lastInputRow.after(reusableDropdown);
-            }
-        })
-    }
-}
-
 // make hidden fields recognisable
 function hide_field(el) { 
     var checked = document.getElementById(el.id);
@@ -544,7 +536,7 @@ function hide_field(el) {
     } else {
       $("#"+el.id).closest('.block_field').css('opacity', 1);
     }
-  }
+}
 
 
 ////////////////
@@ -889,6 +881,259 @@ function yasqe_to_hidden_field(el,keep=false) {
     if (keep===false){ yasqe_div.remove(); } else { yasqe_div.hide(); }
     return value
 }
+
+// Subclass 
+function addLabelURI(btn,fieldId) {
+    var block = $("<li class='col-md-12'><hr>\
+    <section>\
+        <section class='row col-md-6' style='display: inline-block'>\
+            <label class='inner-label col-md-12'>Label</label>\
+            <input type='text' id='label' class='col-md-12 align-self-start' name='label'>\
+        </section>\
+        <section class='row col-md-6' style='display: inline-block'>\
+            <label class='inner-label col-md-12'>URI</label>\
+            <input type='text' id='uri' class='col-md-12 align-self-start' name='uri'>\
+        </section>\
+        <button class='btn btn-dark' type='button' onclick='saveLabelURI(this,\""+fieldId+"\")'>Save value</button>\
+    </section></li>");
+    $(btn).closest('li').replaceWith(block);
+}
+
+function modifyLabelURI(btn,fieldId) {
+    // retrieve previously provided values
+    var ul = $(btn).closest("ul");
+    var li = $(btn).closest("li");
+    var inputElement = li.find("input");
+    var uri = inputElement.val().split(",")[0];
+    var label = inputElement.val().split(",")[1];
+    var currentFieldId = $(btn).closest("section.block_field").data("id");
+
+    // checks whether any value is being defined
+    const isModifyFormActive = $(ul).find('li:last-child section').length > 0;
+    if (isModifyFormActive) {
+        showErrorPopup("Value currently being defined", "Save the value before proceeding.");
+        return false;
+    }
+
+    // create new input fields
+    var block = $("<li class='col-md-12'><hr>\
+    <section>\
+        <section class='row col-md-6' style='display: inline-block'>\
+            <label class='inner-label col-md-12'>Label</label>\
+            <input type='text' id='label' class='col-md-12 align-self-start' name='label'>\
+        </section>\
+        <section class='row col-md-6' style='display: inline-block'>\
+            <label class='inner-label col-md-12'>URI</label>\
+            <input type='text' id='uri' class='col-md-12 align-self-start' name='uri'>\
+        </section>\
+        <button class='btn btn-dark' type='button'>Save value</button>\
+    </section></li>");
+    block.find("#label").val(decodeURIComponent(label));
+    block.find("#uri").val(decodeURIComponent(uri));
+    block.find("button").on("click", function() {
+        var isSubclassField = ul.attr("id").split("__").includes("subclass")
+        var modifySubclass = isSubclassField ? uri : null 
+        saveLabelURI(this,fieldId,modifySubclass);
+    })
+
+    // replace the "add new value" button and remove li
+    ul.find("li:last-of-type").replaceWith(block);
+    delete subclasses[uri];
+    li.remove();
+}
+
+function removeLabelURI(btn) {
+    console.log(btn)
+    var ul = $(btn).closest("ul");
+    var li = $(btn).closest("li");
+    var inputElement = li.find("input");
+    var uri = inputElement.val().split(",")[0];
+    var label = inputElement.val().split(",")[1];
+    var currentFieldId = $(btn).closest("section.block_field").data("id");
+
+    if (ul.attr("id").split("__").includes("subclass")) {
+        const swalWithBootstrapButtons = Swal.mixin({
+            customClass: {
+              confirmButton: "btn btn-dark",
+              cancelButton: "btn btn-dark delete"
+            },
+            buttonsStyling: false
+        });
+        swalWithBootstrapButtons.fire({
+            title: "Are you sure?",
+            text: "To avoid inconsistencies, corresponding triples will be deleted. Do you want to proceed?",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Yes, delete it!",
+            cancelButtonText: "No, cancel!",
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                swalWithBootstrapButtons.fire({
+                    title: "Deleted!",
+                    text: "Your data has been updated.",
+                    icon: "success"
+                });
+                $.ajax({
+                    type: 'GET',
+                    url: $(location).attr('href') + `?action=updateSubclass&update=delete&olduri=${encodeURIComponent(uri)}`,
+                    success: function(data) {
+                        console.log("success")
+                        delete subclasses[uri];
+                        li.remove();
+                        updateSubclassRestrictionField(currentFieldId);
+                    }
+                });
+            } else if (result.dismiss === Swal.DismissReason.cancel) {
+                swalWithBootstrapButtons.fire({
+                    title: "Cancelled!",
+                    text: "Your data has been preserved.",
+                    icon: "error"
+                });
+                updateSubclassRestrictionField(currentFieldId);
+
+            }
+        });
+    } else {
+        li.remove();
+    }
+}
+
+function saveLabelURI(btn,fieldId,modifySubclass=null) {
+    // save input values then update the list
+    console.log(modifySubclass)
+    var ul = $(btn).closest("ul"); 
+    var block = $(btn).closest("li");
+    var label = block.find("#label").val();
+    var uri = block.find("#uri").val();
+    var index = ul.find("li").length;
+
+    // check input values
+    if (label === "") {
+        showErrorPopup("Invalid label", "Please, provide a label");
+        return false;
+    } else if (uri === "") {
+        showErrorPopup("Invalid URI", "Please, provide a URI");
+        return false;
+    } else if (uri in subclasses && uri !== modifySubclass) {
+        // alert in case the uri is already in use, except for subclass value modifying
+        showErrorPopup("Invalid URI", "This URI is already in use. Please, provide a new one");
+        return false;
+    }
+
+    // modify a Subclass value if required 
+    if (modifySubclass && uri !== modifySubclass) {
+        console.log(modifySubclass, uri)
+        const swalWithBootstrapButtons = Swal.mixin({
+            customClass: {
+                confirmButton: "btn btn-dark",
+                cancelButton: "btn btn-dark delete"
+            },
+            buttonsStyling: false
+        });
+        swalWithBootstrapButtons.fire({
+            title: "Are you sure?",
+            text: "To avoid inconsistencies, corresponding triples will be updated. Do you want to proceed?",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Yes, update it!",
+            cancelButtonText: "No, cancel!",
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                swalWithBootstrapButtons.fire({
+                    title: "Deleted!",
+                    text: "Your data has been updated.",
+                    icon: "success"
+                });
+                // Update data based on the new URI
+                $.ajax({
+                    type: 'GET',
+                    url: $(location).attr('href') + `?action=updateSubclass&update=modify&olduri=${encodeURIComponent(modifySubclass)}&newlabel=${encodeURIComponent(label)}&newuri=${encodeURIComponent(uri)}`,
+                    success: function(data) {
+                        var previouslySelectedFields = $("input[type='checkbox']:checked[value='"+encodeURIComponent(modifySubclass)+"']").closest(".block_field");
+                        storeLabelURI(index, fieldId, uri, label, ul, block);
+                        previouslySelectedFields.find(".subclass li:last-of-type input").prop("checked", true);
+                    }
+                });
+            } else if (result.dismiss === Swal.DismissReason.cancel) {
+                swalWithBootstrapButtons.fire({
+                    title: "Cancelled!",
+                    text: "Your data has been preserved.",
+                    icon: "error"
+                });
+            }
+        });
+    } else {
+        storeLabelURI(index, fieldId, uri, label, ul, block);
+    }
+}
+
+// add an hidden input field to the DOM to store the new value
+function storeLabelURI(index, fieldId, uri, label, ul, block) {
+    var hiddenInputId = "value"+parseInt(index)+"__"+fieldId;
+    ul.append($("<li>\
+        <label>"+label+" <i class='far fa-edit' onclick='modifyLabelURI(this)'></i> <i class='far fa-trash-alt' onclick='removeLabelURI(this)'></i></label>\
+        <input type='hidden' id='"+hiddenInputId+"' name='"+hiddenInputId+"' value='"+uri+","+label+"'/>\
+    </li>\
+    <li>\
+        <label class='add-option'>ADD NEW VALUE <i class='fas fa-plus-circle' onclick='addLabelURI(this, \""+fieldId+"\")'></i></label>\
+    </li>"));
+    block.remove();
+
+    // add an option for subclass restriction in case a new subclass value has been defined
+    if (ul.attr("id").split("__").includes("subclass")) {
+        subclasses[uri] = label;
+        var currentIndex = ul.closest("section.block_field").data("id");
+        updateSubclassRestrictionField(currentIndex);
+    }
+    updateindex();
+
+}
+
+// subclass list update
+function updateSubclassRestrictionField(currentIndex) {
+    $(".block_field").each(function() {
+        var tempId = $(this).data("id");
+        if (tempId !== currentIndex) {
+            let selectedValues = [];
+            var subclassRestrictionSection = $(this).find(".subclass");
+            if (subclassRestrictionSection.length > 0) {
+                // find previously selected values
+                selectedValues = subclassRestrictionSection.find("input[type='checkbox']:checked")
+                    .map(function () {
+                        return $(this).val();
+                    }).get();
+                subclassRestrictionSection.remove();
+            }
+
+            // prepare the new checkbox section then check previously selected values
+            var fieldSubclassRestriction = $(`<section class='subclass row'>
+                <label class='col-md-3'>SUBCLASS RESTRICTED <br><span class='comment'>make this field available once a subclass has been selected</span></label>
+                <section class='col-md-8'>
+                    <ul>
+                        <li><label class='inner-label col-md-12'>Subclasses List</label></li>
+                        ${Object.entries(subclasses).map(([uri, label], index) => `
+                            <li><label for='subclass${index}__${tempId}'>${label}</label> <input type='checkbox' value='${encodeURIComponent(uri)}' name='subclass${index}__${tempId}'></li>
+                        `).join('\n')}
+                    </ul>
+                </section>
+            </section>`);
+            selectedValues.forEach(element => {
+                fieldSubclassRestriction.find("[value='"+element+"']").prop("checked", true);
+            });
+
+            var lastInputField = $(this).find(".col-md-3:first-child").last();
+            var lastInputRow = lastInputField.closest(".row");
+            var newId = $(this).data("index")+"__restricted__"+$(this).data("id");
+            fieldSubclassRestriction.find("select").attr("name", newId);
+            fieldSubclassRestriction.find("select").attr("id", newId);
+            lastInputRow.after(fieldSubclassRestriction);
+        }
+    })
+
+}
+
 
 
 ///////////////////

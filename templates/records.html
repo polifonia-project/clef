@@ -79,7 +79,7 @@ $var main_lang = main_lang
 												<section id="$results" class="$results collapse"></section>
 											</section>
 
-										$elif filter[2] in ['Dropdown','Checkbox'] and filter[3] == 'URI':
+										$elif filter[2] in ['Dropdown','Checkbox', 'Subclass'] and filter[3] == 'URI':
 											<p>Filter by most recurring values</p>
 											$ elemID = res_id+filter[1].replace(' ','')
 											$ results = elemID+"results"

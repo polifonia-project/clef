@@ -6,6 +6,106 @@ to create or modify explorative charts
 
 $(document).ready(function() {
 
+    // check section is in viewport (see window.on('scroll') below)
+    function isElementInViewport(el) {
+        var rect = el.getBoundingClientRect();
+        return (
+            rect.top >= 0 && 
+            rect.left >= 0 && 
+            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+            rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        );
+    }
+
+    // show section on scroll
+    $(window).on('scroll', function() {
+        $('.section-fade').each(function() {
+            // activate animation
+            if (isElementInViewport(this)) {
+                $(this).addClass('section-fade-visible');
+            }
+        });
+    });
+    $(window).trigger('scroll'); // for sections already visibile when the page is loaded
+
+    // get data and generate counters
+    $(".counters").each(function() {
+        var chartInfo = $(this).find("script[type='application/json']").html();
+        var $currentCounter = $(this); 
+    
+        // get data from the back-end api
+        $.ajax({
+            type: 'POST',
+            url: '/charts-visualization?action=getData',
+            data: chartInfo,
+            contentType: 'application/json',
+            dataType: 'json',
+            success: function(jsondata) {
+                console.log(jsondata);
+                jsondata.forEach(function(element, index) {
+                    var $counterElement = $currentCounter.find("p.counterNum").eq(index);
+                    
+                    // set the animation
+                    var startValue = 0;
+                    var endValue = element;
+                    var duration = 2000;
+                    var stepTime = 50;
+    
+                    var steps = duration / stepTime;
+                    var increment = (endValue - startValue) / steps;
+    
+                    var currentValue = startValue;
+                    var counter = setInterval(function() {
+                        currentValue += increment;
+                        if (currentValue >= endValue) {
+                            currentValue = endValue;
+                            clearInterval(counter); // stop the animation
+                        }
+                        $counterElement.text(Math.round(currentValue)); // update number
+                    }, stepTime);
+                });
+            }
+        });
+    });
+    
+
+    // get data and generate charts
+    $(".chart-body").each(function() {
+        var chartId = $(this).attr("id");
+        var chartInfo = $("#"+chartId+"_data").html();
+        $.ajax({
+            type: 'POST',
+            url: '/charts-visualization?action=getData',
+            data: chartInfo,
+            contentType: 'application/json',
+            dataType: 'json',
+            success: function(jsondata) {
+                console.log(jsondata);
+                chartInfo = JSON.parse(chartInfo);       
+                if (chartInfo["type"] == "map") {
+                    if (chartInfo["map-type"] === "common-map") {
+                        map(chartId,jsondata)
+                    } else {
+                        mapDrillDown(chartId,jsondata)
+                    }
+                } else if (chartInfo["type"] == "chart") {
+                    var chartOptions = chartInfo["info"];
+
+                    if (chartInfo["chartType"] == "bar") {
+                        if (chartInfo["y-var"] == "?label") { invertedBarchart(chartOptions[0],chartOptions[1],chartOptions[2],jsondata) }
+				        else if (chartInfo["x-var"] == "?label") { barchart(chartOptions[0],chartOptions[1],chartOptions[2],jsondata) }
+                    } else if (chartInfo["chartType"] == "pie") {
+                        piechart(chartOptions[0],chartOptions[1],chartOptions[2],chartInfo["legend"],jsondata,donut=false,semi=false);
+                    } else if (chartInfo["chartType"] == "donut") {
+                        piechart(chartOptions[0],chartOptions[1],chartOptions[2],chartInfo["legend"],jsondata,donut=true,semi=false);
+                    } else if (chartInfo["chartType"] == "semi-circle") {
+                        piechart(chartOptions[0],chartOptions[1],chartOptions[2],chartInfo["legend"],jsondata,donut=false,semi=true);
+                    }
+                }
+            }
+        })
+    })
+
     // generate preview
     // generate preview using event delegation
     $(document).on('click', '.preview', function(e) {
@@ -19,7 +119,7 @@ $(document).ready(function() {
             $(this).find("textarea").remove();
         });
 
-        var url = "http://localhost:8080/charts-visualization?action=preview";
+        var url = "/charts-visualization?action=preview";
         blockField.find('input, select').each(function() {
             url += "&" + encodeURIComponent($(this).attr("name")).replace(/'/g, '%27') + "=" + encodeURIComponent($(this).val()).replace(/'/g, '%27');
         });
@@ -369,8 +469,8 @@ function removeCounter(element) {
 /////////////////////
 
 // Charts (bar-chart, pie-chart, donut-chart, semicircle-chart)
-function barchart(elid,data_x,data_y) {
-    var data = JSON.parse($('#'+elid+'_data').html());
+function barchart(elid,data_x,data_y, data) {
+    console.log(elid,data_x,data_y, data)
     am5.ready(function() {
     var root = am5.Root.new(elid);
     root.setThemes([ am5themes_Animated.new(root) ]);
@@ -433,9 +533,8 @@ function barchart(elid,data_x,data_y) {
     });
 };
 
-function invertedBarchart(elid,data_x,data_y) {
-    console.log(elid)
-    var data = JSON.parse($('#'+elid+'_data').html());
+function invertedBarchart(elid,data_x,data_y,data) {
+
     am5.ready(function() {
         var root = am5.Root.new(elid);
         root.setThemes([
@@ -508,9 +607,8 @@ function invertedBarchart(elid,data_x,data_y) {
 };
   
 
-function piechart(elid,data_x,data_y,legend,donut=false,semi=false) {
+function piechart(elid,data_x,data_y,legend,data,donut=false,semi=false) {
     console.log(data_x, data_y)
-    var data = JSON.parse($('#'+elid+'_data').html());
     am5.ready(function() {
         var root = am5.Root.new(elid);
         root.setThemes([
@@ -559,8 +657,7 @@ function piechart(elid,data_x,data_y,legend,donut=false,semi=false) {
 
 
 
-function map(elid) {
-    var data = JSON.parse($('#'+elid+'_data').html());
+function map(elid, data) {
 
     am5.ready(function() {
         var root = am5.Root.new(elid);
@@ -776,9 +873,10 @@ function linechart(elid, data_x, data_y) {
     }); 
 }
 
-function mapDrillDown(elid) {
-    var data = JSON.parse(document.getElementById(elid + '_data').textContent);
-    
+function mapDrillDown(elid, data) {
+
+    console.log(elid, data)
+
     // group data by country
     async function groupDataByCountry(data) {
         let promises = data.map(async (item) => {

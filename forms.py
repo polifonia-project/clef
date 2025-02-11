@@ -86,8 +86,8 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 			rdf_property = field['property'] if 'property' in field else ''
 			mandatory = field['mandatory'] if 'mandatory' in field and field['mandatory'] == 'True' else 'False'
 			# subclass restriction
-			subclass_restriction = field['restricted'] if 'restricted' in field and field['restricted'] != "None" else ''
-			is_subclass_field = field['subclass'] if 'subclass' in field else ''
+			subclass_restriction = " ".join(field['restricted']) if 'restricted' in field and field['restricted'] != "None" else ''
+			is_subclass_field = 'True' if field['type'] == 'Subclass' else ''
 
 			# text box
 			placeholder = field['placeholder'] if 'placeholder' in field else None
@@ -114,6 +114,7 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 					data_property = rdf_property,
 					data_mandatory = mandatory,
 					data_class=res_class,
+					data_subclass=subclass_restriction,
 					data_supertemplate=data_supertemplate) , )
 				else:
 					params = params + (form.Textbox(myid,
@@ -225,10 +226,9 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 				data_mandatory = mandatory,
 				data_class=res_class,
 				data_subclass=subclass_restriction,
-				data_subclassdropdown = is_subclass_field,
 				data_supertemplate=data_supertemplate), )
 
-			if field['type'] == 'Checkbox':
+			if field['type'] in ['Checkbox', 'Subclass']:
 				prepend_title = '<section class="checkbox_group_label label col-12">'+prepend+"\n"+'<span class="title">'+description+'</span></section>'
 				i = 0
 				params = params + (form.Checkbox(myid+'-'+str(i),
@@ -241,6 +241,7 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 				data_property = rdf_property,
 				data_mandatory = mandatory,
 				data_class=res_class,
+				data_subclassck = is_subclass_field,
 				data_subclass=subclass_restriction,
 				data_supertemplate=data_supertemplate), )
 
@@ -256,6 +257,7 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 					data_property = rdf_property,
 					data_mandatory = mandatory,
 					data_class=res_class,
+					data_subclassck = is_subclass_field,
 					data_subclass=subclass_restriction,
 					data_supertemplate=data_supertemplate), )
 

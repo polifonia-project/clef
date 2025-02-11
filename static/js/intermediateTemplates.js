@@ -121,12 +121,12 @@ function createSubrecord(subtemplateFieldId,label,el,dataReuse=false,subrecordId
             if (moveOn && !clonedElements.includes($(this).attr("id").split("_")[0])) {
                 clonedElements.push($(this).attr("id").split("_")[0]);
 
-                // CREATE A CLONE ELEMENT
-                const cloneElement = $(this).parent().parent().clone();
+                // CREATE A CLONE ELEMENT (of the field's section)
+                const cloneElement = $(this).closest(".form_row.block_field").clone(true);
                 cloneElement.find('textarea, select:not([type="hidden"]), input:not([type="hidden"]):not(label.switch input)').attr('data-subform',subrecordId); // associate the input field with the subrecord id
                 cloneElement.find('textarea, select, input').addClass('hidden');
                 cloneElement.find('textarea, select, input').removeClass('original-template');
-                cloneElement.find('textarea, select, input').val('');
+                cloneElement.find('textarea, select, input:not([type="checkbox"])').val('');
                 cloneElement.find('input.checkbox_group[type="checkbox"]').prop('checked', false);
                 cloneElement.find('.subform, .subrecord-title, .add-span, .subform_section').remove();
 
@@ -160,10 +160,15 @@ function createSubrecord(subtemplateFieldId,label,el,dataReuse=false,subrecordId
                         });
                     }
                 }
+
+                // REMOVE PREVIOUS TAGS (if any)
+                cloneElement.find(".tag").each(function() {
+                    $(this).next(".hiddenInput").remove();
+                    $(this).remove();
+                })
     
                 // SET SUBTEMPLATE FIELDS '+' BUTTON
                 cloneElement.find('[data-subtemplate]').each(function(){
-                    console.log($(this))
                     prepareSubtemplateForms($(this));
                 });
                 
@@ -235,8 +240,6 @@ function createSubrecord(subtemplateFieldId,label,el,dataReuse=false,subrecordId
                     cloneElement.find('.input_or_select').eq(0).append(clonedElementValues);
                     console.log(subrecordForm)
                 }
-                if (cloneElement.find('[data-subclass]:not([data-subclass=""])').length > 0 ) { cloneElement.hide()};
-
                 subrecordForm.append(cloneElement);
 
             }
@@ -324,6 +327,7 @@ function createSubrecord(subtemplateFieldId,label,el,dataReuse=false,subrecordId
         subrecordForm.find('[data-subform="'+subrecordId+'"]').parent().parent().show();
         saveSubrecordClass(subtemplateSelect,subrecordId,true);
         subrecordForm.find('[data-subform="'+subrecordId+'"]').parent().parent().parent().parent().parent().parent().show();
+        subrecordForm.find('[data-subclass]:not([data-subclass=""])').closest(".block_field").hide();
     }
 
     subrecordForm.find("input[type='text'], input[type='textarea']").on('keyup keypress', function(e) {
@@ -425,7 +429,9 @@ function toggleSubform(element,label=null) {
         // delete button
         $(element).find('.delete').on('click', function(e) {
             e.preventDefault();
+            $(this).closest(".subform_section").next(".add-span").show();
             cancelSubrecord($(this).parent());
+            
         });
 
         // modify button 

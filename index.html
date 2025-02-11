@@ -280,6 +280,22 @@
           </section>
           <p class='col-md-5 col-sm-5'>In the field SUBCLASSES you must provide a list of terms to fill in the final list in checkbox. These terms are the URIs of ontological classes, each paired with an associated label. Once at least one Subclass is defined, an additional configuration option becomes available for each field, enabling you to associate any field within the same Template with a specific Subclass.</p>
         </section>
+        <p><strong>SUBTEMPLATE</strong></p>
+        <p>Subtemplate fields enable the creation of multiple interconnected Records through a single Web Form. Instead of a standard input field, imported Subtemplates are displayed as nested sub-forms within the main one, removing the need for users to create separate resources and link them manually.</p>
+        <section class="row">
+          <section class="col-md-7 col-sm-7">
+            <img src="docs/3subtemplate.png" style="max-width: 100%;" alt ="">
+          </section>
+          <p class='col-md-5 col-sm-5'>Subtemplate fields can import any Template, including the same Template for which the field is set. New options can be created during configuration, and multiple Templates can be imported at once, giving users flexibility in choosing the best fit. The Cardinality option allows limiting the creation of sub-records to a single instance. Meanwhile, the Data Inheritance option ensures that when the parent Template and the Subtemplate have input fields with the same RDF Property, the Subtemplate field automatically adopts the value chosen for the parent field.</p>
+        </section>
+        <p><strong>SUBCLASS</strong></p>
+        <p>A Subclass field behaves similarly to checkboxes, presenting end-users with a list of values corresponding to ontological classes. Users can select one or more terms that best align with the entity being described. Depending on the chosen values, additional input fields are dynamically displayed, enabling more precise and tailored solutions for Records description and exploration.</p>
+        <section class="row">
+          <section class="col-md-7 col-sm-7">
+            <img src="docs/3subclass.png" style="max-width: 100%;" alt ="">
+          </section>
+          <p class='col-md-5 col-sm-5'>In the field SUBCLASSES you must provide a list of terms to fill in the final list in checkbox. These terms are the URIs of ontological classes, each paired with an associated label. Once at least one Subclass is defined, an additional configuration option becomes available for each field, enabling you to associate any field within the same Template with a specific Subclass.</p>
+        </section>
         <h6>Data model</h6>
         <section class='row'>
           <section class='col-md-7 col-sm-7'>

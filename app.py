@@ -355,6 +355,7 @@ class Index:
 		results = queries.getRecordsPagination(page)
 
 		records = list(reversed(sorted(results, key=lambda tup: u.key(tup[4][:-5]) ))) if len(results) > 0 else []
+		print("records:", records)
 
 		with open(TEMPLATE_LIST,'r') as tpl_file:
 			tpl_list = json.load(tpl_file)
@@ -687,6 +688,7 @@ class Modify(object):
 			extractor = u.has_extractor(res_template)
 			previous_extractors = u.has_extractor(res_template, name)
 			extractions_data = queries.retrieve_extractions(previous_extractors)
+			print("data:", data)
 
 			return render.modify(graphdata=data, pageID=recordID, record_form=f,
 							user=session['username'],ids_dropdown=ids_dropdown,
@@ -972,7 +974,6 @@ class Records:
 
 				filtersBrowse = queries.getBrowsingFilters(template["template"])
 				filters_by_template[template["name"]] = filtersBrowse
-
 		return render.records(user=session['username'], data=records_by_template,
 							subclass_data=count_by_subclass,title='Latest resources', r_base=conf.base,
 							alll=count_by_template, filters=filters_by_template,

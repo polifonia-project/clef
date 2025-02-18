@@ -1,0 +1,128 @@
+$def with(user,is_git_auth,project,charts,main_lang)
+$var user = user
+$var is_git_auth = is_git_auth
+$var project = project
+$var main_lang = main_lang
+
+<!-- Header -->
+<header class="row">
+	<h3 class="col-md-12 col-lg-12 col-sm-12">$project in numbers</h3>
+</header>
+<!-- Resources -->
+<script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+<script src="https://cdn.amcharts.com/lib/5/xy.js"></script> <!-- bar charts -->
+<script src="https://cdn.amcharts.com/lib/5/percent.js"></script> <!-- pie charts -->
+<script src="https://cdn.amcharts.com/lib/5/map.js"></script> <!-- maps -->
+<script src="https://cdn.amcharts.com/lib/5/geodata/worldLow.js"></script> <!-- maps -->
+<script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+
+
+<!-- Charts -->
+<section class="row articleBox chartsBox">
+	<section class="col-md-12 col-sm-12">
+	$for chart in charts["charts"]:
+		$ heading_class = "full-width" if chart["description"] == "" else ""
+		$if chart["type"] == "counter":
+			<section class="row counters">
+				<section class="chart-heading $heading_class">
+					<h2>$chart["title"]</h2>
+					<p data-id="$chart['id']"></p>
+				</section>
+			$for counter in chart["counters"]:
+				$if "count" in counter:
+					<section class="counterBox col-md-2 col-sm-5">
+						<p class="counterNum">$counter["count"]</p>
+						<p class="counterLabel">$counter["title"]</p>
+					</section>
+			</section>
+			<script>
+				var htmlContent = `$chart['description']`
+					.replace(/&lt;/g, "<")
+					.replace(/&gt;/g, ">")
+					.replace(/&#39;/g, "'");
+				$$("[data-id='$chart['id']']").html(htmlContent);
+			</script>
+		$elif chart["type"] == "map":
+			$ map_type = chart["mapType"]
+			$ info = chart["info"]
+			$ info_data = info + "_data"
+			<section class="row stats-block">
+				<section class="chart-heading $heading_class">
+					<h2>$chart["title"]</h2>
+					<p data-id="$chart['id']"></p>
+				</section>
+				<section class="col-md-6 col-sm-12">
+					<div id="$info" class="map-chart" style="height:55vh"></div>
+				</section>
+			</section>
+			<script id="$info_data" type="application/json">$:chart["stats"]</script>
+			$if map_type == "drilldown-map":
+				<script>mapDrillDown("$info");</script>
+			$else:
+				<script>map("$info");</script>
+			<script>
+				var htmlContent = `$chart['description']`
+					.replace(/&lt;/g, "<")
+					.replace(/&gt;/g, ">")
+					.replace(/&#39;/g, "'");
+				$$("[data-id='$chart['id']']").html(htmlContent);
+			</script>
+		$elif chart["type"] == "chart":
+			$if chart["chartType"] == "bar":
+				$ info = chart["info"]
+				<section class="row stats-block">
+					<section class="chart-heading $heading_class">
+						<h2>$chart["title"]</h2>
+						<p data-id="$chart['id']"></p>
+					</section>
+					<div id="$info[0]" class="col-md-6 col-sm-12" style="height:55vh"></div>
+				</section>
+				<script id="$info[0]_data" type="application/json">$:chart["stats"]</script>
+				$if chart["y-var"] == "?label":
+					<script>invertedBarchart("$info[0]","$info[1]","$info[2]"); </script>
+				$elif chart["x-var"] == "?label":
+					<script>barchart("$info[0]","$info[1]","$info[2]"); </script>
+			$elif chart["chartType"] == "pie":
+				$ info = chart["info"]
+				<section class="row stats-block">
+					<section class="chart-heading $heading_class">
+						<h2>$chart["title"]</h2>
+						<p data-id="$chart['id']"></p>
+					</section>
+					<div id="$info[0]" class="col-md-6 col-sm-12" style="height:70vh"></div>
+				</section>
+				<script id="$info[0]_data" type="application/json">$:chart["stats"]</script>
+				<script>piechart("$info[0]","$info[1]","$info[2]","$chart['legend']",donut=false,semi=false); </script>
+			$elif chart["chartType"] == "donut":
+				$ info = chart["info"]
+					<section class="row stats-block">
+						<section class="chart-heading $heading_class">
+							<h2>$chart["title"]</h2>
+							<p data-id="$chart['id']"></p>
+						</section>
+						<div id="$info[0]" class="col-md-6 col-sm-12" style="height:70vh"></div>
+					</section>
+					<script id="$info[0]_data" type="application/json">$:chart["stats"]</script>
+					<script>piechart("$info[0]","$info[1]","$info[2]","$chart['legend']",donut=true,semi=false); </script>
+			$elif chart["chartType"] == "semi-circle":
+				$ info = chart["info"]
+					<section class="row stats-block">
+						<section class="chart-heading $heading_class">
+							<h2>$chart["title"]</h2>
+							<p data-id="$chart['id']"></p>
+						</section>
+						<div id="$info[0]" class="col-md-g col-sm-12" style="height:70vh"></div>
+					</section>
+					<script id="$info[0]_data" type="application/json">$:chart["stats"]</script>
+					<script>piechart("$info[0]","$info[1]","$info[2]","$chart['legend']",donut=true,semi=true); </script>
+			<script>
+				var htmlContent = `$chart['description']`
+					.replace(/&lt;/g, "<")
+					.replace(/&gt;/g, ">")
+					.replace(/&#39;/g, "'");
+				$$("[data-id='$chart['id']']").html(htmlContent);
+			</script>
+		<hr class="charthr">	
+		
+	</section>
+</section>

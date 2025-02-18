@@ -1,14 +1,21 @@
-$def with (graphdata, pageID, record_form, graph, user,ids_dropdown,is_git_auth,invalid,project,template,skos_vocabs,knowledge_extractor)
+$def with (graphdata,pageID,record_form,graph,user,ids_dropdown,is_git_auth,invalid,project,template,query_templates,knowledge_extractor,extractions,main_lang)
+
 $var user = user
 $var is_git_auth = is_git_auth
 $var project = project
+$var main_lang = main_lang
 
+$if query_templates!=None:
+	<script type="text/javascript">
+		const query_templates_str = '$query_templates'.replace(/&#39;/g, '"');
+		const query_templates = JSON.parse(query_templates_str);
+	</script>
 <header class="row needDoc">
-	<button id="showRight">&gt; help</button>
+	<button id="showRight"><i class="far fa-lightbulb"></i> help</button>
+	<button id="scrollToTop"><i class="fas fa-arrow-up"></i> top</button>
 	<script type="text/javascript">
 		$$('#cbp-spmenu-s2').load( "./documentation #documentation", function() {
-			$$(".documentation").removeClass('col-md-7').addClass('col-md-12 col-sm-4');
-			$$("h2").css('font-size','2em');
+			setFormDocumentation();
 		} );
 	</script>
 	$if invalid == True:
@@ -16,38 +23,66 @@ $var project = project
 	$else:
 		<h3>Review record</h3>
 </header>
-
-<section class="corners row">
-	<section class="col-md-8 col-lg-8 col-sm-8">
-
+<section class="corners row" style="left: -30vw">
+	<section class="col-md-12 col-lg-12 col-sm-12 homeheading">
+		<h2>Ready to publish?</h2>
+	</section>
+	$if template:
+		<section class="col-md-3 col-lg-3 col-sm-3 homeheading" id="table-of-contents">
+			<p class="caption">Table of contents</p>
+			<ul class="fields-list"></ul>
+		</section>
+	<section class="col-md-8 col-lg-8 col-sm-8 homeheading" id="form-section">
 		<form id="modifyForm" name="review" class="col-md-12 col-sm-12 col-lg-12" action="" method="POST">
 			<input type='hidden' name='recordID' value=$:pageID>
 			$if template:
 				<input type='hidden' name='templateID' value=$:template>
 			<section class="row">
-				<section class="homeheading col-md-8 col-lg-8 col-sm-8">
-					$for input in record_form.inputs:
-						<section class="form_row">
-							$ id = input.get_default_id()
-							$if type(input) == Checkbox:
-								$ checked_value = 'http'+id.split('_http')[1].split(',',1)[0]
-								$ field_base = id.split('_http')[0].rsplit('-',1)[0]
-								$ field_name = id.split('_http')[0]
-								<section class="col-md-12 col-sm-12 col-lg-12">
+				<section class="homeheading col-md-12 col-lg-12 col-sm-12">
+					$for idx,input in enumerate(record_form.inputs):
+						$ id = input.get_default_id()
+						$if type(input) == Checkbox:
+							$if type(record_form.inputs[idx-1]) != Checkbox or record_form.inputs[idx-1].get_default_id().split("-")[0] != id.split("-")[0]:
+								<section class=" form_row block_field">
 									$:input.pre
-									$:input.render()
-									$:input.description
-									$if any(checked_value in k_v for k_v in graphdata[field_base]):
+									$ i = 0
+									$ length_input_list = len(record_form.inputs)
+									$while idx+i < length_input_list and type(record_form.inputs[idx+i]) == Checkbox and record_form.inputs[idx+i].get_default_id().split("-")[0] == id.split("-")[0]:
+										<section class="col-md-12 col-sm-12 col-lg-12">
+											$:record_form.inputs[idx+i].render()
+											$:record_form.inputs[idx+i].description
+										</section>
+										$ i+=1	
 										<script type="text/javascript">
-											$$("input[name=$field_name]").attr("checked","checked");
+											var elements = $$("[id='"+"$id".split('-')[0]+"']")[$i-1].attributes;
+											var attrsToChange = [];
+
+											$$.each(elements, function(index, attr) {
+												if (attr.name.startsWith("data_")) {
+													attrsToChange.push(attr);
+												}
+											});
+											$$.each(attrsToChange, function(index, attr) {
+												var newName = attr.name.replace("data_", "data-");
+												$$("[id='"+"$id".split('-')[0]+"']").eq($i-1).attr(newName, attr.value);
+												$$("[id='"+"$id".split('-')[0]+"']").eq($i-1).removeAttr(attr.name);
+											});
 										</script>
 								</section>
-							$else:
+							$ checked_value = 'http'+id.split('_http')[1].split(',',1)[0]
+							$ field_base = id.split('_http')[0].rsplit('-',1)[0]
+							$ field_name = id.split('_http')[0]
+							$if any(checked_value in k_v for k_v in graphdata[field_base]):
+								<script type="text/javascript">
+									$$("input[name=$field_name]").attr("checked","checked");
+								</script>
+						$else:
+							<section class="form_row block_field">
 								<section class="label col-12">
-									$:input.description
+									$:input.pre
+									<span class="title">$:input.description</span>
 								</section>
 								<section class="col-md-12 col-sm-12 col-lg-12 input_or_select detect_web_page">
-									$:input.pre
 									$if id in graphdata:
 										<!-- string value -->
 										$if isinstance(graphdata[id][0],str):
@@ -65,85 +100,99 @@ $var project = project
 											$:input.render()
 											$if len(graphdata[id]) > 0:
 												<script type="text/javascript">
-													$$('#$id').prepend($$('<option value="None">Select from the list</option>'));
+													$$('#$id').prepend($$('<option value="">Select from the list</option>'));
 													$$("#$id option[value$$='$graphdata[id][0][0]']").attr("selected","selected");
 												</script>
+
 										$else:
-										$:input.render()
-										<!-- SKOS vocabs -->
-										$if " vocab " in input.attrs["class"]:
-											$ list_vocabs = "//".join(list(skos_vocabs.keys()))
-											$ selectedVocabs = str(skos_vocabs)
-											<script type="text/javascript">
-												var skos_to_string = '$selectedVocabs'.replace(/&#39;/g, '"');
-												var list_vocabs = '$list_vocabs'.split("//")
-												var skos_vocabs_json = JSON.parse(skos_to_string)
-											</script>
-										<!-- text box with URI,label -->
-										$if len(graphdata[id]) > 0 and "multimedia" not in input.attrs["class"] and "websitePreview" not in input.attrs["class"]:
-											$for k_v in graphdata[id]:
+											$if len(graphdata[id]) > 0 and "multimedia" not in input.attrs["class"] and "websitePreview" not in input.attrs["class"]:
+												<!-- text box with URI,label / SKOS terms /  subrecords -->
+
+												$if type(graphdata[id][0]) is list:
+													<!-- Entities and subrecords -->
+													$:input.render()
+													$for k_v in graphdata[id]:
+														$ input_name = id+'_'+k_v[0]
+														<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>
+														<input type='hidden' class='hiddenInput $k_v[0]' name='$input_name' value="$k_v[0],$:k_v[1]"/>
+												$elif type(graphdata[id][0]) is tuple:
+													<!-- Multi-lang Literals -->		
+													$for k_v in graphdata[id]:
+														$ lang = k_v[1]
+														$ lang_id = id+'_'+lang
+														$if input.type=="text":
+															<input type="text" value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" data-supertemplate="$input.attrs['data_supertemplate']" data-mandatory="$input.attrs['data_mandatory']"/>
+														$else:
+															<textarea value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" data-supertemplate="$input.attrs['data_supertemplate']" data-mandatory="$input.attrs['data_mandatory']">$k_v[0]</textarea>	
+														$if len(k_v) == 3:
+															$ lang_id = id+'_mainLang'
+															<input type="hidden" value="$lang" id="$lang_id" name="$lang_id">
+											$elif "multimedia" in input.attrs["class"]:
+												<!-- multimedia -->
+												$:input.render()
+												$for k_v in graphdata[id]:
+													<div class='multimediaTag $k_v[0]'>
+														$ format = k_v[1].split(".")[-1]
+														$if format in ["mp3", "wav", "wma", "ogg"]:
+															<span class="MMtag file_audio" data-id="$:k_v[1]"><i class="fas fa-eye"></i></span>
+														$elif format in ["apng", "avif", "gif", "ico", "jpg", "jpeg", "jfif", "pjpeg", "pjp", "png", "svg", "webp"]:
+															<span class="MMtag file_image" data-id="$:k_v[1]"><i class="fas fa-eye"></i></span>
+														$else:
+															<span class="MMtag file_video" data-id="$:k_v[1]"><i class="fas fa-eye"></i></span>													
+														<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>
+														<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
+													</div>
+											$else:
+												<!-- iframes -->
+												$for k_v in graphdata[id]:
+													<iframe allow='autoplay' class='col-md-11 iframePreview' src='$:k_v[1]' crossorigin></iframe>
 													<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>
 													<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
-										$elif "multimedia" in input.attrs["class"]:
-											<!-- multimedia -->
-											$for k_v in graphdata[id]:
-												<div class='multimediaTag $k_v[0]'>
-													$ format = k_v[1].split(".")[-1]
-													$if format in ["mp3", "wav", "wma", "ogg"]:
-														<span class="MMtag file_audio" data-id="$:k_v[1]"><i class="fas fa-eye"></i></span>
-													$elif format in ["apng", "avif", "gif", "ico", "jpg", "jpeg", "jfif", "pjpeg", "pjp", "png", "svg", "webp"]:
-														<span class="MMtag file_image" data-id="$:k_v[1]"><i class="fas fa-eye"></i></span>
-													$else:
-														<span class="MMtag file_video" data-id="$:k_v[1]"><i class="fas fa-eye"></i></span>													
-													<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>
-													<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
-												</div>
-										$else:
-											<!-- iframes -->
-											$for k_v in graphdata[id]:
-												<iframe allow='autoplay' class='col-md-11 iframePreview' src='$:k_v[1]' crossorigin></iframe>
-												<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>
-												<input type='hidden' class='hiddenInput $k_v[0]' name='$id-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
 									$else:
 										$:input.render()
 										$if type(input) == Dropdown:
 											<script type="text/javascript">
-												$$('#$id').prepend($$('<option selected=selected value="None">Select from the list</option>'));
-											</script>
-										$elif " vocab " in input.attrs["class"]:
-											$ list_vocabs = "//".join(list(skos_vocabs.keys()))
-											$ selectedVocabs = str(skos_vocabs)
-											<script type="text/javascript">
-												var skos_to_string = '$selectedVocabs'.replace(/&#39;/g, '"');
-												var list_vocabs = '$list_vocabs'.split("//")
-												var skos_vocabs_json = JSON.parse(skos_to_string)
+												$$('#$id').prepend($$('<option selected=selected value="">Select from the list</option>'));
 											</script>
 								</section>
-						</section>
-					$if knowledge_extractor != False:
-						<section class="row import_form">
-							<section class="col-md-12 col-sm-12 col-lg-12">KEYWORDS</section>
-							<ul class="imported_graphs" id="imported_graphs">
-									$for extraction in knowledge_extractor:
-										$if extraction == "next_id":
-											<script>
-												var extraction_number = $knowledge_extractor[extraction];
-											</script>
-										$else:
-											<li id="graph-$extraction">
-												<label>Extraction Graph: <i class='fas fa-trash' onclick='delete_extractor("$extraction")'></i></label><br>
-												$for extracted_keyword in knowledge_extractor[extraction]:
-													<span class="tag" data-id="$extracted_keyword['uri']">$extracted_keyword['label']</span>
-													$ keyword_id = "keyword_" + extraction + "_" + extracted_keyword['label']
-													<input type="hidden" name="$keyword_id" value="$extracted_keyword['uri']">
-											</li>
-								<li id="add_extractor"><label class="add_graph_button">Extract keywords  <i class="fas fa-plus-circle" onclick="extraction_form(this), window.scrollTo(0, 0)"></i></label></li>
-							</ul>
+							</section>
+							<script type="text/javascript">
+								console.log('$id')
+								var elements = $$('[id^="$id"]')[0].attributes;
+								var attrsToChange = [];
 
-						</section>
+								$$.each(elements, function(index, attr) {
+									if (attr.name.startsWith("data_")) {
+										attrsToChange.push(attr);
+									}
+								});
+								$$.each(attrsToChange, function(index, attr) {
+									var newName = attr.name.replace("data_", "data-");
+									$$('#$id').attr(newName, attr.value);
+									$$('#$id').removeAttr(attr.name);
+								});
+							</script>
+					$if type(knowledge_extractor) == type([]):
+						$ extractors_template_ids = [tpl[0] for tpl in knowledge_extractor]
+						$ extractors_names = [tpl[1] for tpl in knowledge_extractor]
+						$ extractors_prepend = [tpl[2] for tpl in knowledge_extractor]
+						$ extractors_id = [tpl[3] for tpl in knowledge_extractor]
+						$ extractors_service = [tpl[4] for tpl in knowledge_extractor]
+						$ extractions_object = extractions
+						<script type="text/javascript">
+							var extractionsString = `$extractions_object`.replace(/\n/g, "\\n").replace(/&quot;/g, "'").replace(/&#39;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+							const extractionsObj = JSON.parse(extractionsString)
+							const extractorsArray = JSON.parse('$extractors_template_ids'.replace(/&#39;/g, '"'));
+							const extractorsNames = JSON.parse('$extractors_names'.replace(/&#39;/g, '"'));
+							const extractorsPrepend = JSON.parse('$extractors_prepend'.replace(/&#39;/g, '"'));
+							const extractorsIds = JSON.parse('$extractors_id'.replace(/&#39;/g, '"'));
+							const extractorsService = JSON.parse('$extractors_service'.replace(/&#39;/g, '"'));
+							if (extractorsArray.includes('$template')) {
+								generateExtractionField('$template','$pageID');
+							}
+						</script>
 				</section>
 				<section class="homeheading col-md-4 col-sm-4 col-lg-4">
-					<h2>Ready to publish?</h2>
 					$ has_keywords = ['yes' for k,v in graphdata.items() if 'keywords' in k]
 					$if len(has_keywords) > 0:
 						<p>Here are the keywords you saved</p>
@@ -157,7 +206,7 @@ $var project = project
 
 			<section class="buttonsSection">
 				<button class="btn btn-dark" name="action" value="saveRecord$:graph" type="submit">Save</button>
-        <button class="btn btn-dark" name="action" value="publishRecord$:graph" type="submit">Publish</button>
+        		<button class="btn btn-dark" name="action" value="publishRecord$:graph" type="submit">Publish</button>
 			</section>
 		</form>
 	</section>
@@ -226,3 +275,8 @@ $var project = project
 		</section>
 	</section>
 </section>
+<link rel="stylesheet" type="text/css" href="./static/css/yasgui.css">
+<script src='static/js/yasr.bundled.min.js'></script>
+<script src='static/js/yasqe.bundled.min.js'></script>
+<script src="static/js/sparql.js"></script>
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>

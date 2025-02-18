@@ -7,15 +7,17 @@ from dotenv import load_dotenv
 import web
 import requests
 import conf
+import queries
 from collections import defaultdict,OrderedDict
 from importlib import reload
 from json.decoder import JSONDecodeError
 import urllib.parse
-
+import copy
 
 RESOURCE_TEMPLATES = 'resource_templates/'
 TEMPLATE_LIST = RESOURCE_TEMPLATES+"template_list.json"
 ASK_CLASS = RESOURCE_TEMPLATES+"ask_class.json"
+SKOS_VOCAB = conf.skos_vocabularies 
 
 # WEBPY STUFF
 
@@ -125,6 +127,24 @@ def get_LOV_labels(term, term_type=None):
 
 	return term, label
 
+def get_LOV_namespace(term):
+	""" get prefixed name of a property"""
+	print("TERM:",term)
+	term, label = term, split_uri(term)
+	print("TERM2:",term, label)
+	lov_api = "https://lov.linkeddata.es/dataset/lov/api/v2/term/search?q="
+	label_en = "http://www.w3.org/2000/01/rdf-schema#label@en"
+	req = requests.get(lov_api+label+"&type=property")
+
+	if req.status_code == 200:
+		res = req.json()
+		print(res)
+		for result in res["results"]:
+			if result["uri"][0] in [term, term.replace("https","http")]:
+				prefixed_name = result["prefixedName"]
+				return prefixed_name[0]
+	return term 
+
 # CONFIG STUFF
 
 def get_vars_from_module(module_name):
@@ -145,24 +165,48 @@ def fields_to_json(data, json_file, skos_file):
 	as modified via the web page *template* """
 
 	list_dicts = defaultdict(dict)
-	list_ids = sorted([k.split("__")[0] for k in data.keys()])
+	#list_ids = sorted([k.split("__")[0] for k in data.keys()])
+	template_config = {'hidden': 'True',
+					'subclasses': {}}
 
 	for k,v in data.items():
-		if k != 'action':
+		if k != 'action' and '__template__' not in k:
 			# group k,v by number in the k to preserve the order
 			# e.g. '4__type__scope': 'Checkbox'
 			idx, json_key , field_id = k.split("__")
 			list_dicts[int(idx)]["id"] = field_id
 			list_dicts[int(idx)][json_key] = v
+		elif '__template__' in k:
+			if v == 'on':
+				template_config['hidden'] = 'False'
+			
 	list_dicts = dict(list_dicts)
 	for n,d in list_dicts.items():
-		# cleanup existing k,v
-		if 'values' in d:
-			values_pairs = d['values'].replace('\r','').strip().split('\n')
+		
+		# Previous code:
+		#if 'values' in d:
+			#values_pairs = d['values'].replace('\r','').strip().split('\n')
+			#d["value"] = "URI"
+			#d['values'] = { pair.split(",")[0].strip():pair.split(",")[1].strip() for pair in values_pairs } if values_pairs[0] != "" else {}
+			
+		if d["type"] in ["Subclass", "Dropdown", "Checkbox"]:
+			values = [d[value_key] for value_key in d if value_key.startswith("value")]
+			print("b",values)
 			d["value"] = "URI"
-			d['values'] = { pair.split(",")[0].strip():pair.split(",")[1].strip() for pair in values_pairs }
+			d["values"] = { urllib.parse.unquote(pair.split(",")[0]).strip():urllib.parse.unquote(pair.split(",")[1]).strip() for pair in values } if len(values) > 0 else {}
+			print("a:",d["values"])
+
+		# set subclasses
+		if d["type"] == "Subclass":
+			d["restricted"] = []
+			template_config["subclasses"] = d["values"]
+		else:
+			d["restricted"] = [urllib.parse.unquote(d[subclass_key]) for subclass_key in d if subclass_key.startswith("subclass")] 
+		
 		d["disambiguate"] = "True" if 'disambiguate' in d else "False"
 		d["browse"] = "True" if 'browse' in d else "False"
+		d["mandatory"] = "True" if 'mandatory' in d else "False" # add mandatory fields
+		d["hidden"] = "True" if 'hidden' in d else "False" # add hidden fields
 		# default if missing
 		if d["type"] == "None":
 			d["type"] = "Textbox" if "values" not in d else "Dropdown"
@@ -174,7 +218,7 @@ def fields_to_json(data, json_file, skos_file):
 				d["value"] = "gYearMonth"
 			else:
 				d["value"] = "gYear"
-		if d['type'] == "Vocab":
+		if d['type'] in ["Skos", "Subtemplate"]:
 			d["value"] = "URI"
 		# multimedia
 		if d['type'] in ["Multimedia", "WebsitePreview"]:
@@ -184,24 +228,37 @@ def fields_to_json(data, json_file, skos_file):
 			d["value"] = "Literal"
 		if d['type'] == 'KnowledgeExtractor':
 			d['knowledgeExtractor'] = "True"
+			d["value"] = "undefined"
 		else:
 			if len(d["label"]) == 0:
 				d["label"] = "no label"
 			if len(d["property"]) == 0:
 				d["property"] = "http://example.org/"+d["id"]
+
 		# add default values
 		d['searchWikidata'] = "True" if d['type'] == 'Textbox' and d['value'] == 'URI' else "False"
-		d['searchVocab'] = "True" if d['type'] == 'Vocab' else "False"
 		d['searchGeonames'] = "True" if d['type'] == 'Textbox' and d['value'] == 'Place' else "False"
+		d['searchOrcid'] = "True" if d['type'] == 'Textbox' and d['value'] == 'Researcher' else "False"
+		d['searchSkos'] = "True" if d['type'] == 'Skos' else "False"
 		d['url'] = "True" if d['type'] == 'Textbox' and d['value'] == 'URL' else "False"
-		vocab_data = update_skos_vocabs(d, skos_file)
-		d['vocab'] = vocab_data[0]
+
+		# update SKOS thesauri list and mark selected ones
+		vocab_data = update_skos_vocabs(d, SKOS_VOCAB)
+		d['skosThesauri'] = vocab_data[0]
 		for idx in range(len(vocab_data[1])):
-			d['vocab'+vocab_data[1][idx]] = d['vocab'][idx] 
+			d['skos'+vocab_data[1][idx]] = d['skos'][idx] 
+
+		# imported subtemplates
+		d["import_subtemplate"] = [RESOURCE_TEMPLATES+field_key+".json" for field_key in d if field_key.startswith("template-")]
+
+		# extra
 		d["disabled"] = "False"
-		d["class"]= "col-md-11 yearField" if d["type"] == "Date" and d["calendar"] == "Year" else "col-md-11"
-		d["class"]= d["class"] + " oneVocable" if "oneVocable" in d else d["class"]
+		d["class"]= "col-md-12 yearField" if d["type"] == "Date" and d["calendar"] == "Year" else "col-md-12"
 		d["cache_autocomplete"] ="off"
+		# view classes: mark elements in the final Record visualization
+		d["view_class"] = ''
+		d["view_class"] += " subtemplateField" if d["type"] == "Subtemplate" else ""
+		
 
 		
 	# add a default disambiguate if none is selected
@@ -216,6 +273,18 @@ def fields_to_json(data, json_file, skos_file):
 	# store the dict as json file
 	with open(json_file, 'w') as fout:
 		fout.write(json.dumps(ordlist, indent=1))
+
+	with open(TEMPLATE_LIST, 'r') as file:
+		tpls = json.load(file)
+
+	# Modify the template status in tpl_list
+	for tpl in tpls:
+		if tpl['template'] == json_file:
+			tpl['hidden'] = template_config['hidden']
+			tpl['subclasses'] = template_config['subclasses']
+
+	with open(TEMPLATE_LIST, 'w') as file:
+		json.dump(tpls, file, indent=1)
 
 def validate_setup(data):
 	""" Validate user input in setup page and check errors / missing values"""
@@ -280,6 +349,8 @@ def updateTemplateList(res_name=None,res_type=None,remove=False):
 		res["short_name"] = res_name.replace(' ','_').lower()
 		res["type"] = res_type
 		res["template"] = RESOURCE_TEMPLATES+'template-'+res_name.replace(' ','_').lower()+'.json'
+		res["hidden"] = "False"
+		res["subclasses"] = {}
 		data.append(res)
 
 		with open(TEMPLATE_LIST,'w') as tpl_file:
@@ -292,16 +363,17 @@ def updateTemplateList(res_name=None,res_type=None,remove=False):
 
 		for i in range(len(data)):
 			if data[i]['short_name'] == res_name:
-				#del data[i]
-				#break
-				data[i]["status"] = "deleted"
-
+				to_be_deleted = data[i]['template']
+				if os.path.exists(to_be_deleted):
+					os.remove(to_be_deleted)
+				del data[i]
+				break
 		with open(TEMPLATE_LIST,'w') as tpl_file:
 			json.dump(data, tpl_file)
 
 def get_template_from_class(res_type):
 	print("###res_type",res_type)
-	""" Return the tempalte file path given the URI of the OWL class
+	""" Return the template file path given the URI of the OWL class
 
 	Parameters
 	----------
@@ -312,8 +384,28 @@ def get_template_from_class(res_type):
 	with open(TEMPLATE_LIST,'r') as tpl_file:
 		data = json.load(tpl_file)
 
-	res_template = [t["template"] for t in data if t["type"] == res_type][0]
+	for t in data:
+		for s in t["subclasses"]:
+			if s in res_type:
+				res_type.remove(s)
+	res_template = [t["template"] for t in data if t["type"] == sorted(res_type)][0]
 	return res_template
+
+def get_class_from_template(res_tpl):
+	print("###res_template",res_tpl)
+	""" Return the URI of the OWL class given the template path
+
+	Parameters
+	----------
+	res_tpl: str
+		Path associated to the template. Becomes dictionary value
+	"""
+
+	with open(TEMPLATE_LIST,'r') as tpl_file:
+		data = json.load(tpl_file)
+
+	res_type = [t["type"] for t in data if t["template"] == res_tpl][0]
+	return res_type
 
 def update_ask_class(template_path,res_name,remove=False):
 	""" Update the list of existing templates in ask_class.json.
@@ -375,7 +467,7 @@ def check_ask_class():
 	with open(ASK_CLASS,'w') as tpl_file:
 		json.dump(ask_tpl, tpl_file)
 
-def change_template_names():
+def change_template_names(is_git_auth=True):
 	""" open the ASK FORM and change the template short_names with full name
 	to be shown when creating a new record """
 	with open(ASK_CLASS,'r') as tpl_file:
@@ -384,10 +476,18 @@ def change_template_names():
 	with open(TEMPLATE_LIST,'r') as tpl_file:
 		tpl_list = json.load(tpl_file)
 
-	for tpl_file,tpl_name in ask_tpl[0]['values'].items():
-		full_name = [tpl["name"] for tpl in tpl_list if tpl["short_name"] == tpl_name][0]
-		ask_tpl[0]['values'][tpl_file] = full_name
-
+	if is_git_auth:
+		for tpl_file,tpl_name in ask_tpl[0]['values'].items():
+			full_name = [tpl["name"] for tpl in tpl_list if tpl["short_name"] == tpl_name][0]
+			ask_tpl[0]['values'][tpl_file] = full_name
+	else:
+		ask_tpl_copy = copy.deepcopy(ask_tpl)
+		for tpl_file,tpl_name in ask_tpl_copy[0]['values'].items():
+			full_name_list = [tpl["name"] for tpl in tpl_list if tpl["short_name"] == tpl_name and tpl["hidden"] == "False"]
+			if len(full_name_list) > 0:
+				ask_tpl[0]['values'][tpl_file] = full_name_list[0]
+			else:
+				del ask_tpl[0]['values'][tpl_file]
 	return ask_tpl
 
 # UTILS
@@ -416,11 +516,10 @@ def update_skos_vocabs(d, skos):
 		with open(skos, 'r') as skos_list:
 			skos_file = json.load(skos_list)
 	
-	print(d)
 	selected_vocabs = []
 	number_list = []
 	for key in list(d.keys()):
-		if key.startswith("vocab") and key != "vocables":
+		if key.startswith("skos") and key != "vocables":
 			number = int(re.search(r'\d+', key).group())
 			if number > len(skos_file):
 				number_list.append(str(number))
@@ -447,48 +546,164 @@ def update_skos_vocabs(d, skos):
 
 
 # KNOWLEDGE EXTRACTION
-def has_extractor(id, modify=False):
-	# checks whether a template allows some knowledge extraction
-	if modify:
-		with open(conf.knowledge_extraction,'r') as ke_file:
-			data = json.load(ke_file)
-			if id in data:
-				return True
-			else:
-				return False
-	else:
-		with open(id,'r') as tpl_file:
+def has_extractor(res_template, record_name=None, processed_templates=[]):
+	"""Return a list of Knowledge Extraction input fields (if record_name == None) 
+	or a list of named graphs that may contain extractions (if record_name != None)
+
+	Parameters
+	----------
+	res_template: str
+		a string representing the id of a Template
+	record_name: str / None
+		a string representing the id of a Named Graph
+	"""
+
+	if record_name != None:
+
+		#check whether a Record and its sub-Records are associated with any Extraction graph
+		result = []
+		graph_uri = conf.base+record_name+'/'
+
+		with open(res_template,'r') as tpl_file:
 			data = json.load(tpl_file)
-		
-		print(data)
+
+		for field in data:
+
+			#check whether the Graph may contain any Extraction
+			if 'knowledgeExtractor' in field and field['knowledgeExtractor'] == 'True':
+				result.append((graph_uri, field['property'], field['label'], field['id']))
+
+			#check whether the Graph may contain any sub-Record
+			if 'import_subtemplate' in field and field['import_subtemplate'] != []:
+				subrecords = queries.get_subrecords(field['property'],record_name)
+				for subrecord in subrecords:
+					for imported_template in field['import_subtemplate']:
+						result.extend(has_extractor(imported_template,subrecord.rsplit('/',1)[1]))
+					
+		return result
+	else:
+
+		# checks whether a template allows some knowledge extraction
+		processed_templates.append(res_template)
+		result = []
+		with open(res_template,'r') as tpl_file:
+			data = json.load(tpl_file)
+
 		if data:
 			for field in data:
 				if 'knowledgeExtractor' in field and field['knowledgeExtractor'] == 'True':
-					return True
-		return False
+					label = field['label'] if 'label' in field else ""
+					pre = field['prepend'] if 'prepend' in field else ""
+					field_id = field['id'] if 'id' in field else ""
+					service = field['service'] if 'service' in field else ""
 
-def update_knowledge_extraction(data, KE_file):
-	# stores the knowledge extractions set by the user
-	extractor = False
-	template_id = data['templateID']
-	with open(template_id,'r') as tpl_file:
-		template_data = json.load(tpl_file)
-	extractor = any(field['type'] == "KnowledgeExtractor" for field in template_data)
-	if extractor==True:
-		with open(KE_file, 'r') as knowledge_extractors:
-			knowledge_extractor = json.load(knowledge_extractors)
-		
-			importer_id = data['recordID']
-			knowledge_extractor[importer_id] = [] if importer_id not in knowledge_extractor else knowledge_extractor[importer_id]
-			extractors = [k.replace("-TYPE", "") for k in data.keys() if k.endswith("-TYPE")]
-			for extractor in extractors:
-				temporary_dict = {"internalID": extractor, "type":data[extractor+"-TYPE"]}
-				if temporary_dict['type'] == 'sparql':
-					temporary_dict['url'] = data[extractor+"-URL"]
-					temporary_dict['query'] = data[extractor+"-QUERY"]
-				elif temporary_dict['type'] == 'file':
-					temporary_dict['file'] = "v"
-				knowledge_extractor[importer_id].append(temporary_dict)
-			with open(KE_file, 'w') as file:
-				json.dump(knowledge_extractor, file)
-			print("Knowledge extractor: successfully updated!")
+					# store the extractor details as a tuple
+					result.append((res_template, label, pre, field_id, service))
+
+				elif 'import_subtemplate' in field and field['import_subtemplate'] != []:
+					# iterate over sub-templates
+					for imported_template in field['import_subtemplate']:
+						if imported_template not in processed_templates:
+							result.extend(has_extractor(imported_template, record_name=None,processed_templates=processed_templates))
+
+		return result
+
+def check_mandatory_fields(recordData):
+	tpl_ID = recordData.templateID
+	with open(tpl_ID,'r') as tpl_file:
+		tpl_fields = json.load(tpl_file)
+	for field in tpl_fields:
+		if 'mandatory' in field and field['mandatory'] == 'True':
+			if recordData[field['id']] == '' and not any(key.startswith(field['id']) and recordData[key] != '' for key in recordData):
+				return False
+	return True	
+
+def get_query_templates(res_tpl):
+	# initialize a blank dict
+	query_dict = {}
+
+	# get SKOS Thesauri
+	if not os.path.isfile(SKOS_VOCAB):
+		skos_file = None
+	else:
+		with open(SKOS_VOCAB, 'r') as skos_list:
+			skos_file = json.load(skos_list)
+
+	# get the template fields	
+	with open(res_tpl,'r') as tpl_file:
+		tpl_fields = json.load(tpl_file)
+	for field in tpl_fields:
+		# get SKOS thesauri settings for 'Vocab' type fields
+		if 'type' in field and field['type'] == 'Skos':
+			field_id = field['id']
+			field_thesauri = field['skosThesauri']
+			query_dict[field_id] = []
+			for thesaurus in field_thesauri:
+				print(query_dict[field_id])
+				if thesaurus in skos_file:
+					included_thesauri = query_dict[field_id]
+					included_thesauri.append({ thesaurus: skos_file[thesaurus] })
+					query_dict[field_id] = included_thesauri
+		# get SPARQL constraints for 'Textbox (Entity)' type fields
+		if 'searchWikidata' in field and field['searchWikidata'] == 'True':
+			field_id = field['id']
+			if 'wikidataConstraint' in field and 'catalogueConstraint' in field:
+				query_dict[field_id] = {'wikidata':field['wikidataConstraint'].replace('\r','').replace('\n',''), 'catalogue':field['catalogueConstraint'].replace('\r','').replace('\n','')}
+			elif 'wikidataConstraint' in field:
+				query_dict[field_id] = field['wikidataConstraint'].replace('\r','').replace('\n','')
+			elif 'catalogueConstraint' in field:
+				query_dict[field_id] = field['catalogueConstraint'].replace('\r','').replace('\n','')
+	return query_dict
+
+
+# CHARTS CONFIG
+def charts_to_json(charts_file, data, update_json=True):
+
+	# initialize a blank list of dictionaries
+	charts = {"charts": []}
+
+	# parse data
+	list_dicts = defaultdict(dict)
+	for k,v in data.items():
+		if k != 'action':
+			# group k,v by number in the k to preserve the order
+			# e.g. '4__type__scope': 'Checkbox'
+			idx, json_key, field_id = k.split("__")
+			list_dicts[int(idx)]["id"] = idx
+			list_dicts[int(idx)][json_key] = v
+	
+	for idx,params in list_dicts.items():
+		# counters
+		counters = [{
+			"id": str(idx)+"__"+viz+"__"+str(idx),
+			"query": params[viz],
+			"title": " ".join(viz.split("_")[1:])
+		} for viz in params if viz.startswith("counter")]
+		counters = sorted(counters, key=lambda x: x["id"])
+		params["counters"] = counters
+
+		# sorted
+		if "y-sort" in params:
+			params["sorted"] = "y"
+		elif "x-sort" in params:
+			params["sorted"] = "x"
+
+		#legend
+		params["legend"] = "True" if "legend" in params else "False"		
+
+	# sort viz by index
+	ordict = OrderedDict(sorted(list_dicts.items()))
+	ordlist = [d for k,d in ordict.items()]
+	charts["charts"] = ordlist
+
+	# save json
+	if update_json:
+		with open(charts_file, 'w') as fout:
+			fout.write(json.dumps(charts, indent=4))
+	else:
+		return charts 
+
+def delete_charts(charts_file):
+	with open(charts_file, 'w') as fout:
+		fout.write(json.dumps({}, indent=4))
+	

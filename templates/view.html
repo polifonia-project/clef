@@ -1,17 +1,18 @@
-$def with (user, graphdata, graphID, title, stage, base,properties,is_git_auth,project,knowledge_extractor)
-
+$def with (user, graphdata, graphID, title, stage, base,properties,is_git_auth,project,knowledge_extractor,inverses_by_class,inverses_by_properties,main_lang)
 $var user = user
 $var is_git_auth = is_git_auth
 $var project = project
+$var main_lang = main_lang
 
 <section class="row articleBox" vocab="https://schema.org/" typeof="Thing">
 	<section class="col-md-8 row">
-			<h2 class="articleTitle col-md-12" property="name">$title
+			<h2 class="articleTitle col-md-12" property="name" xml:lang="$title[1]">$title[0]
 			$if 'modified' in stage:
 				<span>draft</span>
 			</h2>
 			$for field,value in graphdata.items():
 				$ width_class = "col-md-12" if properties[field][1]=="WebsitePreview" else "col-md-5 col-sm-12" if (value and len(value[0]) <= 100) else 'col-md-12'
+				$ width_class += properties[field][2]
 				<section class="info-item $width_class">
 						$if isinstance(value[0],str):
 							<h4 class="articleSubtitle">$field </h4>
@@ -20,6 +21,10 @@ $var project = project
 							$else:
 								$ value = value[0]
 							<p property="$properties[field][0]">$value</p>
+						$elif isinstance(value[0],tuple):
+							<h4 class="articleSubtitle">$field </h4>
+							$for literal in value:
+								<p property="$properties[field][0]" xml:lang="$literal[1]">$literal[0]</p>
 						$else:
 							$if len(value[0][1]) > 0:
 								<h4 class="articleSubtitle">$field </h4>
@@ -28,7 +33,7 @@ $var project = project
 										<!-- wikidata uri -->
 										<p property="$properties[field][0]">
 											<link property="sameAs" url="http://www.wikidata.org/entity/$uri_value[0]"/>
-											<a class="wikiEntity" target='_blank' href="http://www.wikidata.org/entity/$uri_value[0]">
+											<a class="wikiEntity" target='_blank' href="term-$uri_value[0]">
 												$uri_value[1]
 											</a>
 										</p>
@@ -36,7 +41,7 @@ $var project = project
 										<!-- geonames uri -->
 										<p property="$properties[field][0]">
 											<link property="sameAs" url="https://sws.geonames.org/$uri_value[0]"/>
-											<a class="geoEntity" target='_blank' href="https://sws.geonames.org/$uri_value[0]">
+											<a class="geoEntity" target='_blank' href="term-$uri_value[0]">
 												$uri_value[1]
 											</a>
 										</p>
@@ -45,7 +50,7 @@ $var project = project
 										<p property="$properties[field][0]">
 											<link property="sameAs" url="http://www.viaf.org/viaf/$uri_value[0][4:]"/>
 											<a class="viafEntity" target='_blank'\
-											 href="http://www.viaf.org/viaf/$uri_value[0][4:]">
+											 href="term-$uri_value[0][4:]">
 												$uri_value[1]
 											</a>
 										</p>
@@ -74,15 +79,21 @@ $var project = project
 													$ val = " - ".join(uri_value[1].split(" - ")[:-1])
 													<!-- skos Vocable -->
 													<link property="sameAs" url="$uri_value[0]"/>
-													<a class="skosEntity" target='_blank' href="$uri_value[0]">
+													<a class="skosEntity" target='_blank' href="term-$uri_value[0]">
 														$val
 													</a>
 												$else:
 													<!-- urls -->
-													<link property="url" url="$uri_value[0]"/>
-													<a target='_blank' href="$uri_value[0]">
-														$here
-													</a>
+													$if properties[field][3] != "URL":
+														<link property="url" url="$uri_value[0]"/>
+														<a target='_blank' href="term-$uri_value[0]">
+															$here
+														</a>
+													$else:
+														<link property="url" url="$uri_value[0]"/>
+														<a target='_blank' href="$uri_value[0]">
+															$here
+														</a>
 											</p>
 										$else:
 											<!-- local resource -->
@@ -91,19 +102,20 @@ $var project = project
 												<a target='_blank' href="term-$uri_value[0]">$uri_value[1]</a>
 											</p>
 					</section>
-			$if knowledge_extractor:
-				<section class="info-item col-md-5 col-sm-12">
-					<h4 class="articleSubtitle">ENTITIES </h4>
-					$for extraction in knowledge_extractor:
-						$if extraction != "next_id":
-							$for extracted_keyword in knowledge_extractor[extraction]:
-								<p property="https://schema.org/keywords">
-									<link property="sameAs" url="$extracted_keyword['uri']"/>
-									<a class="uri" target='_blank' href="$extracted_keyword['uri']">
-										$extracted_keyword['label']
-									</a>
-								</p>
-				</section>
+			$if graphID in knowledge_extractor and len(knowledge_extractor[graphID]) > 0:
+				$for field in knowledge_extractor[graphID]:
+					$if len(knowledge_extractor[graphID][field]) > 0:
+						<section class="info-item col-md-5 col-sm-12">
+							<h4 class="articleSubtitle">$knowledge_extractor[graphID+'_view']['field_name'] </h4>
+							$for n in range(len(knowledge_extractor[graphID][field])):
+								$for extracted_keyword in knowledge_extractor[graphID][field][n]["metadata"]["output"]:
+									<p property="$knowledge_extractor[graphID+'_view']['property']">
+										<link property="sameAs" url="$extracted_keyword['uri']['value']"/>
+										<a class="uri" target='_blank' href="/term-$extracted_keyword['uri']['value']">
+											$extracted_keyword['label']['value']
+										</a>
+									</p>
+						</section>
 	</section>
 	<section class="col-md-4 sideBoxes">
 		<section class="biblio">
@@ -124,3 +136,54 @@ $var project = project
 	</section> -->
 
 </section>
+$if inverses_by_class != {} and inverses_by_properties != {}:
+	<section class="col-md-12 inverses">
+		<section class="biblio">
+			<h3 class="biblio-label">Incoming properties</h3>
+			<ul class="corners nav nav-tabs mb-3 inverse-properties-tabs">
+				<li class="nav-item" role="presentation">
+					<a class="nav-link dark-nav active" id="template" href="#tab_template">Template</a>
+				</li>
+				<li class="nav-item" role="presentation">
+					<a class="nav-link dark-nav" id="property" href="#tab_property">Property</a>
+				</li>
+			</ul>
+			<section class="inverse-section" id="inverse-section-template" style="display: block;">
+				$for res_type in inverses_by_class:
+					<section class="inverse-template">
+						<span class="inverse-subtitle">$res_type</span>
+						<br>
+						<section class="inverse-results-container">
+						$for property,results in inverses_by_class[res_type]['results'].items():
+							$ property_url, property_short, property_label = property.split(',',2)
+							<section class="inverse-property">
+								<span><h4 class="articleSubtitle">$property_label</h4><br><a href="$property_url">$property_short</a></span>
+							</section>
+							<section class="inverse-property">
+								$for result in set(results):
+									$ result_uri, result_label = result.split(',',1)
+									<span><label>$result_label</label> <a href="$result_uri"><i class="fas fa-external-link-alt"></i></a></span><br>
+							</section>
+						</section>
+					</section>
+			</section>
+			<section class="inverse-section" id="inverse-section-property" style="display: none;">
+				$for property,results in inverses_by_properties.items():
+					$ property_url, property_short = property.split(',',1)
+					<section class="inverse-properties">
+						<span class="inverse-subtitle">$property_short</span>
+						<br>
+						<section class="inverse-results-container">
+							<section class="inverse-property">
+								<span><a href="$property_url">$property_short</a></span>
+							</section>
+							<section class="inverse-property">
+								$for result in set(results):
+									$ result_uri, result_label = result.split(',',1)
+									<span><label>$result_label</label> <a href="$result_uri"><i class="fas fa-external-link-alt"></i></a></span><br>
+							</section>
+						</section>
+					</section>
+			</section>
+		</section>
+	</section>

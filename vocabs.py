@@ -2,8 +2,10 @@
 import json
 from pymantic import sparql
 import conf , os , rdflib
+import os
 from rdflib import URIRef , XSD, Namespace , Literal
 from rdflib.namespace import RDFS
+import stat
 import utils as u
 
 u.reload_config()
@@ -27,4 +29,5 @@ def import_vocabs():
 						vocab.add(( URIRef( uri), RDFS.label, Literal(label) ))
 
 				vocab.serialize(destination='vocabs/vocabs.ttl', format='ttl', encoding='utf-8')
+				os.chmod('vocabs/vocabs.ttl', stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
 				server.update('load <file:///'+dir_path+'/vocabs/vocabs.ttl> into graph <'+conf.base+'vocabularies/>')

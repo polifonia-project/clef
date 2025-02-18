@@ -10,6 +10,14 @@ services:
       - .:/app
       - ./blaze_vm.properties:/RWStore.properties
     restart: always
+
+  sparqlanything:
+    container_name: sparqlanything
+    image: facadex/sparql-anything:latest
+    ports:
+      - "8081:3000"
+    restart: always
+
   web:
     container_name: web
     build: .
@@ -27,6 +35,7 @@ services:
               "--bind","0.0.0.0:8080", "app:wsgiapp"]
     environment: 
       - BLAZEGRAPH_ENDPOINT=http://db:8080/bigdata/sparql
+      - SPARQL_ANYTHING_ENDPOINT=http://sparqlanything:3000/sparql.anything
       - PUBLIC_BLAZEGRAPH_ENDPOINT=http://localhost:8080/sparql
   nginx:
     build: ./services/nginx

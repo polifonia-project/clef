@@ -59,6 +59,37 @@
             "uri": "resource"
         }
     },
+    "dataset status": {
+        "type": "API",
+        "url": "https://op.europa.eu/en/web/eu-vocabularies/concept-scheme/-/resource?uri=http://publications.europa.eu/resource/authority/dataset-status",
+        "endpoint": "https://data.europa.eu/api/hub/search/search?",
+        "parameters": {
+            "q": "Query-term",
+            "filter": "vocabulary",
+            "vocabulary": "dataset-status"
+        },
+        "results": {
+            "array": "result.results",
+            "label": "pref_label.en",
+            "uri": "resource"
+        }
+    },
+    "data-service": {
+        "type": "API",
+        "url": "https://op.europa.eu/en/web/eu-vocabularies/concept-scheme/-/resource?uri=http://publications.europa.eu/resource/authority/data-service-type",
+        "endpoint": "https://data.europa.eu/api/hub/search/search?",
+        "query_term_key": "query",
+        "parameters": {
+            "q": "Query-term",
+            "filter": "vocabulary",
+            "vocabulary": "data-service-type"
+        },
+        "results": {
+            "array": "result.results",
+            "label": "pref_label.en",
+            "uri": "resource"
+        }
+    },
     "data-theme": {
         "type": "API",
         "url": "https://op.europa.eu/en/web/eu-vocabularies/dataset/-/resource?uri=http://publications.europa.eu/resource/dataset/data-theme",
@@ -95,6 +126,17 @@
         "url": "https://schema.gov.it/sparql",
         "endpoint": "https://schema.gov.it/sparql",
         "query": " PREFIX skos: <http://www.w3.org/2004/02/skos/core#> select distinct ?label ?uri where { SERVICE <https://schema.gov.it/sparql> {?uri skos:inScheme <https://w3id.org/italia/controlled-vocabulary/licences>. ?uri skos:prefLabel ?label. FILTER (lang(?label) = \"en\").FILTER(REGEX(?label, \"QUERY-TERM\", \"i\")) } } LIMIT 100",
+        "results": {
+            "array": "results.bindings",
+            "label": "label.value",
+            "uri": "uri.value"
+        }
+    },
+    "academic field": {
+        "type": "SPARQL",
+        "url": "https://schema.gov.it/sparql",
+        "endpoint": "https://schema.gov.it/sparql",
+        "query": " PREFIX skos: <http://www.w3.org/2004/02/skos/core#> select distinct ?label ?uri where { SERVICE <https://schema.gov.it/sparql> {?uri skos:inScheme <https://w3id.org/italia/controlled-vocabulary/classifications-for-universities/academic-disciplines>. ?uri skos:prefLabel ?label. FILTER (lang(?label) = \"en\").FILTER(REGEX(?label, \"QUERY-TERM\", \"i\")) } } LIMIT 100",
         "results": {
             "array": "results.bindings",
             "label": "label.value",

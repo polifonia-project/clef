@@ -1,19 +1,22 @@
-$def with(f,user,data, is_git_auth, project)
+$def with(f,user,data, is_git_auth, project, main_lang)
 $var user = user
 $var is_git_auth = is_git_auth
-$var project= project
+$var project = project
+$var main_lang = main_lang
 
 <header class="row">
-	<h3>Setup your application</h3>
+	<h3 class="col-md-12 col-lg-12 col-sm-12">Setup your application</h3>
 </header>
-<section class="corners row">
+<section class="corners row set_template_field">
+
+	<!-- SETUP FORM -->
 	<section class="col-md-6 col-lg-6 col-sm-6">
 		<form id="setupForm" class="col-md-12 col-sm-12 col-lg-12" action="" method="POST">
 			<section class="row">
 				<section class="homeheading col-md-12 col-lg-12 col-sm-12">
 					$for input in f.inputs:
-						<section class=" form_row">
 						$ id = input.get_default_id()
+						<section class="block_field form_row">
 						$if type(input) == Checkbox:
 							<section class="col-md-12 col-sm-12 col-lg-12">
 								$:input.pre
@@ -22,10 +25,10 @@ $var project= project
 							</section>
 						$else:
 							<section class="label col-12">
-								$:input.description
-							</section>
-							<section class="col-md-12 col-sm-12 col-lg-12">
 								$:input.pre
+								<span class="title">$:input.description</span>
+							</section>
+							<section class="col-md-12 col-sm-12 col-lg-12 input_or_select detect_web_page">
 								$if id in data:
 									$:input.set_value(data[id])
 								$:input.render()
@@ -38,6 +41,8 @@ $var project= project
 			</section>
 		</form>
 	</section>
+
+	<!-- TIPS -->
 	<section class="homeheading col-md-6 col-sm-6 col-lg-6">
 		<p class="caption">Tips</p>
 		<p>Personalise the project name and the payoff in the homepage.</p>
@@ -67,5 +72,6 @@ $var project= project
 		<p>Follow the instructions for creating the OAuth app, and select as <b>Authorization callback URL</b> the following path: <code>YOURDOMAIN/oauth-callback</code>. At the end, come back here and paste the <code>CLIENT ID</code> and <code>SECRET KEY</code>.</p>
 		<p>Done, time to enjoy.</p>
 	</section>
-
+	<section id="searchresult">
+	</section>
 </section>

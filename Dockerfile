@@ -17,7 +17,7 @@ ENV APP_HOME /app
 RUN chown -R app:app $APP_HOME
 RUN ["chmod", "+x", "/wait-for-it.sh"]
 
-RUN rm /etc/nginx/conf.d/default.conf
+RUN rm /etc/nginx/conf.d/default.conf || true
 COPY ./services/nginx/nginx.conf /etc/nginx/conf.d
 
 # change to the app user

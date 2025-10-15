@@ -323,22 +323,24 @@
 
         <h6>Knowledge extraction</h6>
         <p>CLEF comes with a suite of tools that enable users of all levels to harness the potential of Linked Open Data and related technologies. In particular, the Knowledge Extraction field aims to provide powerful solutions for easily retrieving valuable information and fully leveraging online datasets and documents while describing Records.</p>
-        <p>Currently available options include API services, SPARQL endpoints, and static files (<code>.json</code>, <code>.csv</code>, and <code>.xml</code> formats are supported). This feature is powered by <a href="https://sparql-anything.cc/">SPARQL Anything</a>, a re-engineering tool that allows users to query a wide range of resources, including static files, using SPARQL. A dropdown allows you to select the option you prefer to run your query.</p>
+        <p>Currently available options include API services, SPARQL endpoints, static files (<code>.json</code>, <code>.csv</code>, and <code>.xml</code> formats are supported), and websites. This feature is powered by <a href="https://sparql-anything.cc/">SPARQL Anything</a>, a re-engineering tool that allows users to query a wide range of resources, including static files and web pages, using SPARQL. A dropdown allows you to select the option you prefer to run your query.</p>
         <section class='row'>
           <section class='col-md-12 col-sm-12'>
-            <img src="docs/3ke-dropdown.png" style='max-width:100%;' alt="Knowledge Extraction Dropdown">
+            <img src="docs/3-1ke-dropdown.png" style='max-width:100%;' alt="Knowledge Extraction Dropdown">
           </section>
         </section>
-        <p><strong>API SERVICES</strong></p>
+        <p></p>
+        <p><strong>API SERVICES:</strong></p>
         <p>Required parameters to send a query to an API service include:</p>
         <ul>
           <li>API access point (<em>mandatory</em>): the URL of the required service.</li>
 					<li>Query parameters (<em>optional</em>): a set of key,value pairs providing query parameters. You can optionally omit this information in case query parameters are encoded within the query URL.</li>
 					<li>Result dictionary (<em>mandatory</em>): to properly handle retrieved results, you must provide the keys pointing to the desired values (a <code>uri</code> and its <code>label</code>) within the query output. Results are usually returned in the form of an array of objects. Consequently, three paths are needed to reach the array of results and to access URIs and labels. In case multiple keys should be accessed to retrieve a value, they must be separated by a dot.</li>
+          <li><strong>Filter results</strong> (<em>optional</em>): allows you to refine the retrieved data by applying one or more filters to specific variables returned by the query. Each filter must specify: the <em>filter type</em> (<code>Regex</code>, <code>Greater than</code>, <code>Less than</code>), the <em>target variable</em> (the field to which the filter applies), and the <em>filter value</em> (the threshold or regex pattern). For example: <code>("Greater than", "Mentions counter", "10")</code> retrieves only items where the "Mentions counter" value exceeds 10.</li>
         </ul>
         <section class='row'>
           <section class='col-md-7 col-sm-7'>
-            <img src="docs/3api.png" style='max-width:100%;' alt="Knowledge Extraction via API">
+            <img src="docs/3-1api.png" style='max-width:100%;' alt="Knowledge Extraction via API">
           </section>
           <section class='col-md-5 col-sm-5'>
             <p>Based on the given example, query parameters can be omitted and specified directly in the API access point URL:<br><code>https://vocabs.acdh.oeaw.ac.at/rest/v1/search?=&vocab=tadirah&lang=en&query=lem*</code>.</p> 
@@ -349,7 +351,8 @@
             </ul>
           </section>
         </section>
-        <p><strong>SPARQL ENDPOINTS</strong></p>
+        <p></p>
+        <p><strong>SPARQL ENDPOINTS:</strong></p>
         <p>Required parameters to send a query to a SPARQL endpoint include:</p>
 				<ul>
 					<li>SPARQL endpoint (<em>mandatory</em>): the URL of the required service.</li>
@@ -361,7 +364,8 @@
           </section>
           <p class='col-md-5 col-sm-5'>You must include required prefixes at the beginning of the query. Example: <code>PREFIX skos: &lt;http://www.w3.org/2004/02/skos/core#&gt;</code></p>
         </section>
-        <p><strong>STATIC FILES</strong></p>
+        <p></p>
+        <p><strong>STATIC FILES:</strong></p>
         <p>Knowledge Extraction from Static files is powered by SPARQL Anything, which allows producing RDF from diverse data sources. In so doing, the advantages of a query language (e.g.: Filtering of huge volume data and Scalability) are transferred on the analysis of ordinary documents (<code>.json</code>, <code>.csv</code>, and <code>.xml</code> formats).</p>
         <p>Static files can be either queried via a SPARQL query (check the <a href="https://sparql-anything.readthedocs.io/stable/">latest documentation</a> for building your queries) or manually specifying required parameters and filters.</p>
         <section class='row'>
@@ -394,6 +398,21 @@
           </section>
           <p class="col-md-5 col-sm-5">Keys and filters can only be specified after your file has been successfully parsed. During the parsing phase, the file is scanned to identify all available keys. This allows you to define your keys based on an automatic suggestion system.</p>
         </section>
+        <p></p>
+        <p><strong>WEBSITES:</strong></p>
+        <p>Required parameters for extracting information from websites include:</p>
+        <ul>
+          <li><strong>Website URL</strong> (<em>mandatory</em>): the URL of the target website to be processed.</li>
+          <li><strong>HTML Selector</strong> (<em>mandatory</em>): a valid selector used to isolate meaningful HTML elements within the loaded DOM structure.</li>
+          <li><strong>HTML Attribute</strong> (<em>optional</em>): by default, the inner text of the selected HTML element is retrieved and used as the label for Entity Reconciliation to obtain a URI. Alternatively, you can specify the name of an attribute (e.g., <code>href</code>, <code>src</code>, <code>title</code>) to extract its corresponding values.</li>
+          <li><strong>Regex</strong> (<em>optional</em>): a regular expression used to transform or clean the extracted text. You must provide two patterns — one for search and one for replacement — separated by a comma (e.g., <code>"pattern_to_find","replacement_pattern"</code>). The modified label will then be available for entity reconciliation.</li>
+        </ul>
+        <section class='row'>
+          <section class='col-md-7 col-sm-7'>
+            <img src="docs/3-1ke-website.png" style='max-width:100%;' alt="Knowledge Extraction via web scraping">
+          </section>
+        </section>
+
         <h6>Manage records</h6>
         <p>Records are accessible via the member area to authenticated users. Records are paginated and sorted by date (from the most recent to the oldest).</p>
         <img src="docs/3backend.png" style='max-width:100%;' alt="">
@@ -410,8 +429,9 @@
         <p>To remove the record from the Explore page, it must be deleted. The button <code>delete</code> in the column <code>ACTIONS</code> allows a reviewer to delete a record permanently. If Github synchronisation is enabled, the action affects also the file stored in the repository.</p>
 
         <h6>Visualize records</h6>
-        <p>New records are available at <code>{YOURDOMAIN}/view-{RESOURCEID}></code>. The web page shows fields in the same order as in the template.
-        When clicking on values, the website can redirect users to Wikidata pages (e.g. <code>Department of classical philology</code>), geonames pages (e.g. <code>Bologna</code>) or to internal pages describing terms belonging to controlled vocabularies (e.g. <code>female</code>).</p>
+        <p>New records are available at <code>{YOURDOMAIN}/view-{RESOURCEID}</code>. The web page shows fields in the same order as in the template.
+        When clicking on values, the website can redirect users to Wikidata pages (e.g. <code>Department of classical philology</code>), geonames pages (e.g. <code>Bologna</code>) or to internal pages describing terms belonging to controlled vocabularies (e.g. <code>female</code>).
+        From the same page, it is also possible to download the record in multiple formats, including TTL, RDF/XML, and JSON-LD.</p>
         <img src="docs/3-1record.png" style='max-width:100%;' alt="">
         <h6>Explore and search</h6>
         <p>Records can be browsed in the page <code>Explore</code>. Records are grouped by template in tabs, also showing the number of records falling uder that cetegory. In each tab, sections are shown for each field specified as a filter in the template. </p>

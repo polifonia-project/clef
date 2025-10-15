@@ -336,7 +336,7 @@
           <li>API access point (<em>mandatory</em>): the URL of the required service.</li>
 					<li>Query parameters (<em>optional</em>): a set of key,value pairs providing query parameters. You can optionally omit this information in case query parameters are encoded within the query URL.</li>
 					<li>Result dictionary (<em>mandatory</em>): to properly handle retrieved results, you must provide the keys pointing to the desired values (a <code>uri</code> and its <code>label</code>) within the query output. Results are usually returned in the form of an array of objects. Consequently, three paths are needed to reach the array of results and to access URIs and labels. In case multiple keys should be accessed to retrieve a value, they must be separated by a dot.</li>
-          <li><strong>Filter results</strong> (<em>optional</em>): allows you to refine the retrieved data by applying one or more filters to specific variables returned by the query. Each filter must specify: the <em>filter type</em> (<code>Regex</code>, <code>Greater than</code>, <code>Less than</code>), the <em>target variable</em> (the field to which the filter applies), and the <em>filter value</em> (the threshold or regex pattern). For example: <code>("Greater than", "Mentions counter", "10")</code> retrieves only items where the "Mentions counter" value exceeds 10.</li>
+          <li>Filter results (<em>optional</em>): allows you to refine the retrieved data by applying one or more filters to specific variables returned by the query. Each filter must specify: the <em>filter type</em> (<code>Regex</code>, <code>Greater than</code>, <code>Less than</code>), the <em>target variable</em> (the field to which the filter applies), and the <em>filter value</em> (the threshold or regex pattern). For example: <code>("Greater than", "Mentions counter", "10")</code> retrieves only items where the "Mentions counter" value exceeds 10.</li>
         </ul>
         <section class='row'>
           <section class='col-md-7 col-sm-7'>
@@ -402,11 +402,11 @@
         <p><strong>WEBSITES:</strong></p>
         <p>Required parameters for extracting information from websites include:</p>
         <ul>
-          <li><strong>Website URL</strong> (<em>mandatory</em>): the URL of the target website to be processed.</li>
-          <li><strong>HTML Selector</strong> (<em>mandatory</em>): a valid selector used to isolate meaningful HTML elements within the loaded DOM structure.</li>
-          <li><strong>HTML Attribute</strong> (<em>optional</em>): by default, the inner text of the selected HTML element is retrieved and used as the label for Entity Reconciliation to obtain a URI. Alternatively, you can specify the name of an attribute (e.g., <code>href</code>, <code>src</code>, <code>title</code>) to extract its corresponding values.</li>
-          <li><strong>Regex</strong> (<em>optional</em>): a regular expression used to transform or clean the extracted text. You must provide two patterns — one for search and one for replacement — separated by a comma (e.g., <code>"pattern_to_find","replacement_pattern"</code>). The modified label will then be available for entity reconciliation.</li>
-        </ul>
+					<li>Website URL (<em>mandatory</em>): the URL of the target website to be processed.</li>
+					<li>HTML Selector (<em>mandatory</em>): a valid selector used to isolate meaningful HTML elements within the loaded DOM structure.</li>
+					<li>HTML Attribute (<em>optional</em>): by default, the inner text of the selected HTML element is retrieved and used as the label for Entity Reconciliation to obtain a URI. Alternatively, you can specify the name of an attribute (e.g., <code>href</code>, <code>src</code>, <code>title</code>) to extract its corresponding values.</li>
+					<li>Regex (<em>optional</em>): a regular expression used to transform or clean the extracted text. You must provide two patterns — one for search and one for replacement — separated by a comma (e.g., <code>"pattern_to_find","replacement_pattern"</code>). The modified label will then be available for entity reconciliation.</li>
+				</ul>
         <section class='row'>
           <section class='col-md-7 col-sm-7'>
             <img src="docs/3-1ke-website.png" style='max-width:100%;' alt="Knowledge Extraction via web scraping">

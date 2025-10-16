@@ -23,6 +23,7 @@
       .red {color: red;}
       img {margin: 1em auto; border: solid 1px;}
       .tip {display: inline-block; border:solid 1px #29003b; padding: 0.2em !important; width:2.3em;}
+      strong {font-weight: 900;}
     </style>
   </head>
   <body>
@@ -45,6 +46,7 @@
           <li><strong>collaborative</strong>: allow everybody to contribute to your catalogue and grant permissions to smaller groups of collaborators</li>
           <li><strong>peer-review</strong>: allow collaborators to review records before publication</li>
           <li><strong>autocompletion</strong>: ensure collaborators reference the same contents. Autocomplete suggestions from Wikidata, geonames and your own catalogue make it easier!</li>
+          <li><strong>knowledge extraction</strong>: enrich your catalogue by extracting key entities from SPARQL endpoints, APIs, static files, and websites</li>
           <li><strong>synchronization with github</strong>: use github to authenticate collaborators, to backup and version your data</li>
           <li><strong>web archiving</strong>: save your web sources for future use in Internet archive</li>
           <li><strong>release 5-star data</strong> store, serve, and query your data as Linked Open Data</li>
@@ -54,31 +56,6 @@
       </section>
       <section>
         <h5>Install and run</h5>
-        <h6>macOS</h6>
-        <p>On Mac you can install via installer, from source or with Docker</p>
-        <p><strong>With the installer</strong></p>
-        <ul>
-          <li>download <code>install</code> from the latest release</li>
-          <li>open the terminal, change the permissions to the file <code>chmod 755 Downloads/install</code></li>
-          <li>in the terminal, run <code>./install.sh</code>. The installer clones the repository in the folder <code>/Users/{USERNAME}/Desktop/crowdsourcing</code>, creates a virtual environment, installs dependencies, and downloads blazegraph triplestore.</li>
-          <li>in Finder, open the folder <code>/Users/{USERNAME}/Desktop/crowdsourcing</code> and run the executable script <code>run.sh</code> (double click)</li>
-          <li>open your browser at <code>http://0.0.0.0:8080/</code></li>
-          <li>follow the instructions for <a href="#customization">customization</a></li>
-        </ul>
-        <p><strong>From source code (No virtualenv)</strong></p>
-        <ul>
-          <li>download the source code from the latest release or clone the repository</li>
-          <li>install <code>requirements.txt</code> with pip (<code>pip3 install -r requirements.txt</code>)</li>
-          <li>download the latest version of <a href="https://github.com/blazegraph/database/releases/tag/BLAZEGRAPH_2_1_6_RC">blazegraph</a></li>
-          <li>move the file <code>blazegraph.jar</code> in the root folder of the cloned repository</li>
-          <li>download the latest version of <a href="https://github.com/SPARQL-Anything/sparql.anything/releases/latest">SPARQL Anything server</a></li>
-          <li>move the file <code>sparql-anything-server.jar</code> in the root folder of the cloned repository</li>
-          <li>in the terminal, launch blazegraph <code>java -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -server -Xmx2g -Djetty.port=3000 -Dbigdata.propertyFile=blaze.properties -jar blazegraph.jar</code> (NB. <code>-Xmx2g</code> requires 2GB RAM, change according to your preference)</li>
-          <li>then, launch SPARQL Anything <code>java -jar sparql-anything-server-0.8.2.jar --port=8081</code> (NB. change 0.8.2 according to your version of the .jar file)</li>
-          <li>launch the web application <code>python3 app.py 8080</code></li>
-          <li>open your browser at <code>http://0.0.0.0:8080/</code></li>
-          <li>follow the instructions for <a href="#customization">customization</a></li>
-        </ul>
         <p>With <strong>Docker</strong></p>
         <ul>
           <li>install Docker on your system</li>
@@ -92,30 +69,25 @@
             <li>with <a href="https://git-scm.com/downloads">git</a> for easier installation and update (optional, recommended) <code>git clone https://github.com/polifonia-project/clef.git</code></li>
             <li>or <a href="https://github.com/polifonia-project/clef/archive/refs/heads/main.zip">download the zip repository</a> and unpack it.</li>
           </ul>
-          <li>no extra action is needed for configuration. The configuration is loaded from <code>conf.py</code>. The only difference regards the set up of the endpoints for Blazegraph and the application (in two containers). This is set in <code>docker-compose.yml</code> by two properties:</li>
+          <li>no extra action is needed for configuration. The configuration is loaded from <code>conf.py</code>. The only difference regards the set up of the endpoints for Blazegraph, SPARQL.Anything and the application (in three containers). This is set in <code>docker-compose.yml</code> by three properties:</li>
           <ul>
             <li><code>BLAZEGRAPH_ENDPOINT=http://db:8080/bigdata/sparql</code></li>
+            <li><code>SPARQL_ANYTHING_ENDPOINT=http://sparqlanything:3000/sparql.anything</code></li>
             <li><code>PUBLIC_BLAZEGRAPH_ENDPOINT=http://localhost:8080/sparql</code></li>
           </ul>
           <li>ensure that your Docker engine is running</li>
           <li>run <code>docker compose up</code> (the first build might take couple of minutes)</li>
+          <ul>
+            <li>Production: docker compose --project-name=clef -f docker-compose.prod.yml up -d</li>
+            <li>-d ensures that it runs as a daemon on the background</li>
+            <li>-f specifies different file to build for production</li>
+            <li>project-name ensures that the containers are not prefixed with app-</li>
+          </ul>
           <li>access your web browser at <a href="http://localhost:8080">http://localhost:8080</a></li>
           <li>follow the instructions for <a href="#customization">customization</a></li>
         </ul>
 
          <p>See section <a href="#setup">Setup</a> for detail on how to change default ports.</p>
-
-         <h6>Windows</h6>
-        <p>On Windows you can install CLEF with <strong>Vagrant</strong></p>
-        <ul>
-          <li>ensure you have <a href="https://www.virtualbox.org/wiki/Downloads">VirtualBox</a></li>
-          <li>ensure you have <a href="https://www.vagrantup.com/downloads.html">Vagrant</a></li>
-          <li>clone the repository</li>
-          <li>cd into the repository and run <code>vagrant up</code>. <em>(NB. The first time this command will take longer, as the underlying virtual machine needs to be downloaded and provisioned. The second time, the provisioning is skipped and the runtime is much faster.)</em></li>
-          <li>access your web browser at <a href="http://localhost:8080">http://localhost:8080</a></li>
-          <li>follow the instructions for <a href="#customization">customization</a></li>
-        </ul>
-        <p>If you change the configuration or update the git repository, <a href="https://www.vagrantup.com/docs/cli/reload">reload the running vagrant</a> <code>vagrant reload</code></p>
       </section>
       <section id="customization">
         <h5>Setup</h5>
@@ -127,21 +99,16 @@
         <p><strong>MAIN LANGUAGE:</strong> The default language used to display cataloged data.</p>
         <p><strong>MY ENDPOINT:</strong> The local SPARQL endpoint runs on port 3000. Changes are disabled. To modify the default port you'll have to modify the following files:</p>
         <ul>
-          <li>change <code>myEndpoint</code> in <code>conf.py</code>, in the root folder of the application.</li>
-          <li>if you are running the application from source code, change also the running command</li>
-          <li>if you are running the app in docker, change also <code>docker-compose.yml</code></li>
-          <li>if you are running the app with the bash script, change also <code>run.sh</code></li>
-          <li>if you are running the app in Vagrant, change <code>Vagrantfile</code></li>
+          <li>change <code>myEndpoint</code> in <code>conf.py</code>, in the root folder of the application</li>
+          <li><code>docker-compose.yml</code></li>
         </ul>
-        <p><strong>MY PUBLIC ENDPOINT:</strong> the public URL of your SPARQL endpoint, used for front-end functionalities, e.g. autocomplete. Default URI is <code>http://127.0.0.1:3000/blazegraph/sparql</code>. Similarly to the local endpoint address, to change the port of the web application, change the aforementioned files.</p>
-        <ul>
-          <li>If you are running the application locally, this value must be the same as <strong>MY ENDPOINT</strong></li>
-          <li>If run remotely, the web application provides an out-of-the-box read-only SPARQL endpoint at <code>{YOURDOMAIN}/sparql</code>. Use this URL.</li>
-          <li>if you are running the app in docker, change <code>docker-compose.yml</code></li>
-        </ul>
+        <p><strong>MY PUBLIC ENDPOINT:</strong> The public URL of your SPARQL endpoint, used for front-end functionalities, e.g. autocomplete. Default URI is <code>http://127.0.0.1:3000/blazegraph/sparql</code>. Similarly to the local endpoint address, to change the port of the web application, change the aforementioned files.</p>
+        <p><strong>SPARQL.ANYTHING ENDPOINT:</strong> Configure the local SPARQL.ANYTHING endpoint, which by default runs on port 3000. To change the default port, update <code>docker-compose.yml</code>.</p>
         <p><strong>URI BASE:</strong> The URI base is the persistent URI of new entities. You can use external services such as w3id. Be aware that content negotiation is not automatically enabled. See an <a href="https://github.com/perma-id/w3id.org/tree/master/musow">example</a> on how to enable it with w3id.</p>
         <p><strong>LIMIT REQUESTS:</strong> Limit the number of daily anonymous contributions per user - requests coming from the same IP address.</p>
         <p><strong>PAGINATION LIMIT:</strong> Choose the number of records to be shown in the backend and frontend (pagination of results).</p>
+        <p><strong>PRIMARY COLOR:</strong> Select the primary color of your catalogue (used for titles). Changing this setting requires restarting the application.</p>
+        <p><strong>SECONDARY COLOR:</strong> Select the secondary color of your catalogue (used for highlights and gradients). Changing this setting requires restarting the application.</p>
         <h6>GitHub backup</h6>
         <p>CLEF can be synchronised with a GitHub repository to (1) create a versioned backup of data (and keep track of changes to records) and (2) to create a team to collaborate to the catalogue.</p>
         <p>Before modifying the Setup page, you will need:</p>
@@ -185,19 +152,26 @@
       <section>
         <h5>Templates and ontologies</h5>
         <p>Templates are interfaces designed to setup the web forms for data collection. Each template corresponds to a topic of interest to be described (an entity). Templates can be created, modified, and deleted from the Member area. </p>
-        <h6>Resource templates</h6>
-        <section class='row'>
+        <h6>Create a template</h6>
+        <section class='row' id='create-tpl'>
           <section class='col-md-5 col-sm-5'>
             <img src="docs/3createtemplate.png" style='max-width:100%;' alt="">
           </section>
           <p class='col-md-6 col-sm-6'>To create a new template, click on <strong>Create a new template</strong> in the Member area.
-            First, you must provide a meaningful unique name (e.g. <code>Book</code>, <code>Person</code>) and the URI of a OWL class (e.g. <code>http://xmlns.com/foaf/spec/#term_Person</code>). Notice that <span class='red'>name and class cannot be modified</span>
+            First, you must provide a meaningful unique name (e.g. <code>Book</code>, <code>Person</code>) and the URI of one or multiple OWL classes (e.g. <code>http://xmlns.com/foaf/spec/#term_Person</code>). Notice that <span class='red'>name and class cannot be modified</span>
             in later stages (you can only delete and start a new template). </p>
-
         </section>
-        <p>Once filled in name and class, you are redirected to a dedicated webpage for customizing the template.
-          Templates are lists of fields, each corresponding to a RDF property having as a subject an instance of the class already specified.</p>
-        <img src="docs/3createtpl.png" style="max-width:100%;" alt="">
+        <p>Once filled in name and class, you are redirected to a dedicated webpage for customizing the template's settings.</p>
+        <img src="docs/3-1tplsettings.png" style="max-width:100%;" alt=""> 
+        <p>What you can modify:</p>
+        <p><strong>DESCRIPTION</strong>: Write a short description of the type of resources that this template is meant to describe. This information helps clarify the purpose of the template and guide users in applying it correctly.</p>
+        <p><strong>SUBCLASSES</strong>: Define more specific categories within the main type of resource described by the template. They can also be used to display certain fields only when a specific subclass is selected.</p>
+        <p><strong>"OTHER" SUBCLASS</strong>: Activate this option to include an <em>Other</em> value in the subclass dropdown. This allows users to describe resources that do not fit any of the predefined subclasses, ensuring flexibility when classifying data.</p>
+        <p><strong>EXTRACTION CLASSES</strong>: Define which classes can be automatically assigned to entities identified through Named Entity Recognition in textual descriptions and through semi-automatic Knowledge Extraction from available resources.</p>
+        <p><strong>HIDE TEMPLATE</strong>: Enable this option if you want to keep the template available only to administrators. Hidden templates remain accessible for editing and maintenance but cannot be selected by regular users when creating new records or browsing existing ones.</p>
+        <h6>Configure a template</h6>
+        <p>Templates are lists of fields, each corresponding to a RDF property having as a subject an instance of the class already specified.</p>
+        <img src="docs/3-1tplfields.png" style="max-width:100%;" alt="">
         <p>You can create new fields choosing between: textbox (short texts), text area (long texts), dropdown (select 1 term from list), checkbox-(multiple terms from list), date (date values), multimedia (embed multimedia files), vocabulary (controlled terms from taxonomies and SKOS thesauri), website preview (embed iframes), knowledge extraction (retrieve key entities from multiple sources), subclass (ontological subclasses via checkboxes), and subtemplate (a subform with additional fields from another Template).</p>
         <section class='row'>
           <section class='col-md-7 col-sm-7'>
@@ -212,8 +186,9 @@
         <p>Text boxes can be used to record 4 types of information. In the <strong>VALUE TYPE</strong> field you can choose between:</p>
         <ul>
           <li><strong>Free text (Literal):</strong> short texts (e.g. a title). When this value is selected, a checkbox appears on the bottom of the box, asking whether to use this value as primary label. <span class='red'>At least one free text field</span> must be included in the template and <span class='red'>at most one free text field</span> must be flagged as primary label to associate a title to the record.</li>
-          <li><strong>Entity URI (from Wikidata, VIAF, or catalogue):</strong> the final field will provide autocompletion suggestions from wikidata or, if nothing is found on Wikidata, from the catalogue. Users may accept or reject the suggestions. (<em>NB. this field is not meant to record URLs of web resources. Use Free text instead.</em>). When this value is selected, a checkbox appears on the bottom of the box, asking whether to use this field value as a filter in the <strong>Explore</strong> page, i.e. it creates an index of catalogued resources by values of the selected field. You can create as many filters as you want.</li>
-          <li><strong>Location (from geonames):</strong> the final field will provide autocompletion suggestions from <a href="https://www.geonames.org/">geonames</a>, a specialised service for administrative and geographical locations. Like with <strong>Entity URI</strong>, when this value is selected, a checkbox appears on the bottom of the box, and this field can be used as filter in the <strong>Explore</strong> page.</li>
+          <li><strong>Entity URI (from Wikidata, VIAF, or catalogue):</strong> the final field provides autocompletion suggestions from wikidata or, if nothing is found on Wikidata, from the catalogue. Users may accept or reject the suggestions. (<em>NB. this field is not meant to record URLs of web resources. Use URL instead.</em>). When this value is selected, a checkbox appears on the bottom of the box, asking whether to use this field value as a filter in the <strong>Explore</strong> page, i.e. it creates an index of catalogued resources by values of the selected field. You can create as many filters as you want.</li>
+          <li><strong>Location (from geonames):</strong> the final field provides autocompletion suggestions from <a href="https://www.geonames.org/">geonames</a>, a specialised service for administrative and geographical locations. Like with <strong>Entity URI</strong>, when this value is selected, a checkbox appears on the bottom of the box, and this field can be used as filter in the <strong>Explore</strong> page.</li>
+          <li><strong>Researcher Idenier (from ORCID)</strong>: the final field provides autocompletion from <a href="https://orcid.org/">ORCID</a>, the international registry of researchers. This option enables users to link a resource or record directly to an individual’s verified ORCID identifier. As with the other entity-based types, a checkbox appears at the bottom of the box allowing this field to be used as a filter in the <strong>Explore</strong> page.</li>
           <li><strong>URL:</strong> to record URLs of web resources (e.g. an online video or a blog post). In the final form you will be asked if a copy of the website should be preserved in the long term. While you cannot store external documents in CLEF, CLEF sends a request to the Internet archive <a href="https://archive.org/web/">Wayback machine</a> to store a copy of your favourite webpages.</li>
         </ul>
         <p><strong>TEXT AREA</strong></p>
@@ -222,15 +197,15 @@
           <section class='col-md-7 col-sm-7'>
             <img src="docs/3textarea.png" style='max-width:100%;' alt="">
           </section>
-          <p class='col-md-5 col-sm-5'>In this field you can automatically extract Named Entities (powered by <a href="https://spacy.io/">SpaCy</a>). After filling in the field, press return and wait for suggestions to appear at the bottom of the text area. Suggested entities (people, places, organisations, etc.) are matched to Wikidata entities and are stored as <strong>keywords</strong> associated to the record (<code>schema:keywords</code>) - not as values of the field. You can accept or reject suggestions.</p>
+          <p class='col-md-5 col-sm-5'>In this field you can automatically extract Named Entities (powered by <a href="https://spacy.io/">SpaCy</a>). After filling in the field, press return and wait for suggestions to appear at the bottom of the text area. Suggested entities (people, places, organisations, etc.) are matched to Wikidata entities and are stored as <strong>keywords</strong> associated to the record (<code>schema:keywords</code>) - not as values of the field. You can accept or reject suggestions. For each extracted entity, you can also assign a class from the list of <strong>Extraction classes</strong> defined in the template settings (see <a href="#create-tpl">Create a template</a>).</p>
         </section>
         <p><strong>DROPDOWN AND CHECKBOX</strong></p>
         <p>Dropdown and checkboxes behave similarly. These allow the final user to choose one or more terms from a list of controlled values. Specifically, dropdowns restrict the selection to one term from the list, while checkboxes allow multiple choice selections.</p>
         <section class='row'>
           <section class='col-md-7 col-sm-7'>
-            <img src="docs/3checkbox.png" style='max-width:100%;' alt="">
+            <img src="docs/3-1dropdown.png" style='max-width:100%;' alt="">
           </section>
-          <p class='col-md-5 col-sm-5'>In the field <strong>VALUES</strong> you must provide a comma-separated list of terms to fill in the final list in dropdown or checkbox. List of terms are URIs associated with a label. Both internal and external vocabularies can be used (and mixed). In each line, write the URI of a resource, followed by comma and the label.</p>
+          <p class='col-md-5 col-sm-5'>In the field <strong>VALUES</strong> you can define an arbitrary number of terms to populate the final dropdown menu or checkbox list. Each term consists of a label and a corresponding URI, which can be added one by one. Both internal and external vocabularies can be used (and mixed).</p>
         </section>
         <p><strong>DATE</strong></p>
         <p>Date fields allow the final user to insert a date in a predefined format.</p>
@@ -257,10 +232,10 @@
           <p class='col-md-5 col-sm-5'>A collection of predefined SKOS vocabularies is already available (<strong>VOCABULARIES LIST</strong>), which include <a href="https://vocabs.dariah.eu/tadirah/en/">TaDiRAH</a>, <a href="https://op.europa.eu/en/web/eu-vocabularies/dataset/-/resource?uri=http://publications.europa.eu/resource/dataset/data-theme">Data theme</a>, <a href="https://op.europa.eu/en/web/eu-vocabularies/dataset/-/resource?uri=http://publications.europa.eu/resource/dataset/file-type">File type</a>, <a href="https://op.europa.eu/en/web/eu-vocabularies/dataset/-/resource?uri=http://publications.europa.eu/resource/dataset/access-right">Access right</a>, <a href="https://op.europa.eu/en/web/eu-vocabularies/concept-scheme/-/resource?uri=http://publications.europa.eu/resource/authority/language">Language</a>, <a href="https://schema.gov.it/lodview/controlled-vocabulary/licences">Licenses</a>, <a href="https://op.europa.eu/en/web/eu-vocabularies/dataset/-/resource?uri=http://publications.europa.eu/resource/dataset/frequency">Frequency</a>. Still, you can add a new vocabulary by clicking on the <strong>ADD A NEW VOCABULARY</strong> button. To add a new vocabulary you must provide a label, a link to the vocabulary webpage, a SPARQL endpoint, and a SPARQL query to retrieve terms. The query must return two default variables, i.e. ?uri and ?label, which respectively return the URI and a string label for the term. Once added, the new vocabulary will be saved and made available for later reuse. Additionally, it is possible to specify whether the final user can select more than one term for that particular field (<strong>NUMBER OF TERMS</strong>).</p>
         </section>
         <p><strong>KNOWLEDGE EXTRACTION</strong></p>
-        <p>A Knowledge Extraction field enables automatically extracting key Named Entities (URI-label pairs). To perform this task, users must provide one or more queries to be sent to specific APIs and SPARQL endpoints or to parse Static Files (.csv, .json, and .xml formats are allowed).</p>
+        <p>A Knowledge Extraction field enables automatically extracting key Named Entities (URI-label pairs). To perform this task, users must provide one or more queries to be sent to specific APIs and SPARQL endpoints or to parse Static Files (.csv, .json, and .xml formats are allowed) and Websites.</p>
         <section class="row">
           <section class="col-md-7 col-sm-7">
-            <img src="docs/3extractor.png" style="max-width: 100%;" alt ="">
+            <img src="docs/3-1extractor.png" style="max-width: 100%;" alt ="">
           </section>
           <p class='col-md-5 col-sm-5'>Although extracted value pairs can be manually modified, some services do not provide URIs for retrieved entities. To address this, you can use an Entity Reconciliation service to automatically obtain URIs from authority records based on the retrieved labels.</p>
         </section>
@@ -273,28 +248,12 @@
           <p class='col-md-5 col-sm-5'>Subtemplate fields can import any Template, including the same Template for which the field is set. New options can be created during configuration, and multiple Templates can be imported at once, giving users flexibility in choosing the best fit. The Cardinality option allows limiting the creation of sub-records to a single instance. Meanwhile, the Data Inheritance option ensures that when the parent Template and the Subtemplate have input fields with the same RDF Property, the Subtemplate field automatically adopts the value chosen for the parent field.</p>
         </section>
         <p><strong>SUBCLASS</strong></p>
-        <p>A Subclass field behaves similarly to checkboxes, presenting end-users with a list of values corresponding to ontological classes. Users can select one or more terms that best align with the entity being described. Depending on the chosen values, additional input fields are dynamically displayed, enabling more precise and tailored solutions for Records description and exploration.</p>
+        <p>A Subclass field behaves similarly to dropdwon, presenting end-users with a list of values corresponding to ontological classes. Users can select the term that best align with the entity being described. Depending on the chosen value, additional input fields are dynamically displayed, enabling more precise and tailored solutions for Records description and exploration.</p>
         <section class="row">
           <section class="col-md-7 col-sm-7">
-            <img src="docs/3subclass.png" style="max-width: 100%;" alt ="">
+            <img src="docs/3-1subclass.png" style="max-width: 100%;" alt ="">
           </section>
-          <p class='col-md-5 col-sm-5'>In the field SUBCLASSES you must provide a list of terms to fill in the final list in checkbox. These terms are the URIs of ontological classes, each paired with an associated label. Once at least one Subclass is defined, an additional configuration option becomes available for each field, enabling you to associate any field within the same Template with a specific Subclass.</p>
-        </section>
-        <p><strong>SUBTEMPLATE</strong></p>
-        <p>Subtemplate fields enable the creation of multiple interconnected Records through a single Web Form. Instead of a standard input field, imported Subtemplates are displayed as nested sub-forms within the main one, removing the need for users to create separate resources and link them manually.</p>
-        <section class="row">
-          <section class="col-md-7 col-sm-7">
-            <img src="docs/3subtemplate.png" style="max-width: 100%;" alt ="">
-          </section>
-          <p class='col-md-5 col-sm-5'>Subtemplate fields can import any Template, including the same Template for which the field is set. New options can be created during configuration, and multiple Templates can be imported at once, giving users flexibility in choosing the best fit. The Cardinality option allows limiting the creation of sub-records to a single instance. Meanwhile, the Data Inheritance option ensures that when the parent Template and the Subtemplate have input fields with the same RDF Property, the Subtemplate field automatically adopts the value chosen for the parent field.</p>
-        </section>
-        <p><strong>SUBCLASS</strong></p>
-        <p>A Subclass field behaves similarly to checkboxes, presenting end-users with a list of values corresponding to ontological classes. Users can select one or more terms that best align with the entity being described. Depending on the chosen values, additional input fields are dynamically displayed, enabling more precise and tailored solutions for Records description and exploration.</p>
-        <section class="row">
-          <section class="col-md-7 col-sm-7">
-            <img src="docs/3subclass.png" style="max-width: 100%;" alt ="">
-          </section>
-          <p class='col-md-5 col-sm-5'>In the field SUBCLASSES you must provide a list of terms to fill in the final list in checkbox. These terms are the URIs of ontological classes, each paired with an associated label. Once at least one Subclass is defined, an additional configuration option becomes available for each field, enabling you to associate any field within the same Template with a specific Subclass.</p>
+          <p class='col-md-5 col-sm-5'>The list of <strong>SUBCLASSES</strong> is automatically retrieved from the initial configuration. To modify or update these values, go to the Settings page.</p>
         </section>
         <h6>Data model</h6>
         <section class='row'>
@@ -350,29 +309,38 @@
         <p>Text areas allow longer descriptions to be included and can be expanded vertically. </p>
         <section class='row'>
           <section class='col-md-7 col-sm-7'>
-            <img src="docs/2ner.png" style='max-width:100%;' alt="">
+            <img src="docs/3-1nlp.png" style='max-width:100%;' alt="">
+            <img src="docs/3-1keywords.png" style='max-width:100%;' alt="">
           </section>
-          <p class='col-md-5 col-sm-5'>Once users finish typing, they can press return and wait for <em>named entities</em> to be extracted from the text (e.g. people, places, organizations). Such entities are reconciled to Wikidata and are stored as keywords associated to the record (not to the specific field). Suggestions can be rejected by clicking on the <code>x</code></p>
+          <p class='col-md-5 col-sm-5'>
+            Once users finish typing, they can press return and wait for <em>named entities</em> to be extracted from the text (e.g. people, places, organizations).  
+            Extracted entities are automatically reconciled with Wikidata and stored as keywords associated with the record (not with the specific field).  
+            Users can refine the reconciliation by selecting a more accurate match among the suggested Wikidata options.  
+            In addition, each extracted entity can be assigned to a specific <em>class</em> chosen from the available list of <strong>Extraction classes</strong>.  
+            Suggestions can be rejected by clicking on the <code>x</code>.
+                  
         </section>
 
         <h6>Knowledge extraction</h6>
         <p>CLEF comes with a suite of tools that enable users of all levels to harness the potential of Linked Open Data and related technologies. In particular, the Knowledge Extraction field aims to provide powerful solutions for easily retrieving valuable information and fully leveraging online datasets and documents while describing Records.</p>
-        <p>Currently available options include API services, SPARQL endpoints, and static files (<code>.json</code>, <code>.csv</code>, and <code>.xml</code> formats are supported). This feature is powered by <a href="https://sparql-anything.cc/">SPARQL Anything</a>, a re-engineering tool that allows users to query a wide range of resources, including static files, using SPARQL. A dropdown allows you to select the option you prefer to run your query.</p>
+        <p>Currently available options include API services, SPARQL endpoints, static files (<code>.json</code>, <code>.csv</code>, and <code>.xml</code> formats are supported), and websites. This feature is powered by <a href="https://sparql-anything.cc/">SPARQL Anything</a>, a re-engineering tool that allows users to query a wide range of resources, including static files and web pages, using SPARQL. A dropdown allows you to select the option you prefer to run your query.</p>
         <section class='row'>
           <section class='col-md-12 col-sm-12'>
-            <img src="docs/3ke-dropdown.png" style='max-width:100%;' alt="Knowledge Extraction Dropdown">
+            <img src="docs/3-1ke-dropdown.png" style='max-width:100%;' alt="Knowledge Extraction Dropdown">
           </section>
         </section>
-        <p><strong>API SERVICES</strong></p>
+        <p></p>
+        <p><strong>API SERVICES:</strong></p>
         <p>Required parameters to send a query to an API service include:</p>
         <ul>
           <li>API access point (<em>mandatory</em>): the URL of the required service.</li>
 					<li>Query parameters (<em>optional</em>): a set of key,value pairs providing query parameters. You can optionally omit this information in case query parameters are encoded within the query URL.</li>
 					<li>Result dictionary (<em>mandatory</em>): to properly handle retrieved results, you must provide the keys pointing to the desired values (a <code>uri</code> and its <code>label</code>) within the query output. Results are usually returned in the form of an array of objects. Consequently, three paths are needed to reach the array of results and to access URIs and labels. In case multiple keys should be accessed to retrieve a value, they must be separated by a dot.</li>
+          <li>Filter results (<em>optional</em>): allows you to refine the retrieved data by applying one or more filters to specific variables returned by the query. Each filter must specify: the <em>filter type</em> (<code>Regex</code>, <code>Greater than</code>, <code>Less than</code>), the <em>target variable</em> (the field to which the filter applies), and the <em>filter value</em> (the threshold or regex pattern). For example: <code>("Greater than", "Mentions counter", "10")</code> retrieves only items where the "Mentions counter" value exceeds 10.</li>
         </ul>
         <section class='row'>
           <section class='col-md-7 col-sm-7'>
-            <img src="docs/3api.png" style='max-width:100%;' alt="Knowledge Extraction via API">
+            <img src="docs/3-1api.png" style='max-width:100%;' alt="Knowledge Extraction via API">
           </section>
           <section class='col-md-5 col-sm-5'>
             <p>Based on the given example, query parameters can be omitted and specified directly in the API access point URL:<br><code>https://vocabs.acdh.oeaw.ac.at/rest/v1/search?=&vocab=tadirah&lang=en&query=lem*</code>.</p> 
@@ -383,7 +351,8 @@
             </ul>
           </section>
         </section>
-        <p><strong>SPARQL ENDPOINTS</strong></p>
+        <p></p>
+        <p><strong>SPARQL ENDPOINTS:</strong></p>
         <p>Required parameters to send a query to a SPARQL endpoint include:</p>
 				<ul>
 					<li>SPARQL endpoint (<em>mandatory</em>): the URL of the required service.</li>
@@ -395,7 +364,8 @@
           </section>
           <p class='col-md-5 col-sm-5'>You must include required prefixes at the beginning of the query. Example: <code>PREFIX skos: &lt;http://www.w3.org/2004/02/skos/core#&gt;</code></p>
         </section>
-        <p><strong>STATIC FILES</strong></p>
+        <p></p>
+        <p><strong>STATIC FILES:</strong></p>
         <p>Knowledge Extraction from Static files is powered by SPARQL Anything, which allows producing RDF from diverse data sources. In so doing, the advantages of a query language (e.g.: Filtering of huge volume data and Scalability) are transferred on the analysis of ordinary documents (<code>.json</code>, <code>.csv</code>, and <code>.xml</code> formats).</p>
         <p>Static files can be either queried via a SPARQL query (check the <a href="https://sparql-anything.readthedocs.io/stable/">latest documentation</a> for building your queries) or manually specifying required parameters and filters.</p>
         <section class='row'>
@@ -428,6 +398,21 @@
           </section>
           <p class="col-md-5 col-sm-5">Keys and filters can only be specified after your file has been successfully parsed. During the parsing phase, the file is scanned to identify all available keys. This allows you to define your keys based on an automatic suggestion system.</p>
         </section>
+        <p></p>
+        <p><strong>WEBSITES:</strong></p>
+        <p>Required parameters for extracting information from websites include:</p>
+        <ul>
+					<li>Website URL (<em>mandatory</em>): the URL of the target website to be processed.</li>
+					<li>HTML Selector (<em>mandatory</em>): a valid selector used to isolate meaningful HTML elements within the loaded DOM structure.</li>
+					<li>HTML Attribute (<em>optional</em>): by default, the inner text of the selected HTML element is retrieved and used as the label for Entity Reconciliation to obtain a URI. Alternatively, you can specify the name of an attribute (e.g., <code>href</code>, <code>src</code>, <code>title</code>) to extract its corresponding values.</li>
+					<li>Regex (<em>optional</em>): a regular expression used to transform or clean the extracted text. You must provide two patterns — one for search and one for replacement — separated by a comma (e.g., <code>"pattern_to_find","replacement_pattern"</code>). The modified label will then be available for entity reconciliation.</li>
+				</ul>
+        <section class='row'>
+          <section class='col-md-7 col-sm-7'>
+            <img src="docs/3-1ke-website.png" style='max-width:100%;' alt="Knowledge Extraction via web scraping">
+          </section>
+        </section>
+
         <h6>Manage records</h6>
         <p>Records are accessible via the member area to authenticated users. Records are paginated and sorted by date (from the most recent to the oldest).</p>
         <img src="docs/3backend.png" style='max-width:100%;' alt="">
@@ -444,9 +429,10 @@
         <p>To remove the record from the Explore page, it must be deleted. The button <code>delete</code> in the column <code>ACTIONS</code> allows a reviewer to delete a record permanently. If Github synchronisation is enabled, the action affects also the file stored in the repository.</p>
 
         <h6>Visualize records</h6>
-        <p>New records are available at <code>{YOURDOMAIN}/view-{RESOURCEID}></code>. The web page shows fields in the same order as in the template.
-        When clicking on values, the website can redirect users to Wikidata pages (e.g. <code>Department of classical philology</code>), geonames pages (e.g. <code>Bologna</code>) or to internal pages describing terms belonging to controlled vocabularies (e.g. <code>female</code>).</p>
-        <img src="docs/3record.png" style='max-width:100%;' alt="">
+        <p>New records are available at <code>{YOURDOMAIN}/view-{RESOURCEID}</code>. The web page shows fields in the same order as in the template.
+        When clicking on values, the website can redirect users to Wikidata pages (e.g. <code>Department of classical philology</code>), geonames pages (e.g. <code>Bologna</code>) or to internal pages describing terms belonging to controlled vocabularies (e.g. <code>female</code>).
+        From the same page, it is also possible to download the record in multiple formats, including TTL, RDF/XML, and JSON-LD.</p>
+        <img src="docs/3-1record.png" style='max-width:100%;' alt="">
         <h6>Explore and search</h6>
         <p>Records can be browsed in the page <code>Explore</code>. Records are grouped by template in tabs, also showing the number of records falling uder that cetegory. In each tab, sections are shown for each field specified as a filter in the template. </p>
         <p>By default, an initial filter is created for the text field defined as <strong>primary label</strong>, and records are sorted alphabetically. Filters based on entities (i.e. text fields referencing entity URIs and locations, or dropdwon and checkboxes referencing controlled vocabularies) are grouped by frequency of values, and then sorted alphabetically.</p>
@@ -471,6 +457,13 @@
             <img src="docs/3chart.png" style="max-width: 100%;" alt ="">
           </section>
           <p class='col-md-5 col-sm-5'>To ensure your SPARQL query works properly, it should return a literal value assigned to the variable <code>?label</code> and a numeric value assigned to the variable <code>?count</code>. For improved readability, you can provide a label for each variable and choose to sort the returned elements either alphabetically or numerically. Moreover, you can optionally decide to enrich your visualization with an automatically generated legend.</p>
+        </section>
+        <p><strong>NETWORK</strong></p>
+        <p>CLEF offers an interactive <em>Network Graph</em> solution — powered by the JS library <a href="https://www.amcharts.com/">amCharts</a> — for visualizing groups of related entities and their relationships within the Catalogue. This visualization is useful to display how entities cluster by class and label, and to inspect counts of grouped items.</p>        <section class="row">
+        <section class="col-md-7 col-sm-7">
+          <img src="docs/3-1network.png" style="max-width: 100%;" alt ="">
+        </section>
+        <p class='col-md-5 col-sm-5'>To ensure your SPARQL query works correctly, it must return the variables <code>?classLabel</code>, <code>?entity</code>, <code>?label</code>, and <code>?count</code>. The visualization groups entities (<code>?entity</code>) that share the same class (<code>?classLabel</code>) and label (<code>?label</code>), while <code>?count</code> provides the number of occurrences for each group. A typical example is grouping catalogue <strong>subjects</strong> by their classes. In the <strong>MAIN CLASS</strong> field, provide the overall label that represents all entities described by the graph (for instance: <em>Subjects</em>).</p>
         </section>
         <p><strong>MAPS</strong></p>
         <p>CLEF offers two Maps solutions -powered by the JS library <a href="https://www.amcharts.com/">amCharts</a>- for displaying geographical locations (Simple Map) and clusters of elements (Drill-down Map) within an interactive map or globe.</p>
@@ -499,7 +492,7 @@
           </ul>
         </ul>
         <p><strong>DATA MODEL</strong></p>
-        <p>A reference page dedicated to the data model is automatically generated by the system to support developers in data reuse. The webpage is available at <code>{YOURDOMAIN}>/model</code> (link in the footer).
+        <p>A reference page dedicated to the data model is automatically generated by the system to support developers in data reuse. The webpage is available at <code>{YOURDOMAIN}/model</code> (link in the footer).
           The documentation is automatically generated by querying CLEF, to retrieve class and properties effectively used, and <a href="https://lov.linkeddata.es/">Linked Open Vocabularies (LOV)</a>, to retrieve labels and comments associated to the original specification in the ontology. If a property is not available from the LOV catalogue, a default label is shown.</p>
         <p><strong>USER INTERFACE</strong></p>
         <p>New records are available at <code>{YOURDOMAIN}/view-{RESOURCEID}</code>. The webpage also serves data as RDFa (according to <code>schema.org</code>). <em> NB. Dereferentiation is not a built-in feature. Users must refer and configure external persistent URI providers (e.g. <a href="https://w3id.org/">w3id</a>).</em></p>

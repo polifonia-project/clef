@@ -23,7 +23,7 @@ services:
       - static_data:/app/static
     command: ["/bin/sh", "-c", "cp -r /app/static_default/* /app/static || true"]
   web:
-    # container_name: atlas
+    # container_name: clef
     build:
       context: .
       dockerfile: Dockerfile.prod
@@ -53,7 +53,7 @@ services:
       PUBLIC_BLAZEGRAPH_ENDPOINT: "http://localhost:8080/sparql"
     restart: unless-stopped
   nginx:
-    container_name: atlas
+    container_name: clef
     build:
       context: ./services/nginx
       dockerfile: Dockerfile.prod

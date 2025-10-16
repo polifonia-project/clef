@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.blazegraph.prod
-    # image: atlas-db:0.1.2
+    # image: clef-db:0.1.2
     # image: "lyrasis/blazegraph:2.1.5"
     # Uncomment if you want to access blazegraph interface in your browser (http://localhost:8888)
     ports:
@@ -57,7 +57,7 @@ services:
     environment:
       BLAZEGRAPH_ENDPOINT: "http://db:8080/bigdata/sparql"
       SPARQL_ANYTHING_ENDPOINT: "http://sparqlanything:3000/sparql.anything"
-      PUBLIC_BLAZEGRAPH_ENDPOINT: "sparql"  #  or put https://projects.dharc.unibo.it/atlas/sparql
+      PUBLIC_BLAZEGRAPH_ENDPOINT: "sparql"
     restart: unless-stopped
 
   init-static:
@@ -68,7 +68,7 @@ services:
     command: ["/bin/sh", "-c", "cp -r /app/static_default/* /app/static || true"]
 
   nginx:
-    container_name: atlas
+    container_name: clef
     build:
       context: .
       dockerfile: Dockerfile.nginx.prod

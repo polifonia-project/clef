@@ -1,25 +1,27 @@
 version: "3.8"
 services:
   db:
-    container_name: db
+    # container_name: db
     image: "lyrasis/blazegraph:2.1.5"
-    # Uncomment if you want to access blazegraph interface in your browser (http://localhost:8888) 
-    #  ports:
-    #   - 8888:8080
+    # Uncomment if you want to access blazegraph interface in your browser (http://localhost:8888)
+    environment:
+      JAVA_OPTIONS: "-Xms4g -Xmx16g -XX:+UseG1GC"
+    ports:
+      - 8888:8080
     volumes:
       - .:/app
       - ./blaze_vm.properties:/RWStore.properties
     restart: always
 
   sparqlanything:
-    container_name: sparqlanything
+    # container_name: sparqlanything
     image: facadex/sparql-anything:latest
     ports:
       - "8081:3000"
     restart: always
 
-  web:
-    container_name: web
+  clef:
+    container_name: clef
     build: .
     depends_on:
       - sparqlanything

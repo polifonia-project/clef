@@ -31,6 +31,7 @@ def ask_user_permission(code):
 						headers={"accept": "application/json"})
 	if req.status_code == 200:
 		res = req.json()
+		print(res)
 	return res
 
 
@@ -46,6 +47,24 @@ def get_user_login(res):
 		res_user = req_user.json()
 		userlogin = res_user["login"]
 		usermail = res_user["email"]
+
+		# new call in case no email is returned
+		if not usermail:
+			req_emails = requests.get(
+				"https://api.github.com/user/emails",
+				headers={"Authorization": f"token {access_token}"}
+			)
+			emails = req_emails.json()
+
+			if req_emails.status_code == 200:
+				emails = req_emails.json()
+				primary_email = next(
+					(e["email"] for e in emails if e.get("primary")),
+					None
+				)
+				if primary_email:
+					usermail = primary_email
+
 	return userlogin, usermail, access_token
 
 

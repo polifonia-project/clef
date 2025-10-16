@@ -87,7 +87,7 @@
   {
     "type":"Textbox",
     "id":"sparqlAnythingEndpoint",
-    "label":"my sparql.anything endpoint",
+    "label":"sparql.anything endpoint",
     "placeholder":"$sparqlAnythingEndpoint",
     "prepend":"The local URL of the Sparql.Anything service, do not change for default settings",
     "disabled":"False",
@@ -151,6 +151,38 @@
     "disambiguate":"False",
     "browse":"False",
     "hidden": "False"
+  },
+  {
+    "type":"Color",
+    "id":"primaryColor",
+    "label":"Primary Color",
+    "prepend": "Primary color of your website, used for main headings, buttons, and key elements. Please restart your application to apply the color changes!",
+    "disabled":"False",
+    "class":"col-md-11",
+    "searchWikidata":"False",
+    "cache_autocomplete":"off",
+    "property":"http://rdfs.org/ns/void#feature",
+    "value":"Literal",
+    "defaultvalue":"",
+    "disambiguate":"False",
+    "browse":"False",
+    "hidden":"False"
+  },
+  {
+    "type":"Color",
+    "id":"secondaryColor",
+    "label":"Secondary Color",
+    "prepend": "Secondary color of your website, used for accents, shadows, and supporting elements. Please restart your application to apply the color changes!",
+    "disabled":"False",
+    "class":"col-md-11",
+    "searchWikidata":"False",
+    "cache_autocomplete":"off",
+    "property":"http://rdfs.org/ns/void#feature",
+    "value":"Literal",
+    "defaultvalue":"",
+    "disambiguate":"False",
+    "browse":"False",
+    "hidden":"False"
   },
   {
     "type":"Textbox",

@@ -1,0 +1,13 @@
+!data/
+!records/
+!vocabs/
+ip_logs.log
+sessions/
+docs/
+!static/
+*.log
+__pycache__/
+.mypy_cache
+.git
+Vagrantfile
+charts copy.json

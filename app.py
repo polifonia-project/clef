@@ -18,7 +18,9 @@ from spacy import displacy
 from SPARQLWrapper import SPARQLWrapper, JSON
 from rdflib import Graph
 from rdflib.namespace import OWL, DC , DCTERMS, RDF , RDFS
-from io import StringIO
+import io
+import zipfile
+
 #import subprocess
 
 import forms, mapping, conf, queries , vocabs  , github_sync
@@ -32,21 +34,19 @@ web.config.debug = False
 WIKIDATA_SPARQL = "https://query.wikidata.org/bigdata/namespace/wdq/sparql"
 DEFAULT_FORM_JSON = conf.myform
 DEFAULT_ENDPOINT = "http://127.0.0.1:3000/blazegraph/sparql"
-IP_LOGS = "ip_logs.log"
+IP_LOGS = "data/ip_logs.log"
 RESOURCE_TEMPLATES = 'resource_templates/'
 TEMPLATE_LIST = RESOURCE_TEMPLATES+"template_list.json"
 ASK_CLASS = RESOURCE_TEMPLATES+"ask_class.json"
-SKOS_VOCAB = conf.skos_vocabularies 
-USER_AGENT = conf.sparql_wrapper_user_agent
+SKOS_VOCAB = conf.skos_vocabularies
+USER_AGENT = "polifonia/1.0 (https://github.com/polifonia-project; polifonia@example.org)"
 NER_EN = spacy.load("en_core_web_sm")
 NER_IT = spacy.load("it_core_news_sm")
-#KNOWLEDGE_EXTRACTION = conf.knowledge_extraction
-
 
 # ROUTING
 
 prefix = ''
-prefixLocal = prefix # REPLACE IF IN SUBFOLDER
+prefixLocal = '' # REPLACE IF IN SUBFOLDER
 urls = (
 	prefix + '/', 'Login',
 	prefix + '/setup', 'Setup',
@@ -54,7 +54,7 @@ urls = (
 	prefix + '/logout', 'Logout',
 	prefix + '/gitauth', 'Gitauth',
 	prefix + '/oauth-callback', 'Oauthcallback',
-	prefix + '/welcome-(.+)','Index',
+	prefix + '/welcome-(.+)', 'Index',
 	prefix + '/record-(.+)', 'Record',
 	prefix + '/modify-(.+)', 'Modify',
 	prefix + '/review-(.+)', 'Review',
@@ -62,14 +62,16 @@ urls = (
 	prefix + '/records', 'Records',
 	prefix + '/model', 'DataModel',
 	prefix + '/view-(.+)', 'View',
-	prefix + '/term-(.+)', 'Term',
-	prefix + '/(sparql)','sparql',
-	prefix + '/savetheweb-(.+)','Savetheweb',
-	prefix + '/nlp','Nlp',
+	prefix + '/term', 'Term',
+	prefix + '/(sparql)', 'sparql',
+	prefix + '/savetheweb-(.+)', 'Savetheweb',
+	prefix + '/nlp', 'Nlp',
 	prefix + '/sparqlanything', 'Sparqlanything',
 	prefix + '/wd', 'Wikidata',
 	prefix + '/charts-visualization', 'Charts',
-	prefix + '/charts-template', 'ChartsTemplate'
+	prefix + '/charts-template', 'ChartsTemplate',
+	prefix + '/serialization', 'Serialization',
+	prefix + "/static/(.*)", "StaticFileHandler"  # Serve static files explicitly
 )
 
 app = web.application(urls, globals())
@@ -87,7 +89,8 @@ render = web.template.render('templates/', base="layout", cache=False,
 								'upper':u.upper, 'toid':u.toid,'isnumeric':u.isnum,
 								'get_type':web.form.Checkbox.get_type, 'type':type,
 								'Checkbox':web.form.Checkbox,
-								'Dropdown':web.form.Dropdown})
+								'Dropdown':web.form.Dropdown,
+								'color':[conf.primaryColor, conf.secondaryColor]})
 
 
 # LOAD CONFIG AND CONTROLLED VOCABULARIES
@@ -110,6 +113,18 @@ class Notfound:
 	def GET(self):
 		raise web.notfound()
 
+class StaticFileHandler:
+	def GET(self, file):
+		"""Serve static files manually when using Gunicorn"""
+		static_path = os.path.join(os.path.dirname(__file__), "static")
+		file_path = os.path.join(static_path, file)
+
+		if os.path.exists(file_path):
+			return open(file_path, "rb").read()
+		else:
+			return web.notfound()
+
+
 app.notfound = notfound
 app.internalerror = internalerror
 
@@ -127,7 +142,7 @@ def create_record(data):
 	if data and 'action' in data and data.action.startswith('createRecord'):
 		record = data.action.split("createRecord",1)[1]
 		u.log_output('START NEW RECORD', session['logged_in'], session['username'])
-		raise web.seeother(prefixLocal+'record-'+record)
+		raise web.seeother('/record-'+record)
 	else:
 		u.log_output('ELSE', session['logged_in'], session['username'])
 		return internalerror()
@@ -142,7 +157,7 @@ class Gitauth:
 
 		github_auth = "https://github.com/login/oauth/authorize"
 		clientId = conf.gitClientID
-		scope = "&scope=repo read:user"
+		scope = "&scope=repo read:user user:email"
 
 		return web.seeother(github_auth+"?client_id="+clientId+scope)
 
@@ -155,20 +170,33 @@ class Oauthcallback:
 
 		data = web.input()
 		code = data.code
-		res = github_sync.ask_user_permission(code)
 
-		if res:
-			userlogin, usermail, bearer_token = github_sync.get_user_login(res)
-			is_valid_user = github_sync.get_github_users(userlogin)
-			if is_valid_user == True:
-				session['logged_in'] = 'True'
-				session['username'] = usermail
-				session['gituser'] = userlogin
-				session['ip_address'] = str(web.ctx['ip'])
-				session['bearer_token'] = bearer_token
-				# store the token in session
-				u.log_output('LOGIN VIA GITHUB', session['logged_in'], session['username'])
-				raise web.seeother(prefixLocal+'welcome-1')
+		try:
+			res = github_sync.ask_user_permission(code)
+		except Exception as e:
+			u.log_output("ERROR GITHUB OAUTH", str(e), "None")
+			return internalerror()
+
+		if not res or "access_token" not in res:
+			u.log_output("ERROR GITHUB OAUTH", "no access token", "None")
+			return internalerror()
+
+		userlogin, usermail, bearer_token = github_sync.get_user_login(res)
+		is_valid_user = github_sync.get_github_users(userlogin) # look for repo collaborators
+
+		print(userlogin, usermail, bearer_token)
+
+		if userlogin and usermail and bearer_token:
+			session['is_member'] = 'True' if is_valid_user else 'False' # set False as default value
+			session['logged_in'] = 'True'
+			session['username'] = usermail
+			session['gituser'] = userlogin
+			session['ip_address'] = str(web.ctx['ip'])
+			session['bearer_token'] = bearer_token
+			
+			# store the token in session
+			u.log_output('LOGIN VIA GITHUB', session['logged_in'], session['username'])
+			raise web.seeother(prefixLocal+'welcome-1')
 		else:
 			print("bad request to github oauth")
 			return internalerror()
@@ -181,12 +209,19 @@ class Setup:
 
 		u.log_output("SETUP:GET",session['logged_in'], session['username'])
 		is_git_auth = github_sync.is_git_auth()
+		is_member = True if session["is_member"] == "True" else False
+		if is_git_auth and not is_member:
+			raise web.seeother(prefixLocal+'gitauth')
+		
 		u.reload_config() # reload conf
 		f = forms.get_form('setup.json') # get the form template
 		data = u.get_vars_from_module('conf') # fill in the form with conf values
+
+		
 		return render.setup(f=f,user=session['username'],
 							data=data, is_git_auth=is_git_auth,
 							project=conf.myProject,main_lang=conf.mainLang)
+			
 
 	def POST(self):
 		""" Modify config.py and static/js/conf.json and reload the module
@@ -205,13 +240,13 @@ class Setup:
 			file.writelines('status= "modified"\n')
 			file.writelines('main_entity = "https://schema.org/CreativeWork"\n')
 			file.writelines('myform = "'+DEFAULT_FORM_JSON+'"\n')
-			file.writelines('myEndpoint = "'+DEFAULT_ENDPOINT+'"\n')
 			file.writelines('log_file = "'+IP_LOGS+'"\n')
 			file.writelines('wikidataEndpoint = "'+WIKIDATA_SPARQL+'"\n')
 			file.writelines('resource_templates = "'+RESOURCE_TEMPLATES+'"\n')
 			file.writelines('template_list = "'+TEMPLATE_LIST+'"\n')
 			file.writelines('ask_form = "'+RESOURCE_TEMPLATES+'ask_class.json"\n')
 			file.writelines('skos_vocabularies = "skos_vocabs.json"\n')
+			file.writelines('sparql_wrapper_user_agent = "'+USER_AGENT+'"\n')
 			file.writelines('charts = "charts.json"\n')
 			data = u.validate_setup(data)
 
@@ -223,7 +258,7 @@ class Setup:
 			u.init_js_config(data)
 			u.reload_config()
 
-			raise web.seeother(prefixLocal+'/welcome-1')
+			raise web.seeother(prefixLocal+'welcome-1')
 
 
 class Template:
@@ -238,58 +273,76 @@ class Template:
 
 		# display template
 		is_git_auth = github_sync.is_git_auth()
+		is_member = True if session["is_member"] == "True" else False
+		if is_git_auth and not is_member:
+			raise web.seeother(prefixLocal+'gitauth')
+
 		data = web.input()
+
 		if 'action' in data and 'updateSubclass' in data.action:
 			queries.updateSubclassValue(data)
 
 		with open(TEMPLATE_LIST,'r') as tpl_file:
 			tpl_list = json.load(tpl_file)
 
-		res_type = ";  ".join([i['type'] for i in tpl_list if i["short_name"] == res_name][0])
-		res_full_name = [i['name'] for i in tpl_list if i["short_name"] == res_name][0]
-		res_status = [i['hidden'] for i in tpl_list if i["short_name"] == res_name][0]
+		# load template settings
+		res_config = next(tpl for tpl in tpl_list if tpl["short_name"] == res_name)
 
 		# if does not exist create the template json file
 		template_path = RESOURCE_TEMPLATES+'template-'+res_name+'.json'
 		if not os.path.isfile(template_path):
 			f = open(template_path, "w")
 			json.dump([],f)
-			fields = None
-		else: # load template form
-			with open(template_path,'r') as tpl_file:
-				fields = json.load(tpl_file)
-		if not os.path.isfile(SKOS_VOCAB):
-			skos_file = None
-		else:
-			with open(SKOS_VOCAB, 'r') as skos_list:
-				skos_file = json.load(skos_list)
 
-		return render.template(f=fields,user=session['username'],
-								res_type=res_type,res_name=res_full_name,
-								res_status=res_status,is_git_auth=is_git_auth,
-								project=conf.myProject,skos_vocabs=skos_file,
-								templates=tpl_list,main_lang=conf.mainLang)
+		# modify settings
+		return render.template_settings(user=session['username'],res_config=res_config,
+								is_git_auth=is_git_auth,project=conf.myProject,main_lang=conf.mainLang)
 
 	def POST(self, res_name):
 		""" Save the form template for data entry and reload config files
 		"""
 
 		data = web.input()
-		if 'action' in data and 'updateTemplate' not in data.action and 'deleteTemplate' not in data.action:
-			create_record(data)
-		else:
-			template_path = RESOURCE_TEMPLATES+'template-'+res_name+'.json'
-			if 'action' in data and 'deleteTemplate' in data.action:
-				# os.remove(template_path) # remove json file
-				u.updateTemplateList(res_name,None,remove=True) # update tpl list
-				u.update_ask_class(template_path, res_name,remove=True) # update ask_class
-				raise web.seeother(prefixLocal+'/welcome-1')
+		template_path = RESOURCE_TEMPLATES+'template-'+res_name+'.json'
+		# save template initial settings then modify fields
+		if 'action' in data and 'modifyFields' in data.action:
+
+			# save config settings
+			u.config_template(res_name,data=data)
+
+			# load template settings
+			with open(TEMPLATE_LIST,'r') as tpl_file:
+				tpl_list = json.load(tpl_file)
+			res_config = next(tpl for tpl in tpl_list if tpl["short_name"] == res_name)
+
+			# load template form
+			with open(template_path,'r') as tpl_file:
+					fields = json.load(tpl_file)
+			if not os.path.isfile(SKOS_VOCAB):
+				skos_file = None
 			else:
-				u.fields_to_json(data, template_path, SKOS_VOCAB) # save the json template
-				u.reload_config()
-				vocabs.import_vocabs()
-				u.update_ask_class(template_path, res_name) # modify ask_class json
-				raise web.seeother(prefixLocal+'/welcome-1')
+				with open(SKOS_VOCAB, 'r') as skos_list:
+					skos_file = json.load(skos_list)
+
+			return render.template_fields(f=fields,user=session['username'],
+											res_config=res_config,is_git_auth=is_git_auth,
+											project=conf.myProject,skos_vocabs=skos_file,
+											templates=tpl_list,main_lang=conf.mainLang)
+
+		elif 'action' in data and 'deleteTemplate' in data.action:
+			# os.remove(template_path) # remove json file
+			u.updateTemplateList(res_name,None,remove=True) # update tpl list
+			u.update_ask_class(template_path, res_name,remove=True) # update ask_class
+			raise web.seeother(prefixLocal+'welcome-1')
+		elif 'action' in data and 'updateTemplate' in data.action:
+			u.fields_to_json(data, template_path, SKOS_VOCAB) # save the json template
+			u.reload_config()
+			vocabs.import_vocabs()
+			u.update_ask_class(template_path, res_name) # modify ask_class json
+			raise web.seeother(prefixLocal+'welcome-1')
+		else:
+			create_record(data)
+
 
 # LOGIN : Homepage
 
@@ -347,15 +400,20 @@ class Index:
 		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
 
 		is_git_auth = github_sync.is_git_auth()
+		is_external_user = True if 'is_member' in session and session['is_member'] == 'False' and is_git_auth else False
 		session['ip_address'] = str(web.ctx['ip'])
 		filterRecords = ''
 		userID = session['username'].replace('@','-at-').replace('.','-dot-')
-		alll = queries.countAll()
-		all, notreviewed, underreview, published = queries.getCountings()
-		results = queries.getRecordsPagination(page)
-
+		userURI = conf.base + userID
+		if is_external_user:
+			alll = queries.countAll(userURI=userURI)
+			all, notreviewed, underreview, published = queries.getCountings(userURI=userURI)
+			results = queries.getRecordsPagination(page, userURI=userURI)
+		else:
+			alll = queries.countAll()
+			all, notreviewed, underreview, published = queries.getCountings()
+			results = queries.getRecordsPagination(page)
 		records = list(reversed(sorted(results, key=lambda tup: u.key(tup[4][:-5]) ))) if len(results) > 0 else []
-		print("records:", records)
 
 		with open(TEMPLATE_LIST,'r') as tpl_file:
 			tpl_list = json.load(tpl_file)
@@ -371,7 +429,8 @@ class Index:
 				notreviewed=notreviewed,underreview=underreview,
 				published=published, page=page,pagination=int(conf.pagination),
 				filter=filterRecords, filterName = 'filterAll',is_git_auth=is_git_auth,
-				project=conf.myProject,templates=tpl_list,main_lang=conf.mainLang)
+				project=conf.myProject,templates=tpl_list,main_lang=conf.mainLang,
+				is_external_user=is_external_user)
 		else:
 			if conf.gitClientID == '':
 				session['logged_in'] = 'False'
@@ -380,7 +439,8 @@ class Index:
 					notreviewed=notreviewed,underreview=underreview,
 					published=published, page=page,pagination=int(conf.pagination),
 					filter=filterRecords, filterName = 'filterAll',is_git_auth=is_git_auth,
-					project=conf.myProject,templates=tpl_list,main_lang=conf.mainLang)
+					project=conf.myProject,templates=tpl_list,main_lang=conf.mainLang,
+					is_external_user=is_external_user)
 			else:
 				session['logged_in'] = 'False'
 				u.log_output('WELCOME PAGE NOT LOGGED IN', session['logged_in'], session['username'])
@@ -402,6 +462,10 @@ class Index:
 		actions = web.input()
 		session['ip_address'] = str(web.ctx['ip'])
 		is_git_auth = github_sync.is_git_auth()
+		is_external_user = True if 'is_member' in session and session['is_member'] == 'False' and is_git_auth else False
+		session['ip_address'] = str(web.ctx['ip'])
+		userID = session['username'].replace('@','-at-').replace('.','-dot-')
+		userURI = conf.base + userID
 
 		with open(TEMPLATE_LIST,'r') as tpl_file:
 			tpl_list = json.load(tpl_file)
@@ -422,10 +486,16 @@ class Index:
 			filterRecords = filterRecords if filterRecords not in ['none',None] else ''
 			filterName = actions.action
 			page = 1
-			results = queries.getRecordsPagination(page, filterRecords)
-			records = list(reversed(sorted(results, key=lambda tup: u.key(tup[4][:-5]) ))) if len(results) > 0 else []
-			alll = queries.countAll()
-			all, notreviewed, underreview, published = queries.getCountings()
+			if is_external_user:
+				results = queries.getRecordsPagination(page, filterRecords,userURI=userURI)
+				records = list(reversed(sorted(results, key=lambda tup: u.key(tup[4][:-5]) ))) if len(results) > 0 else []
+				alll = queries.countAll(userURI=userURI)
+				all, notreviewed, underreview, published = queries.getCountings(userURI=userURI)
+			else:
+				results = queries.getRecordsPagination(page, filterRecords)
+				records = list(reversed(sorted(results, key=lambda tup: u.key(tup[4][:-5]) ))) if len(results) > 0 else []
+				alll = queries.countAll()
+				all, notreviewed, underreview, published = queries.getCountings()
 			filterRecords = filterRecords if filterRecords != '' else 'none'
 
 			return render.index(wikilist=records, user=session['username'],
@@ -434,13 +504,14 @@ class Index:
 				underreview=underreview, published=published,
 				page=page, pagination=int(conf.pagination),
 				filter= filterRecords, filterName = filterName, is_git_auth=is_git_auth,
-				project=conf.myProject,templates=tpl_list,main_lang=conf.mainLang)
+				project=conf.myProject,templates=tpl_list,main_lang=conf.mainLang,
+				is_external_user=is_external_user)
 
 		# create a new record
 		elif actions.action.startswith('createRecord'):
 			record = actions.action.split("createRecord",1)[1]
 			u.log_output('START NEW RECORD (LOGGED IN)', session['logged_in'], session['username'], record )
-			raise web.seeother(prefixLocal+'record-'+record)
+			raise web.seeother('/record-'+record)
 
 		# delete a record (but not the dump in /records folder)
 		elif actions.action.startswith('deleteRecord'):
@@ -457,10 +528,16 @@ class Index:
 				raise web.seeother(prefixLocal+'welcome-'+page)
 			else:
 				filterName = [k if v == filterRecords else 'filterName' for k,v in filter_values.items()][0]
-				results = queries.getRecordsPagination(page,filterRecords)
-				records = list(reversed(sorted(results, key=lambda tup: u.key(tup[4][:-5]) ))) if len(results) > 0 else []
-				alll = queries.countAll()
-				all, notreviewed, underreview, published = queries.getCountings(filterRecords)
+				if is_external_user:
+					results = queries.getRecordsPagination(page, filterRecords,userURI=userURI)
+					records = list(reversed(sorted(results, key=lambda tup: u.key(tup[4][:-5]) ))) if len(results) > 0 else []
+					alll = queries.countAll(userURI=userURI)
+					all, notreviewed, underreview, published = queries.getCountings(userURI=userURI)
+				else:
+					results = queries.getRecordsPagination(page, filterRecords)
+					records = list(reversed(sorted(results, key=lambda tup: u.key(tup[4][:-5]) ))) if len(results) > 0 else []
+					alll = queries.countAll()
+					all, notreviewed, underreview, published = queries.getCountings()
 
 				return render.index(wikilist=records, user=session['username'],
 					varIDpage=str(time.time()).replace('.','-'),
@@ -468,7 +545,8 @@ class Index:
 					underreview=underreview, published=published,
 					page=page, pagination=int(conf.pagination),
 					filter= filterRecords, filterName = filterName, is_git_auth=is_git_auth,
-					project=conf.myProject,templates=tpl_list,main_lang=conf.mainLang)
+					project=conf.myProject,templates=tpl_list,main_lang=conf.mainLang,
+					is_external_user=is_external_user)
 
 		# modify a record
 		elif actions.action.startswith('modify'):
@@ -501,12 +579,13 @@ class Index:
 					underreview=underreview, published=published,
 					page=page, pagination=int(conf.pagination),
 					filter= filterRecords, filterName = filterName, is_git_auth=is_git_auth,
-					project=conf.myProject,templates=tpl_list,main_lang=conf.mainLang)
+					project=conf.myProject,templates=tpl_list,main_lang=conf.mainLang,
+					is_external_user=is_external_user)
 
 		# create a new template
 		elif actions.action.startswith('createTemplate'):
 			is_git_auth = github_sync.is_git_auth()
-			res_type = sorted([ urllib.parse.unquote(actions[class_input].strip()) for class_input in actions if class_input.startswith("uri_class")]) 
+			res_type = sorted([ urllib.parse.unquote(actions[class_input].strip()) for class_input in actions if class_input.startswith("uri_class")])
 			res_type = conf.main_entity if res_type == [] else res_type
 			res_name = actions.class_name.replace(' ','_').lower() if "class_name" in actions else "not provided"
 
@@ -520,7 +599,7 @@ class Index:
 			res_n, adress = (actions.class_name, res_name) if (res_type not in types and res_name not in names) else (actions.class_name+'_'+now_time, res_name+'_'+now_time)
 			u.updateTemplateList(res_n,res_type)
 			raise web.seeother(prefixLocal+'template-'+adress)
-		
+
 		# delete existing template
 		elif actions.action.startswith('deleteTemplate'):
 			is_git_auth = github_sync.is_git_auth()
@@ -528,7 +607,7 @@ class Index:
 			template_path = RESOURCE_TEMPLATES+'template-'+res_name+'.json'
 			u.updateTemplateList(res_name,None,remove=True) # update tpl list
 			u.update_ask_class(template_path, res_name,remove=True) # update ask_class
-			raise web.seeother(prefixLocal+'/welcome-1')
+			raise web.seeother(prefixLocal+'welcome-1')
 
 		# login or create a new record
 		else:
@@ -557,17 +636,18 @@ class Record(object):
 		session['ip_address'] = str(web.ctx['ip'])
 		user = session['username']
 		logged_in = True if user != 'anonymous' else False
-		block_user, limit = u.check_ip(str(web.ctx['ip']), str(datetime.datetime.now()) )
+		#block_user, limit = u.check_ip(str(web.ctx['ip']), str(datetime.datetime.now()) )
 		u.check_ask_class()
 		ask_form = u.change_template_names(is_git_auth)
+		descriptions_dict = u.get_templates_description()
 		f = forms.get_form(ask_form,True)
 
 		return render.record(record_form=f, pageID=name, user=user,
-							alert=block_user, limit=limit,
+							alert=False, limit=50,
 							is_git_auth=is_git_auth,invalid=False,
 							project=conf.myProject,template=None,
 							query_templates=None,knowledge_extractor=set(),
-							main_lang=conf.mainLang)
+							main_lang=conf.mainLang,descriptions_dict=descriptions_dict)
 
 	def POST(self, name):
 		""" Submit a new record
@@ -587,17 +667,18 @@ class Record(object):
 		user = session['username']
 		session['ip_address'] = str(web.ctx['ip'])
 		u.write_ip(str(datetime.datetime.now()), str(web.ctx['ip']), 'POST')
-		block_user, limit = u.check_ip(str(web.ctx['ip']), str(datetime.datetime.now()) )
-		whereto = prefixLocal+'/' if user == 'anonymous' else prefixLocal+'welcome-1'
+		#block_user, limit = u.check_ip(str(web.ctx['ip']), str(datetime.datetime.now()) )
+		whereto = '/' if user == 'anonymous' else '/welcome-1'
+		descriptions_dict= u.get_templates_description()
 
 		# form validation (ask_class)
 		if not f.validates():
 			u.log_output('SUBMIT INVALID FORM', session['logged_in'], session['username'],name)
-			return render.record(record_form=f, pageID=name, user=user, alert=block_user,
-								limit=limit, is_git_auth=is_git_auth,invalid=True,
+			return render.record(record_form=f, pageID=name, user=user, alert=False,
+								limit=50, is_git_auth=is_git_auth,invalid=True,
 								project=conf.myProject,template=None,
 								query_templates=None,knowledge_extractor=set(),
-								main_lang=conf.mainLang)
+								main_lang=conf.mainLang,descriptions_dict=descriptions_dict)
 		else:
 			recordData = web.input()
 
@@ -607,11 +688,13 @@ class Record(object):
 					f = forms.get_form(recordData.res_name,processed_templates=[])
 					query_templates = u.get_query_templates(recordData.res_name)
 					extractor = u.has_extractor(recordData.res_name)
-					return render.record(record_form=f, pageID=name, user=user, alert=block_user,
-									limit=limit, is_git_auth=is_git_auth,invalid=False,
+					keywords_classes = u.get_keywords_classes(recordData.res_name)
+					return render.record(record_form=f, pageID=name, user=user, alert=False,
+									limit=50, is_git_auth=is_git_auth,invalid=False,
 									project=conf.myProject,template=recordData.res_name,
 									query_templates=query_templates,knowledge_extractor=extractor,
-									main_lang=conf.mainLang)
+									main_lang=conf.mainLang,descriptions_dict=descriptions_dict,
+									keywords_classes=keywords_classes)
 				else:
 					raise web.seeother(prefixLocal+'record-'+name)
 
@@ -627,12 +710,12 @@ class Record(object):
 				if invalid_input:
 					f = forms.get_form(templateID)
 					query_templates = u.get_query_templates(recordData.res_name)
-					extractor = u.has_extractor(templateID) 
-					return render.record(record_form=f, pageID=name, user=user, alert=block_user,
-									limit=limit, is_git_auth=is_git_auth,invalid=True,
+					extractor = u.has_extractor(templateID)
+					return render.record(record_form=f, pageID=name, user=user, alert=False,
+									limit=50, is_git_auth=is_git_auth,invalid=True,
 									project=conf.myProject,template=templateID,
 									query_templates=query_templates,knowledge_extractor=extractor,
-									main_lang=conf.mainLang)
+									main_lang=conf.mainLang,descriptions_dict=descriptions_dict)
 				else:
 					#u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
 					userID = user.replace('@','-at-').replace('.','-dot-')
@@ -665,17 +748,22 @@ class Modify(object):
 		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
 
 		is_git_auth = github_sync.is_git_auth()
+		is_external_user = True if 'is_member' in session and session['is_member'] == 'False' and is_git_auth else False
 		session['ip_address'] = str(web.ctx['ip'])
 		session_data['logged_in'] = 'True' if (session['username'] != 'anonymous') or \
 							(conf.gitClientID == '' and session['username'] == 'anonymous') else 'False'
 
+		graphToRebuild = conf.base+name+'/'
+		is_editable_by_author = queries.can_user_edit_graph(graphToRebuild,session['username'])
+		if is_external_user and not is_editable_by_author:
+			raise web.seeother(prefixLocal+'gitauth')
+			
 		if (session['username'] != 'anonymous') or \
 			(conf.gitClientID == '' and session['username'] == 'anonymous'):
-			graphToRebuild = conf.base+name+'/'
 			recordID = name
 			res_class = queries.getClass(conf.base+name)
-			res_template = u.get_template_from_class(res_class)
-			data = queries.getData(graphToRebuild, res_template)
+			res_template, res_subclasses = u.get_template_from_class(res_class)
+			data = queries.getData(graphToRebuild, res_template, res_subclasses=res_subclasses)
 			u.log_output('START MODIFY RECORD', session['logged_in'], session['username'], recordID )
 
 			f = forms.get_form(res_template,processed_templates=[])
@@ -683,19 +771,21 @@ class Modify(object):
 			with open(res_template) as tpl_form:
 				fields = json.load(tpl_form)
 			ids_dropdown = u.get_dropdowns(fields)
-			
+			ids_subtemplate = u.get_subtemplates(fields)
+
 			query_templates=u.get_query_templates(res_template)
 			extractor = u.has_extractor(res_template)
 			previous_extractors = u.has_extractor(res_template, name)
 			extractions_data = queries.retrieve_extractions(previous_extractors)
-			print("data:", data)
+			keywords_classes = u.get_keywords_classes(res_template)
 
 			return render.modify(graphdata=data, pageID=recordID, record_form=f,
 							user=session['username'],ids_dropdown=ids_dropdown,
-							is_git_auth=is_git_auth,invalid=False,
-							project=conf.myProject,template=res_template,
+							ids_subtemplate=ids_subtemplate,is_git_auth=is_git_auth,
+							invalid=False,project=conf.myProject,template=res_template,
 							query_templates=query_templates,knowledge_extractor=extractor,
-							extractions=extractions_data,main_lang=conf.mainLang)
+							extractions=extractions_data,main_lang=conf.mainLang,
+							keywords_classes=keywords_classes)
 		else:
 			session['logged_in'] = 'False'
 			raise web.seeother(prefixLocal+'/')
@@ -716,9 +806,10 @@ class Modify(object):
 		recordData = web.input()
 		session['ip_address'] = str(web.ctx['ip'])
 		is_git_auth = github_sync.is_git_auth()
+		is_external_user = True if session["is_member"] == "False" else False
 		templateID = recordData.templateID if 'templateID' in recordData else None
 		res_class = queries.getClass(conf.base+name)
-		res_template = u.get_template_from_class(res_class)
+		res_template, res_subclasses = u.get_template_from_class(res_class)
 
 		if 'action' in recordData:
 			create_record(recordData)
@@ -727,31 +818,39 @@ class Modify(object):
 			if not f.validates():
 				graphToRebuild = conf.base+name+'/'
 				recordID = name
-				data = queries.getData(graphToRebuild,templateID)
+				data = queries.getData(graphToRebuild,templateID,res_subclasses=res_subclasses)
 				u.log_output('INVALID MODIFY RECORD', session['logged_in'], session['username'], recordID )
 				f = forms.get_form(templateID)
 
 				with open(templateID) as tpl_form:
 					fields = json.load(tpl_form)
 				ids_dropdown = u.get_dropdowns(fields)
+				ids_subtemplate = u.get_subtemplates(fields)
 
 				query_templates = u.get_query_templates(templateID)
 				extractor = u.has_extractor(res_template)
 				previous_extractors = u.has_extractor(res_template, name)
 				extractions_data = queries.retrieve_extractions(previous_extractors)
+				keywords_classes = u.get_keywords_classes(res_template)
 
 				return render.modify(graphdata=data, pageID=recordID, record_form=f,
 								user=session['username'],ids_dropdown=ids_dropdown,
-								is_git_auth=is_git_auth,invalid=True,
-								project=conf.myProject,template=res_template,
+								ids_subtemplate=ids_subtemplate,is_git_auth=is_git_auth,
+								invalid=True,project=conf.myProject,template=res_template,
 								query_templates=query_templates,knowledge_extractor=extractor,
-								extractions=extractions_data,main_lang=conf.mainLang)
+								extractions=extractions_data,main_lang=conf.mainLang,
+								keywords_classes=keywords_classes)
 			else:
 				recordID = recordData.recordID
 				#u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
 				userID = session['username'].replace('@','-at-').replace('.','-dot-')
 				graphToClear = conf.base+name+'/'
-				file_path = mapping.inputToRDF(recordData, userID, 'modified', graphToClear=graphToClear,tpl_form=templateID)
+				if is_external_user:
+					queries.clearGraph(graphToClear)
+					stage = 'not modified'
+				else:
+					stage = 'modified'
+				file_path = mapping.inputToRDF(recordData, userID, stage, graphToClear=graphToClear,tpl_form=templateID)
 				if conf.github_backup == "True":
 					try:
 						github_sync.push(file_path,"main", session['gituser'],
@@ -779,6 +878,10 @@ class Review(object):
 		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
 
 		is_git_auth = github_sync.is_git_auth()
+		is_member = True if session['is_member'] == 'True' else False
+		if is_git_auth and not is_member:
+			raise web.seeother(prefixLocal+'gitauth')
+		
 		session_data['logged_in'] = 'True' if (session['username'] != 'anonymous') or \
 							(conf.gitClientID == '' and session['username'] == 'anonymous') else 'False'
 
@@ -788,8 +891,8 @@ class Review(object):
 			graphToRebuild = conf.base+name+'/'
 			recordID = name
 			res_class = queries.getClass(conf.base+name)
-			res_template = u.get_template_from_class(res_class)
-			data = queries.getData(graphToRebuild,res_template)
+			res_template, res_subclasses = u.get_template_from_class(res_class)
+			data = queries.getData(graphToRebuild, res_template, res_subclasses=res_subclasses)
 			session['ip_address'] = str(web.ctx['ip'])
 			u.log_output('START REVIEW RECORD', session['logged_in'], session['username'], recordID )
 
@@ -798,18 +901,22 @@ class Review(object):
 			with open(res_template) as tpl_form:
 				fields = json.load(tpl_form)
 			ids_dropdown = u.get_dropdowns(fields) # TODO CHANGE
-			
+			ids_subtemplate = u.get_subtemplates(fields)
+
 			query_templates = u.get_query_templates(res_template)
 			extractor = u.has_extractor(res_template)
 			previous_extractors = u.has_extractor(res_template, name)
 			extractions_data = queries.retrieve_extractions(previous_extractors)
+			keywords_classes = u.get_keywords_classes(res_template)
 
 			return render.review(graphdata=data, pageID=recordID, record_form=f,
 								graph=graphToRebuild, user=session['username'],
-								ids_dropdown=ids_dropdown,is_git_auth=is_git_auth,
-								invalid=False,project=conf.myProject,template=res_template,
+								ids_dropdown=ids_dropdown,ids_subtemplate=ids_subtemplate,
+								is_git_auth=is_git_auth,invalid=False,
+								project=conf.myProject,template=res_template,
 								query_templates=query_templates,knowledge_extractor=extractor,
-								extractions=extractions_data,main_lang=conf.mainLang)
+								extractions=extractions_data,main_lang=conf.mainLang,
+								keywords_classes=keywords_classes)
 		else:
 			session['logged_in'] = 'False'
 			raise web.seeother(prefixLocal+'/')
@@ -838,26 +945,30 @@ class Review(object):
 				graphToRebuild = conf.base+name+'/'
 				recordID = name
 				res_class = queries.getClass(conf.base+name)
-				res_template = u.get_template_from_class(res_class)
-				data = queries.getData(graphToRebuild,templateID)
+				res_template, res_subclasses = u.get_template_from_class(res_class)
+				data = queries.getData(graphToRebuild, res_template, res_subclasses=res_subclasses)
 				session['ip_address'] = str(web.ctx['ip'])
 				u.log_output('INVALID REVIEW RECORD', session['logged_in'], session['username'], recordID )
 				#f = forms.get_form(conf.myform)
 				with open(templateID) as tpl_form:
 					fields = json.load(tpl_form)
 				ids_dropdown = u.get_dropdowns(fields) # TODO CHANGE
-				
+				ids_subtemplate = u.get_subtemplates(fields)
+
 				query_templates = u.get_query_templates()
 				extractor = u.has_extractor(res_template)
 				previous_extractors = u.has_extractor(res_template, name)
 				extractions_data = queries.retrieve_extractions(previous_extractors)
+				keywords_classes = u.get_keywords_classes(res_template)
 
 				return render.review(graphdata=data, pageID=recordID, record_form=f,
 									graph=graphToRebuild, user=session['username'],
-									ids_dropdown=ids_dropdown,is_git_auth=is_git_auth,
-									invalid=True,project=conf.myProject,template=templateID,
+									ids_dropdown=ids_dropdown,ids_subtemplate=ids_subtemplate,
+									is_git_auth=is_git_auth,invalid=True,
+									project=conf.myProject,template=templateID,
 									query_templates=query_templates,knowledge_extractor=extractor,
-									extractions=extractions_data,main_lang=conf.mainLang)
+									extractions=extractions_data,main_lang=conf.mainLang,
+									keywords_classes=keywords_classes)
 			else:
 				recordData = web.input()
 				recordID = recordData.recordID
@@ -880,26 +991,29 @@ class Review(object):
 				graphToRebuild = conf.base+name+'/'
 				recordID = name
 				res_class = queries.getClass(conf.base+name)
-				res_template = u.get_template_from_class(res_class)
-				data = queries.getData(graphToRebuild,templateID)
+				res_template, res_subclasses = u.get_template_from_class(res_class)
+				data = queries.getData(graphToRebuild, res_template, res_subclasses=res_subclasses)
 				session['ip_address'] = str(web.ctx['ip'])
 				u.log_output('INVALID REVIEW RECORD', session['logged_in'], session['username'], recordID )
 				f = forms.get_form(templateID)
 				with open(templateID) as tpl_form:
 					fields = json.load(tpl_form)
 				ids_dropdown = u.get_dropdowns(fields)
-				
+				ids_subtemplate = u.get_subtemplates(fields)
+
 				query_templates = u.get_query_templates()
 				extractor = u.has_extractor(res_template)
 				previous_extractors = u.has_extractor(res_template, name)
 				extractions_data = queries.retrieve_extractions(previous_extractors)
+				keywords_classes = u.get_keywords_classes(res_template)
 
 				return render.review(graphdata=data, pageID=recordID, record_form=f,
 									graph=graphToRebuild, user=session['username'],
-									ids_dropdown=ids_dropdown,is_git_auth=is_git_auth,
-									invalid=True,project=conf.myProject,template=templateID,
+									ids_dropdown=ids_dropdown,ids_subtemplate=ids_subtemplate,
+									is_git_auth=is_git_auth,invalid=True,project=conf.myProject,template=templateID,
 									query_templates=query_templates,knowledge_extractor=extractor,
-									extractions=extractions_data,main_lang=conf.mainLang)
+									extractions=extractions_data,main_lang=conf.mainLang,
+									keywords_classes=keywords_classes)
 			else:
 				recordData = web.input()
 				#u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
@@ -954,31 +1068,63 @@ class Records:
 		with open(TEMPLATE_LIST,'r') as tpl_file:
 			templates = json.load(tpl_file)
 
-		records_by_template , count_by_template , count_by_subclass , filters_by_template = {} , {} , {} , {}
+		records_by_template , count_by_template , count_by_subclass , filters_by_template, extraction_config = {} , {} , {} , {}, {}
 		for template in templates:
 			if not (is_git_auth==False and template["hidden"] =='True'):
 				res_class=template["type"]
 				res_subclass_dict = template["subclasses"]
 				res_subclasses = list(res_subclass_dict.keys())
-				records = queries.getRecords(res_class,res_subclasses)
+				records = list(queries.getRecords(res_class,res_subclasses))
 				records_by_template[template["name"]] = records
 				alll = queries.countAll(res_class,res_subclasses,False,False)
 				count_by_template[template["name"]] = alll
+				init_count_subclass = int(alll)
 				if len(res_subclasses) > 0:
 					count_by_subclass[template["name"]] = {}
 				for res_subclass in res_subclasses:
 					count_subclass = queries.countAll(res_class,res_subclasses,[res_subclass],False)
+					init_count_subclass -= int(count_subclass)
 					count_by_subclass[template["name"]][res_subclass] = {"label": res_subclass_dict[res_subclass], "count": count_subclass}
-				for template_name in count_by_subclass:
-					count_by_subclass[template_name] = dict(sorted(count_by_subclass[template_name].items(), key=lambda item: item[1]['count'], reverse=True))
+				
+				# show other subclass
+				if "other_subclass" in template and template["other_subclass"] == "True":
+					count_by_subclass[template["name"]]["other"] = {"label": "Other", "count": str(init_count_subclass)}
+
+					# ATLAS - show additional values from taxonomies
+					count_by_other_values,records_other_value = queries.countAllOtherValues(res_class,res_subclasses)
+					count_by_subclass[template["name"]]["other"]["other"] = count_by_other_values
+					for i, record in enumerate(records_by_template[template["name"]]):
+						if record[7] == "" and record[0] in records_other_value:
+							print(record)
+							record_info_list = list(record)
+							record_info_list[7] = "other-"+records_other_value[record[0]]
+							records_by_template[template["name"]][i] = tuple(record_info_list)
 
 				filtersBrowse = queries.getBrowsingFilters(template["template"])
 				filters_by_template[template["name"]] = filtersBrowse
+				extraction_properties = queries.getExtractionProperties(template["template"])
+				extraction_config[template["name"]] = { "extraction_properties" : extraction_properties }
+				if "keywords_classes" in template:
+					extraction_config[template["name"]]["keywords_classes"] = template["keywords_classes"]
+
+
+		for template_name in count_by_subclass:
+			items = {
+				k: v for k, v in sorted(
+					((k, v) for k, v in count_by_subclass[template_name].items() if k != 'other'),
+					key=lambda item: int(item[1]['count']),
+					reverse=True
+				)
+			}
+			if 'other' in count_by_subclass[template_name]:
+				items['other'] = count_by_subclass[template_name]['other']
+			count_by_subclass[template_name] = items
+
 		return render.records(user=session['username'], data=records_by_template,
 							subclass_data=count_by_subclass,title='Latest resources', r_base=conf.base,
 							alll=count_by_template, filters=filters_by_template,
 							is_git_auth=is_git_auth,project=conf.myProject,
-							main_lang=conf.mainLang)
+							main_lang=conf.mainLang,extraction_config=extraction_config)
 
 	def POST(self):
 		""" EXPLORE page """
@@ -1005,14 +1151,19 @@ class View(object):
 		res_class = queries.getClass(conf.base+name)
 		data, stage, title, properties, data_labels, extractions_data, new_dict_classes = None, None, None, None, {}, {}, {}
 		try:
-			res_template = u.get_template_from_class(res_class)
-			data = dict(queries.getData(record+'/',res_template))
+			res_template, res_subclasses = u.get_template_from_class(res_class)
+			data = dict(queries.getData(record+'/',res_template,res_subclasses))
 			stage = data['stage'][0] if 'stage' in data else 'draft'
-			previous_extractors = u.has_extractor(res_template, name)
-			extractions_data = queries.retrieve_extractions(previous_extractors,view=True)
+			previous_extractors = u.has_extractor(res_template, name, res_subclasses=res_subclasses)
+			extractions_data = queries.retrieve_extractions(previous_extractors,view=res_template)
+
 
 			with open(res_template) as tpl_form:
-				fields = json.load(tpl_form)
+				all_fields = json.load(tpl_form)
+			fields = []
+			for field in all_fields:
+				if field['restricted'] in [ [], ["other"] ] or any(subclass in field['restricted'] for subclass in res_subclasses):
+					fields.append(field)
 			try:
 				title_field = [v for k,v in data.items() \
 					for field in fields if (field['disambiguate'] == "True" \
@@ -1023,9 +1174,9 @@ class View(object):
 			properties = {field["label"]:[field["property"], field["type"], field["view_class"], field["value"]] for field in fields if 'property' in field}
 
 			data_labels = {}
-			for k, v in data.items():  
-				for field in fields:  
-					if k == field['id']: 
+			for k, v in data.items():
+				for field in fields:
+					if k == field['id']:
 						if properties[field["label"]][3] == "URI":
 							data_labels[field['label']] = [[quote(val[0],safe=''), val[1]] for val in v]
 						else:
@@ -1055,7 +1206,6 @@ class View(object):
 				templates = json.load(tpl_list)
 
 
-			result_class = "; ".join(sorted(result_class.split("; ")))
 			for k in list(class_sorted.keys()):
 
 				# retrieve the corresponding template
@@ -1068,7 +1218,13 @@ class View(object):
 					template_fields = json.load(tpl_file)
 				property_label = list(class_sorted[k].keys())[0]
 				property_name = next(f["label"] for f in template_fields if f["property"] == property_label.split(',',1)[0])
-				new_dict_classes[template_name] = {'class':k, 'results': { property_label+','+property_name : class_sorted[k][property_label]} }
+				if template_name in new_dict_classes:
+					if property_label+','+property_name in new_dict_classes[template_name]["results"]:
+						new_dict_classes[template_name]["results"][property_label+','+property_name].extend(class_sorted[k][property_label])
+					else:
+						new_dict_classes[template_name]["results"][property_label+','+property_name] = class_sorted[k][property_label]
+				else:
+					new_dict_classes[template_name] = {'results': { property_label+','+property_name : class_sorted[k][property_label]} }
 		except Exception as e:
 			pass
 
@@ -1093,54 +1249,63 @@ class View(object):
 # TERM : vocabulary terms and newly created entities
 
 class Term(object):
-	def GET(self, name):
-		""" controlled vocabulary term web page
-
-		Parameters
-		----------
-		name: str
-			the ID of the term, generally the last part of the URL
-		"""
-		try:
-			name = unquote(name)
-		except Exception as e:
-			name = name
-
+	def GET(self):
 		web.header("Cache-Control", "no-cache, max-age=0, must-revalidate, no-store")
 		is_git_auth = github_sync.is_git_auth()
-		results_by_class = {}
+
+		params = web.input(id=None)
+		if params.id:
+			name = unquote(params.id)
+		else:
+			raise web.notfound()
+
 
 		# look for occurrences in Record Graphs
 		uri = mapping.getRightURIbase(name)
 		label = queries.get_URI_label(uri)
 		data = queries.describe_term(uri)
-		appears_in = [ result["subject"]["value"] \
-					for result in data["results"]["bindings"] \
-					if (result["object"]["value"] == uri and result["object"]["type"] == 'uri') ] \
-					if data != None else []
+		results_by_class = {}
+
+		if data is not None:
+			appears_in_set = {
+				result["subject"]["value"]
+				for result in data["results"]["bindings"]
+				if result["object"]["value"] == uri 
+				and result["object"]["type"] == "uri"
+			}
+			appears_in = list(appears_in_set)
+		else:
+			appears_in = []
+
 		# look for occurrences in Extraction Graphs
 		extractions_data = queries.describe_extraction_term(uri)
 		appears_in_extractions = [result["graph"]["value"][:-1] for result in extractions_data["results"]["bindings"] ] \
 			if extractions_data != None else []
+		hide_link = True if (len(appears_in_extractions) > 0 and len(appears_in) == 0) and conf.base in uri else False
 		appears_in.extend(appears_in_extractions)
+		appears_in = list(set(appears_in))
 
 		with open(TEMPLATE_LIST) as tpl_list:
 			res_templates = json.load(tpl_list)
+
 		for res_uri in appears_in:
 			res_class = sorted(queries.getClass(res_uri))
-			res_type = next((t["name"] for t in res_templates if all(cls in (t["type"] + list(t["subclasses"].keys())) for cls in res_class)),None)
+			res_tpl = next((t for t in res_templates if all(cls in (t["type"] + list(t["subclasses"].keys())) for cls in res_class)),None)
+			res_type = res_tpl["name"] if res_tpl != None else None
+			tpl_sublcasses = list(res_tpl["subclasses"].keys()) if res_tpl != None else []
 			if res_type in results_by_class:
 				results_by_class[res_type]['results'].append(res_uri)
 			elif res_type != None:
-				results_by_class[res_type] = {'class':res_class, 'results':[res_uri]}
+				main_class = [cls for cls in res_class if cls  not in tpl_sublcasses]
+				results_by_class[res_type] = {'class':main_class, 'results':[res_uri], 'subclasses': tpl_sublcasses}
 
 		count = len(appears_in)
 		map_coordinates = (queries.geonames_geocoding(uri)) if uri.startswith("https://sws.geonames.org/") else None
-		
+
 		return render.term(user=session['username'], label=label, count=count,
 						is_git_auth=is_git_auth,project=conf.myProject,base=conf.base,
 						uri=uri,name=name,results=results_by_class,map=map_coordinates,
-						main_lang=conf.mainLang)
+						hide_link=hide_link,main_lang=conf.mainLang)
 
 	def POST(self,name):
 		""" controlled vocabulary term web page
@@ -1316,7 +1481,6 @@ class Nlp(object):
 			query_str_decoded = query_string.q.strip()
 
 		# parse string with spacy
-        
 		parsed = NER_IT(query_str_decoded) if query_string.lang == 'it' else NER_EN(query_str_decoded)
 		entities = {word.text for word in parsed.ents if word.label_ in ['PERSON','ORG','GPE','LOC']}
 		# prepare json
@@ -1329,19 +1493,23 @@ class Nlp(object):
 
 class Sparqlanything(object):
 	def GET(self):
-		web.header('Content-Type', 'application/json')
 		web.header('Access-Control-Allow-Origin', '*')
 		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
 
 		query_string = web.input()
 		try:
 			query_str_decoded = query_string.q.decode('utf-8').strip()
+			endpoint = query_string.endpoint.decode('utf-8').strip() if "endpoint" in query_string else None
+			has_csv_header = query_string.csvheader.decode('utf-8').strip() if "csvheader" in query_string else None
 		except Exception as e:
 			query_str_decoded = query_string.q.strip()
-		
+			endpoint = query_string.endpoint.strip() if "endpoint" in query_string else None
+			has_csv_header = query_string.csvheader.strip() if "csvheader" in query_string else None
+
 		action = query_string.action
-		
+
 		if action == "searchclasses":
+			web.header('Content-Type', 'application/json')
 			if query_str_decoded.endswith(".xml"):
 				classes_query = "SELECT DISTINCT ?class WHERE { SERVICE <x-sparql-anything:"+query_str_decoded+"> { ?subj a ?class } }"
 				temp_results = queries.SPARQLAnything(classes_query)
@@ -1355,21 +1523,47 @@ class Sparqlanything(object):
 				if response.status_code == 200:
 					csv_content = StringIO(response.text)
 					reader = csv.reader(csv_content)
-					results = next(reader)
+					first_row = next(reader)
+					results = first_row if has_csv_header == "true" else [str(i) for i in range(len(first_row))]
 			return json.dumps(results)
-		
-		elif action == "searchentities":
-			results = queries.SPARQLAnything(query_str_decoded)
-			for result in results["results"]["bindings"]:
-				if "uri" not in result:
-					result["uri"] = {"value": result["label"]["value"], "type": "uri"}
-				uri = result["uri"]["value"]
-				if not (uri.startswith("http://") or uri.startswith("https://")):
-					service = query_string.service if "service" in action else "wd"
-					result["uri"]["value"] = queries.entity_reconciliation(uri,service)
 
-			return json.dumps(results)
-	
+		elif action == "searchentities":
+			results = queries.SPARQLAnything(query_str_decoded,endpoint=endpoint)
+			total_results = len(results["results"]["bindings"])
+			service = query_string.service if "service" in query_string else "wd"
+			if service == "skos":
+				web.header('Content-Type', 'application/json')
+				print("results:", results)
+				return json.dumps(results)
+			else:
+				def stream():
+					
+					web.header('Content-Type', 'text/event-stream')
+					web.header('Cache-Control', 'no-cache')
+					web.header('Connection', 'keep-alive')
+					yield f"data: {json.dumps({'length': total_results})}\n\n" # total length
+
+					count = 0 
+					for result in results["results"]["bindings"]:
+						if "label" not in result and "uri" in result:
+							uri = result["uri"]["value"]
+							label = queries.entity_reconciliation(uri, service, find="label", language=conf.mainLang)
+							result["label"] = {"value": label, "type": "literal"}
+
+						if "uri" not in result:
+							result["uri"] = {"value": result["label"]["value"], "type": "uri"}
+
+						uri = result["uri"]["value"]
+						if not (uri.startswith("http://") or uri.startswith("https://")):
+							result["uri"]["value"] = queries.entity_reconciliation(uri, service, find="uri", language=conf.mainLang)
+
+						count += 1
+						yield f"data: {json.dumps({'count': count})}\n\n" # current count
+
+					yield f"data: {json.dumps({'data': results})}\n\n" # data
+
+				return stream()
+
 class Wikidata(object):
 	def GET(self):
 		web.header('Content-Type', 'application/json')
@@ -1382,13 +1576,13 @@ class Wikidata(object):
 			query_str_decoded = query_string.query.decode('utf-8').strip()
 		except Exception as e:
 			query_str_decoded = query_string.query.strip()
-		
+
 		sparql = SPARQLWrapper(WIKIDATA_SPARQL,agent=USER_AGENT)
 		sparql.setQuery(query_str_decoded)
 		sparql.setReturnFormat(JSON)
 		results = sparql.query().convert()
 		return json.dumps(results)
-	
+
 class Charts(object):
 	def GET(self):
 		web.header("X-Forwarded-For", session['ip_address'])
@@ -1409,10 +1603,10 @@ class Charts(object):
 		else:
 			with open(conf.charts) as chart_file:
 				charts = json.load(chart_file)
-		
+
 		for chart in charts["charts"]:
-			if chart["type"] == "map":
-				chart_id = str(time.time()).replace('.','-')
+			if chart["type"] in ["map", "timeline", "network"]:
+				chart_id = str(time.time()).replace('.','-') + chart["id"]
 				chart["info"] = chart_id
 			elif chart["type"] == "chart":
 				chart_id = str(time.time()).replace('.','-')
@@ -1426,14 +1620,34 @@ class Charts(object):
 		return render.charts_visualization(user=session['username'], is_git_auth=is_git_auth,
 					   project=conf.myProject, charts=charts,
 					   main_lang=conf.mainLang)
-	
+
 	def POST(self):
 		web.header('Content-Type', 'application/json')
-		data = web.data()
-		json_data = json.loads(data)
-		results = queries.getChartData(json_data)
-		return json.dumps(results)
-	
+		raw_data = web.data()  # bytes
+		ctype = web.ctx.env.get("CONTENT_TYPE", "")
+
+		# form-urlencoded (submit button)
+		if ctype.startswith("application/x-www-form-urlencoded"):
+			params = web.input()  # già dict
+			if "action" in params and params.action.startswith("createRecord"):
+				create_record(params)
+			else:
+				return json.dumps({"error": "missing or invalid action"})
+
+		# JSON (AJAX)
+		elif ctype.startswith("application/json"):
+			try:
+				data = json.loads(raw_data.decode("utf-8"))
+			except Exception as e:
+				return json.dumps({"error": "invalid json", "details": str(e)})
+
+			results = queries.getChartData(data)
+			return json.dumps(results)
+
+		else:
+			return json.dumps({"error": f"Unsupported Content-Type: {ctype}"})
+
+
 class ChartsTemplate(object):
 	def GET(self):
 		web.header("X-Forwarded-For", session['ip_address'])
@@ -1443,12 +1657,16 @@ class ChartsTemplate(object):
 		web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
 
 		is_git_auth = github_sync.is_git_auth()
-		with open(conf.charts) as chart_file:
-			charts = json.load(chart_file)
+		is_member = True if session["is_member"] == "True" else False
+		if (is_member and is_git_auth) or not is_git_auth:
+			with open(conf.charts) as chart_file:
+				charts = json.load(chart_file)
 
-		return render.charts_template(user=session['username'], is_git_auth=is_git_auth,
-					   project=conf.myProject, charts=charts,
-					   main_lang=conf.mainLang)
+			return render.charts_template(user=session['username'], is_git_auth=is_git_auth,
+						project=conf.myProject, charts=charts,
+						main_lang=conf.mainLang)
+		else:
+			raise web.seeother(prefixLocal+'gitauth')
 
 	def POST(self):
 		data = web.input()
@@ -1456,7 +1674,45 @@ class ChartsTemplate(object):
 			u.delete_charts(conf.charts)
 		elif 'action' in data and 'updateTemplate' in data.action:
 			u.charts_to_json(conf.charts, data)
-		raise web.seeother(prefixLocal+'/welcome-1')
+		raise web.seeother(prefixLocal+'welcome-1')
+	
+class Serialization:
+	def GET(self):
+		user_data = web.input(id=None)
+		format = user_data.format or 'TURTLE' # TURTLE set as default
+		graph_id = user_data.id
+		mime_map = {
+            'ttl': 'text/turtle',
+            'jsonld': 'application/ld+json',
+            'rdf': 'application/rdf+xml'
+        }
+		accept = mime_map.get(format, 'text/turtle')
+		graphs = queries.get_serialization_file(format,graph_id)
+
+		if isinstance(graphs, list) and len(graphs) > 1:
+			# Multiple graphs
+			buffer = io.BytesIO()
+			with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
+				for idx, g in enumerate(graphs, start=1):
+					filename = f"graph-{idx}.{format}"
+					zipf.writestr(filename, g)
+
+			buffer.seek(0)
+			web.header('Content-Type', 'application/zip')
+			web.header('Content-Disposition', f'attachment; filename="graph-{graph_id}.zip"')
+			return buffer.read()
+
+		else:
+			# Single graph
+			if isinstance(graphs, list):
+				graph = graphs[0]
+			else:
+				graph = graphs
+
+			web.header('Content-Type', accept)
+			web.header('Content-Disposition', f'attachment; filename="graph-{graph_id}.{format}"')
+			return graph
+
 
 
 if __name__ == "__main__":

@@ -50,8 +50,13 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 	with open(conf.template_list) as tpl_file:
 		tpl_list = json.load(tpl_file)
 
-	res_class = [t["type"] for t in tpl_list if t["template"] == json_form]
+	res_dict = next((t for t in tpl_list if t["template"] == json_form), None) 
+	res_class = [res_dict["type"]] if res_dict else [] 
 	res_class = ";  ".join(res_class[0]) if len(res_class) > 0 else "none"
+	if res_dict:
+		res_subclass = res_dict["subclasses"] if "subclasses" in res_dict else {}
+		if "other_subclass" in res_dict and res_dict["other_subclass"] == "True":
+			res_subclass["other"] = "Other"
 	processed_templates.append(json_form)
 
 	for field in fields:
@@ -88,12 +93,19 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 			# subclass restriction
 			subclass_restriction = " ".join(field['restricted']) if 'restricted' in field and field['restricted'] != "None" else ''
 			is_subclass_field = 'True' if field['type'] == 'Subclass' else ''
+			classes = classes+' showOtherSubclass' if 'showOther' in field and field['showOther'] == 'showOther' else classes
+
 
 			# text box
 			placeholder = field['placeholder'] if 'placeholder' in field else None
 			default = field['defaultvalue'] if 'defaultvalue' in field else ''
 			# dropdown
-			dropdown_values = [(k,v) for k,v in field['values'].items()] if 'values' in field else None
+			if 'values' in field:
+				dropdown_values = [(k,v) for k,v in field['values'].items()]  
+			elif field['type'] == 'Subclass':
+				dropdown_values = [(k,v) for k,v in res_subclass.items()]  
+			else:
+				None
 			# subtemplate
 			data_supertemplate = 'True' if supertemplate else 'None'
 
@@ -214,7 +226,7 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 					data_subclass=subclass_restriction,
 					data_supertemplate=data_supertemplate), )
 
-			if field['type'] == 'Dropdown':
+			if field['type'] in ['Dropdown', 'Subclass']:
 				params = params + (form.Dropdown(myid,
 				description = description,
 				args=dropdown_values,
@@ -225,10 +237,11 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 				data_property = rdf_property,
 				data_mandatory = mandatory,
 				data_class=res_class,
+				data_subclassdropdown = is_subclass_field,
 				data_subclass=subclass_restriction,
 				data_supertemplate=data_supertemplate), )
 
-			if field['type'] in ['Checkbox', 'Subclass']:
+			if field['type'] == 'Checkbox':
 				prepend_title = '<section class="checkbox_group_label label col-12">'+prepend+"\n"+'<span class="title">'+description+'</span></section>'
 				i = 0
 				params = params + (form.Checkbox(myid+'-'+str(i),
@@ -241,7 +254,6 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 				data_property = rdf_property,
 				data_mandatory = mandatory,
 				data_class=res_class,
-				data_subclassck = is_subclass_field,
 				data_subclass=subclass_restriction,
 				data_supertemplate=data_supertemplate), )
 
@@ -257,7 +269,6 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 					data_property = rdf_property,
 					data_mandatory = mandatory,
 					data_class=res_class,
-					data_subclassck = is_subclass_field,
 					data_subclass=subclass_restriction,
 					data_supertemplate=data_supertemplate), )
 
@@ -284,6 +295,14 @@ def get_form(json_form, from_dict=False, supertemplate=False, processed_template
 				data_subclass=subclass_restriction,
 				data_subtemplate=myid,
 				data_supertemplate=data_supertemplate), )
+
+			# Color (setup only)
+			if field['type'] == 'Color':
+				params = params + (form.Color(myid,
+				description = description,
+				id=myid,
+				pre = prepend,
+				class_= classes),)
 
 	if supertemplate:
 		return params

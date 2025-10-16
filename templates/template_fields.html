@@ -1,0 +1,481 @@
+$def with(f,user,res_config,is_git_auth,project,skos_vocabs,templates,main_lang)
+$var user = user
+$var is_git_auth = is_git_auth
+$var project = project
+$var main_lang = main_lang
+
+$ res_name = res_config['name']
+$ res_type = '; '.join(res_config['type'])
+$ res_subclasses = res_config['subclasses']
+$ has_other_subclass = res_config['other_subclass']
+$if has_other_subclass == "True":
+	$ res_subclasses["other"] = "Other"
+
+<!-- Subtemplates list -->
+$if templates:
+	<script type="text/javascript">
+		var templates = '$templates'.replace(/&#39;/g, '"')
+		console.log(templates);
+		var templatesObject = JSON.parse(templates);
+		var subclasses = JSON.parse('$res_subclasses'.replace(/&#39;/g, '"'));
+	</script>
+$else:
+	<script type="text/javascript">
+		var templatesObject = {};
+		var subclasses = JSON.parse('$res_subclasses'.replace(/&#39;/g, '"'));
+	</script>
+
+<header class="row">
+	<h3 class="col-md-12 col-sm-12">$res_name</h3>
+	<p class="col-md-12 col-sm-12" id='res_type' class='col-md-8'>
+		$res_type
+		<span class="tip" data-toggle="tooltip" data-placement="bottom"
+			title="" data-original-title="You cannot change template name and class.">
+			<i class="fas fa-info-circle"></i></span>
+	</p>
+</header>
+<section class="corners row set_template_field">
+
+	<!-- TEMPLATE FORM -->
+	<section class="col-lg-8 col-md-12 col-sm-12">
+
+		<form id="templateForm" class="col-md-12 col-sm-12 col-lg-12" action="" method="POST">
+			<section class="row">
+				<section class="sortable homeheading col-md-12 col-lg-12 col-sm-12">
+
+					<section id="stepper">
+						<div class="stepper">
+							<div class="step-wrapper">
+								<div class="step">1</div>
+								<span class="stepper-label">Step 1: Initial settings</span>
+							</div>
+							<div class="line"></div>
+							<div class="step-wrapper active">
+								<div class="step">2</div>
+								<span class="stepper-label">Step 2: Configure fields</span>
+							</div>
+						</div>
+					</section>
+
+					$if f:
+						$ subclass_field = next((field for field in f if "type" in field and field["type"] == "Subclass"), None)
+
+						$for field in f:
+							$ hidden_style = "style=opacity:0.6" if "hidden" in field and field["hidden"] == "True" else ""
+							$ id = field["id"]
+							<section class="block_field" data-id="$id" $hidden_style>
+								<!-- TYPE -->
+								<section class="row">
+									<label class='col-md-3'>FIELD TYPE</label>
+									<select onchange="change_fields(this)" class="col-md-8 ($res_type) custom-select" id='type__$id' name='type__$id'>
+									<option value="None">Select</option>
+									<option value="Textbox">Textbox (text values or name of entities)</option>
+									<option value="Textarea">Textarea (long textual descriptions)</option>
+									<option value="Dropdown">Dropdown (select one value from a list)</option>
+									<option value="Checkbox">Checkbox (multiple choice)</option>
+									<option value="Date">Date (select a day/month/year/timespan)</option>
+									<option value="Multimedia">Multimedia (audio, image, video)</option>
+									<option value="Skos">Vocabulary (SKOS)</option>
+									<option value='WebsitePreview'>Website Preview (iframe)</option>
+									<option value='KnowledgeExtractor'>Knowledge Extraction</option>
+									<option value='Subclass'>Subclass</option>
+									<option value='Subtemplate'>Subtemplate</option>
+									</select>
+									<script type="text/javascript">
+										$$("#type__$id option[value$$=$field['type']]").attr("selected","selected");
+									</script>
+								</section>
+
+								<!-- LABEL -->
+								<section class="row">
+									<label class='col-md-3'>DISPLAY NAME</label>
+									<input type='text' id='label__$id' class='col-md-8' name='label__$id' value='${field["label"]}'/>
+								</section>
+
+								<!-- PREPEND -->
+								<section class="row">
+									<label class='col-md-3'>DESCRIPTION <br><span class="comment">a short explanation of the expected value</span></label>
+									<textarea id='prepend__$id' class='col-md-8 align-self-start' name='prepend__$id' rows="5">$:field["prepend"]</textarea>
+								</section>
+
+								<!-- PROPERTY -->
+								<section class="row">
+									<label class='col-md-3'>RDF PROPERTY <br><span class='comment'>start typing to get suggestions from LOV</span></label>
+									<input type='text' id='property__$id' class='col-md-8 searchLOV' name='property__$id' value='${field["property"]}'/>
+									<div id="searchresult"> </div>
+								</section>
+
+								<section id="addons__$id">
+									$if field['type'] == 'Textbox':
+										<!-- VALUE -->
+										<section class="row">
+											<label class='col-md-3'>VALUE TYPE</label>
+											<select class="col-md-8 ($res_type) custom-select" id='value__$id' name='value__$id' onchange="add_disambiguate('$id',this)">
+												<option value="None">Select</option>
+												<option value="Literal">Free text (Literal)</option>
+												<option value="URI">Entity (URI from Wikidata, VIAF, or catalogue)</option>
+												<option value="Place">Location (from GeoNames)</option>
+												<option value="Researcher">Researcher and contributor (from ORCiD)</option>
+												<option value="URL">URL</option>
+											</select>
+											<script type="text/javascript">
+												$$("#value__$id option[value$$=$field['value']]").attr("selected","selected");
+											</script>
+										</section>
+										<!-- SPARQL CONSTRAINT
+										$if field['value'] == 'URI':
+											<section class='row'>
+												<label class='col-md-3'>SPARQL CONSTRAINTS <br><span class='comment'>select a service to modify or add a constraint (optional)</span></label>
+												<select class='custom-select col-md-8' name='service__$id' onchange='SPARQL_constraint_editor($$(this).parent().prev().find("select"),this,$id)'>
+												<option value='None'>Select a service</option>
+												<option value='WD'>Wikidata</option>
+												<option value='catalogue'>This catalogue SPARQL endpoint</option>
+												</select>
+											</section>
+											$if 'wikidataConstraint' in field:
+												<textarea class='hiddenInput' style='display: none;' name='wikidataConstraint__$id'></textarea>	
+												<script type="text/javascript">
+													$$('[name*="wikidataConstraint__$id"]').val(`$field['wikidataConstraint']`)
+												</script>
+											$if 'catalogueConstraint' in field: 
+												<textarea class='hiddenInput' style='display: none;' name='catalogueConstraint__$id' value='$field["catalogueConstraint"]'></textarea>
+												<script type="text/javascript">
+													$$('[name*="catalogueConstraint__$id"]').val(`$field['catalogueConstraint']`)
+												</script> -->
+										<!-- PLACEHOLDER -->
+										<section class="row">
+											<label class='col-md-3'>PLACEHOLDER <br><span class="comment">an example value to be shown to the user (optional)</span></label>
+											<input type='text' id='placeholder__$id' class='col-md-8 align-self-start' name='placeholder__$id' value="${field['placeholder']}"/>
+										</section>
+									$elif field['type'] == 'Textarea':
+										<!-- PLACEHOLDER -->
+										<section class="row">
+											<label class='col-md-3'>PLACEHOLDER <br><span class="comment">an example value to be shown to the user (optional)</span></label>
+											<input type='text' id='placeholder__$id' class='col-md-8 align-self-start' name='placeholder__$id' value="${field['placeholder']}"/>
+										</section>
+									$elif field['type'] == 'Date':
+										<!-- VALUE DATE -->
+										<section class="row">
+											<label class='col-md-3'>CALENDAR TYPE</label>
+											<select class="col-md-8 ($res_type) custom-select" id='calendar__$id' name='calendar__$id'>
+												<option value="None">Select</option>
+												<option value='Day'>Full Date</option>
+												<option value='Month'>Month and Year</option>
+												<option value='Year'>Year</option>
+											</select>
+											<script type="text/javascript">
+												$$("#calendar__$id option[value$$=$field['calendar']]").attr("selected","selected");
+											</script>
+										</section>
+									$elif field['type'] == 'Multimedia':
+										<!-- VALUE MULTIMEDIA -->
+										<section class="row">
+											<label class='col-md-3'>MULTIMEDIA TYPE</label>
+											<select class="col-md-8 ($res_type) custom-select" id='multimedia__$id' name='multimedia__$id'>
+												<option value="None">Select</option>
+												<option value='Audio'>Audio</option>
+												<option value='Image'>Image</option>
+												<option value='Video'>Video</option>
+												<option value='Audio Image Video'>All</option>
+											</select>
+											<script type="text/javascript">
+												$$("#multimedia__$id option[value$$='"+"$field['multimedia']"+"']").attr("selected","selected");
+											</script>
+										</section>
+										<!-- PLACEHOLDER -->
+										<section class="row">
+											<label class='col-md-3'>PLACEHOLDER <br><span class="comment">an example value to be shown to the user (optional)</span></label>
+											<input type='text' id='placeholder__$id' class='col-md-8 align-self-start' name='placeholder__$id' value="${field['placeholder']}"/>
+										</section>
+									$elif field['type'] == 'Skos':
+										<!-- VOCABULARIES LIST -->
+										<section class='row'>
+											<label class='col-md-3'>VOCABULARIES LIST</label>
+											<section class="col-md-8">
+											$if len(skos_vocabs) > 0:
+												$ n = 0
+												$for vocabulary in skos_vocabs:
+													$ n+=1
+													$ idx = str(n) + "__" + id
+													<label for='skos$idx'>$vocabulary.upper()<input type='checkbox' id='skos$idx' name='skos$idx' value='$vocabulary'></label><br>
+													$if vocabulary in field['skosThesauri']:
+														<script type="text/javascript">
+															$$('#skos$idx').attr('checked','checked');
+														</script>
+												<label class="add_vocabulary_button">ADD A NEW VOCABULARY <i class='fas fa-plus-circle' onClick='add_skos_vocab(this)'></i></label>
+											</section>
+										</section>
+										<section class='row'>
+											<label class='col-md-3'>NUMBER OF TERMS</label>
+											<section class='col-md-8'>
+												<label for='vocable1__$id'>
+													Single term
+													<input type='radio' id='oneVocable__$id' name='vocables__$id' value='oneVocable'>
+													</label><br>
+												<label for='vocable2__$id'>
+													Multiple terms
+													<input type='radio' id='multipleVocables__$id' name='vocables__$id' value='multipleVocables'>
+													</label><br>
+											</section>
+										</section>
+										<!-- PLACEHOLDER -->
+										<section class="row">
+											<label class='col-md-3'>PLACEHOLDER <br><span class="comment">an example value to be shown to the user (optional)</span></label>
+											<input type='text' id='placeholder__$id' class='col-md-8 align-self-start' name='placeholder__$id' value="${field['placeholder']}"/>
+										</section>
+										$if 'vocables' in field:
+											$ vocables = field['vocables'] + "__" + id
+											<script type="text/javascript">
+												console.log('$vocables')
+												$$('input[id*="$vocables"]').prop('checked', true);
+											</script>
+									$elif field['type'] == 'WebsitePreview':
+										<!-- PLACEHOLDER -->
+										<section class="row">
+											<label class='col-md-3'>PLACEHOLDER <br><span class="comment">an example value to be shown to the user (optional)</span></label>
+											<input type='text' id='placeholder__$id' class='col-md-8 align-self-start' name='placeholder__$id' value="${field['placeholder']}"/>
+										</section>
+									$elif field['type'] == 'Subtemplate':
+										<section class='row'>
+											<label class='col-md-3'>IMPORT TEMPLATE<br><span class='comment'>end-users can use templates among selected ones</span></label>
+											<section class="col-md-8 import-section" id="import-$id"></section>
+										</section>
+										<section class='row'>
+											<label class='col-md-3'>CARDINALITY <br><span class='comment'>the number of expected values</span></label>
+											<section class='col-md-8'>
+												<label for='oneValue__$id'>
+													Single use of subtemplate
+													<input type='radio' id='oneValue__$id' name='cardinality__$id' value='oneValue'>
+													</label><br>
+												<label for='multipleValues__$id'>
+													Multiple uses of subtemplate
+													<input type='radio' id='multipleValues__$id' name='cardinality__$id' value='multipleValues'>
+													</label><br>
+											</section>
+											<label class='col-md-3'>DATA INHERITANCE <br><span class='comment'>use upper level record data to auto-fill subtemplate fields with same property</span></label>
+											<section class='col-md-8'>
+												<label for='allowDataReuse__$id'>
+													Allow data inheritance 
+													<input type='radio' id='allowDataReuse__$id' name='dataReuse__$id' value='allowDataReuse'>
+												</label><br>
+												<label for='denyDataReuse__$id'>
+													Deny data inheritance  
+													<input type='radio' id='denyDataReuse__$id' name='dataReuse__$id' value='denyDataReuse'>
+												</label><br>
+											</section>
+										</section>
+										$ cardinality = field['cardinality'] + "__" + id if 'cardinality' in field else "allowDataReuse__" + id
+										$ data_reuse = field['dataReuse'] + "__" + id if 'dataReuse' in field else "denyDataReuse__" + id
+										<script type="text/javascript">
+											// import List
+											$$("#import-$id").html(generateCheckboxes(templatesObject, '$id'));
+											// import Details
+											$$("#$cardinality").attr('checked', 'checked')
+											$$("#$data_reuse").attr('checked', 'checked')
+										</script>
+										$for value in field['import_subtemplate']:
+											<script type="text/javascript">
+												$$('[id*="$id"][value="$value"]').attr('checked', 'checked');
+											</script>
+									$elif field['type'] == 'KnowledgeExtractor':
+										<!-- ENTITY RECONCILATION SERVICE -->
+										<section class="row">
+											<label class='col-md-3'>URI RECONCILATION <br><span class='comment'>select an entity reconciliation service for missing URIs</span></label>
+											<select class="col-md-8 ($res_type) custom-select" id='service__$id' name='service__$id'>
+												<option value="None">Select</option>
+												<option value='wd'>Wikidata</option>
+												<option value='viaf'>VIAF</option>
+												<option value='geonames'>Geonames</option>
+											</select>
+											<script type="text/javascript">
+												$$("#service__$id option[value$$=$field['service']]").attr("selected","selected");
+											</script>
+										</section>
+									$elif field['type'] in ['Dropdown', 'Checkbox']:
+										<!-- VALUES -->
+										<section class="row">
+											<label class='col-md-3'>VALUES <br><span class="comment">define values as URI, label pairs</span></label>
+											<section class="col-md-8">
+												<ul id="values__$id" class="col-md-12 values-list">
+													<li><label class="inner-label col-md-12">Values List</label></li>
+													$ idx = 0
+													$for uri,lab in field["values"].items():
+														$ idx +=1
+														$ value_id = "value" + str(idx) + "__" + id
+														<li>
+															<label>$lab.strip() <i class="far fa-edit" onclick="modifyLabelURI(this)"></i> <i class="far fa-trash-alt" onclick="removeLabelURI(this)"></i></label>
+															<input type="hidden" id="$value_id" name="$value_id" value="$uri.strip(),$lab.strip()">
+														</li>
+													<li><label class="add-option">ADD NEW VALUE <i class="fas fa-plus-circle" onclick="addLabelURI(this, '$id')"></i></label></li>
+												</ul>
+											</section>
+										</section>										
+									$if subclass_field and id != subclass_field["id"]:
+										<!-- SUBCLASS RESTRICTION -->
+										<section class="row subclass">
+											<label class='col-md-3'>SUBCLASS RESTRICTED <br><span class="comment">make this field available once a subclass has been selected</span></label>
+											<section class='col-md-8'>
+												<ul id='restricted__$id' name='restricted__$id'>
+													<label class="inner-label col-md-12">Subclasses List</label>
+												</ul>
+											</section>
+										</section>
+										<script type="text/javascript">
+											var rawSelectedSubclass = '$field["restricted"]';
+											var selectedSubclass = rawSelectedSubclass.replace(/^\[&#39;|&#39;\]$$/g, "").split(/&#39;, &#39;/);
+											var idx = 1;
+											$$.each(subclasses, function(uri, label) {
+												var encodedURI = encodeURIComponent(uri);
+												var id = "subclass" + idx + "__" + "$id";
+												idx+=1;
+												var ck = $$("<label for='"+id+"'>"+label+"</label> <input type='checkbox' name='"+id+"' id='"+id+"' value='"+encodedURI+"' />");
+												let subclassURIs = selectedSubclass.map(item => item.split(",")[0]);
+
+												if (subclassURIs.includes(uri)) {
+													ck.prop("checked", true);
+												}
+												var li = $$("<li>").append(ck);
+												$$('#restricted__$id').append(li);
+											});
+										</script>
+									$if 'value' in field and field['value'] == 'URI':
+										<!-- BROWSE -->
+										<section class="row">
+											$ checked_browse = "checked=checked" if 'browse'in field and field["browse"] == "True" else ""
+											<label class="left col-11" for=" for="browse__$id">Use this value as a filter in <em>Explore</em> page</label>
+											<input $checked_browse type="checkbox" id="browse__$id" name="browse__$id">
+										</section>
+									$if 'value' in field and field['value'] == 'Literal' and field['type'] == 'Textbox':
+										$ checked_disambiguate = "checked=checked" if 'disambiguate'in field and field["disambiguate"] == "True" else ""
+										<!-- DISAMBIGUATE -->
+										<section class="row">
+											<label class="left col-11" for=" for="disambiguate__$id">Use this value as primary label (e.g. book title)</label>
+											<input $checked_disambiguate class='disambiguate' onClick='disable_other_cb(this)' type="checkbox" id="disambiguate__$id" name="disambiguate__$id">
+										</section>
+									<!-- mandatory fields -->
+									<section class="row">
+										$ checked_mandatory = "checked=checked" if 'mandatory' in field and field["mandatory"] == "True" else ""
+										<label class="left col-11" for=" for="mandatory__$id">Make this value mandatory</label>
+										<input $checked_mandatory type="checkbox" id="mandatory__$id" name="mandatory__$id">
+									</section>
+									<!-- hidden fields -->
+									<section class="row">
+										$ checked_hidden = "checked=checked" if 'hidden' in field and field["hidden"] == "True" else ""
+										<label class="left col-11" for=" for="hidden__$id">Hide this field from the front-end view</label>
+										<input $checked_hidden type="checkbox" id="hidden__$id" name="hidden__$id" onclick="hide_field(this)">
+									</section>
+								</section>
+								<a href="#" class="up"><i class="fas fa-arrow-up"></i></a> <a href="#" class="down"><i class="fas fa-arrow-down"></i></a>
+								<a href="#" class="trash"><i class="far fa-trash-alt"></i></a>
+							</section>
+				</section>
+				<section class="add_fields homeheading col-md-12 col-lg-12 col-sm-12">
+					<a class="link_btn" onclick="add_field('Textbox','$res_type')" name="add_textbox">Add Textbox</a>
+					<a class="link_btn" onclick="add_field('Textarea','$res_type')" name="add_textarea">Add Textarea</a>
+					<a class="link_btn" onclick="add_field('Dropdown','$res_type')" name="add_dropdown">Add Dropdown</a>
+					<a class="link_btn" onclick="add_field('Checkbox','$res_type')" name="add_checkbox">Add Checkbox</a>
+					<a class="link_btn" onclick="add_field('Date','$res_type')" name="add_date">Add Date</a>
+					<a class="link_btn" onclick="add_field('Multimedia','$res_type')" name="add_multimedia">Add Multimedia</a>
+					$ skos_thesauri = "//".join(list(skos_vocabs.keys()))
+					<a class="link_btn" onclick="add_field('Skos','$res_type', '$skos_thesauri')" name="add_vocabulary">Add Vocabulary</a>
+					<a class="link_btn" onclick="add_field('WebsitePreview','$res_type')" name="add_preview">Add Website Preview</a>
+					<a class="link_btn" onclick="add_field('KnowledgeExtractor','$res_type')" name="add_extractor">Add Knowledge Extraction</a>
+					<a class="link_btn" onclick="add_field('Subclass','$res_type')" name="add_subclass">Add Subclass</a>
+					<a class="link_btn" onclick="add_field('Subtemplate','$res_type')" name="add_subtemplate">Add Subtemplate</a>
+					<script type="text/javascript">
+						var available_skos_vocabularies = '$skos_thesauri';
+					</script>
+				</section>
+			</section>
+			<section class="buttonsSection">
+				<button id="updateTemplate" name="action" value="updateTemplate-$res_name" class="btn btn-dark" type="submit">Save</button>
+				<button class="btn btn-dark delete_template" data-toggle="modal" data-target="#popup" name="action" value="deleteTemplate-$res_name" type="submit" title="delete">Delete <i class="far fa-trash-alt"></i></button>
+			</section>
+		</form>
+	</section>
+
+	<!-- TIPS SECTION -->
+	<section class="homeheading col-md-12 col-sm-12 col-lg-4">
+		<p class="caption">Tips</p>
+		<p>You can create your template for data entry in few easy steps! Select the appearance of your field (text box, dropdown, checkbox), name it and provide a short description.</p>
+		<p>Start typing the full URI or the prefix (e.g. <code>foaf:depic..</code>) of the RDF property to be associated to the field.
+		You will get suggestions from the <a href="https://lov.linkeddata.es/">LOV vocabularies catalogue</a> for autocompletion.
+		Easy right? You can still choose to ignore suggestions and create your own property.</p>
+		<p>Field values can be free text, entities, or controlled lists of terms.</p>
+		<h5>Text box</h5>
+		<p>
+			<code>Free text</code>: any free text descriptions. You can use this field value as the main title the record (use the checkbox below).
+			You <b>must</b> select one field as a title.</p>
+		<p>
+			<code>Entity</code>: a term that can be reused in other records. When creating a record, you'll get autocompletion suggestions from <a href="https://www.wikidata.org/wiki/Wikidata:Main_Page">Wikidata</a>, <a href="https://viaf.org/">VIAF</a>, and the catalogue.
+			 You can select this field to be used as a filter in the page Explore. You can create as many filters as you want.
+			 </p>
+		<p><code>Location</code>: a place that can be geolocalised. Similarly to entities, autocompletion suggestions from <a href="http://www.geonames.org/">geonames</a> will appear.</p>
+		<p><code>URL</code>: the address of a web resource.</p>
+		<h5>Text area</h5>
+		<p>A Textarea allows for longer text descriptions to be annotated.
+			When filling in, press return to enable entity extraction from text (e.g. people names, places, organizations).
+			You will be able to accept or reject suggestions, and these will be automatically added to your data (by means of <code>schema:keywords</code>)</p>
+		<h5>Dropdown and checkbox</h5>
+		<p>Create your own controlled vocabulary in <code>VALUES</code>.
+			For each value, include the full URI and the label of a term. URIs can be from external vocabularies or reuse the URI base that you <a href="setup">setup</a>.</p>
+		<h5>Date</h5>
+		<p><code>Full Date</code>: a complete date corresponding to the <code>xsd:Date</code> type, i.e.: YYYY/MM/DD. You can select the value from a calendar.</p>
+		<p><code>Month and Year</code>: a date corresponding to the <code>xsd:gYearMonth</code> type, i.e.: YYYY/MM. You can select the value from a calendar.</p>
+		<p><code>Year</code>: a date corresponding to the <code>xsd:gYear</code> type, i.e.: YYYY. You can select a year from a dropdown.</p>
+		<h5>Multimedia</h5>
+		<p>Specify the path to an external multimedia resource. The url <b>must</b> end with the resource format. You can either select the type of resource (audio, video, image) or allow any type of multimedia to be linked (all).</p>
+		<p><code>Audio</code>: provide a path to external audio resources. The allowed formats are ".mp3", ".wav", ".wma", ".ogg".</p>
+		<p><code>Image</code>: provide a path to external image resources. The allowed formats are ".apng", ".avif", ".gif", ".ico", ".jpg", ".jpeg", ".jfif", ".pjpeg", ".pjp", ".png", ".svg", ".webp".</p>
+		<p><code>Video</code>: provide a path to external videoaudio resources. The allowed formats are ".mp4", ".ogg", ".webm".</p>
+		<p><code>All</code>: provide a path to external multimedia resources (audio, images, video). Make sure the formats of these resources comply with the allowed formats for each respective type.</p>
+		<h5>Vocabulary</h5>
+		<p>Import vocabularies from selected SKOS vocabularies. Currently the following vocabularies are supported:</p> 
+		<p>You can add new vocabularies by specifying a label, a link to the vocabulary webpage, and the URL of its SPARQL endpoint. Additionally, include the SPARQL query constraints to get a <code>?label</code> and a <code>?uri</code> for each retrieved term of the vocabulary. New vocabularies will be stored for later reuse.</p>
+		<h5>Website Preview</h5>
+		<p>Provide the url to embed a webpage's preview within a record.</p>
+		<h5>Knowledge Extraction</h5>
+		<p>Automatic extraction of Key Entities through queries (API, SPARQL, Static Files). Extracted entities will be stored in a new named graph, connected to the Record by means of the provided RDF property.</p>
+		<h5>Subclass</h5>
+		<p>Create your own list of additional ontological classes in <code>SUBCLASSES</code>.
+			For each value, include the full URI and its corresponding label. Once a new value has been added, the <code>SUBCLASS RESTRICTED</code> option becomes available for each input, allowing you to pair fields with one or more subclass values. This approach ensures that fields become accessible only after a specific subclass has been selected.
+		</p>
+		<h5>Subtemplate</h5>
+		<p>Select one or multiple templates to add their input fields to the main form, enabling the simultaneous creation of linked records. In case multiple templates are selected, a dropdown menu will allow users to choose the most suitable one for describing a new entity.</p>
+		<p>If <code>Data Inheritance</code> is set to <code>Allowed</code>, any field in a subtemplate that shares an RDF property with a field in the main template will not be displayed. Instead, corresponding data will be automatically inherited from the parent form.</p>
+	</section>
+
+	<!-- CREATE SUBTEMPLATE FORM -->
+	<section id="selectTemplateClassModal" aria-labelledby="selectTemplateClassButton" role="menu">
+		<form id="selectTemplateClass" name="selectTemplateClass" class="" method="POST">
+			<section>
+				<span>New Template  <i class='fas fa-times'></i></span>
+			</section>
+			<section class="modal-input">
+				<span class="label">Name</span><br><span class="comment">choose a name for this template</span>
+				<input type="text" name="class_name" value="" placeholder="e.g.: Work of art">
+			</section>
+<!-- 			<section class="modal-input">
+				<span class="label">Description</span><br><span class="comment">provide a description for this template</span>
+				<textarea name="class_description" value="" placeholder="e.g.: The Work of Art class includes paintings, sculptures, drawings, installations, photographs, and other creative pieces made by artists."></textarea>
+			</section> -->
+			<section class="modal-input">
+				<span class="label">Class</span><br><span class="comment">choose one or multiple OWL classes</span>
+				<input type="text" name="class_uri" value="" placeholder="e.g.: crm:E22_Man-made-object">
+				<section id="uri-container"></section>
+			</section>
+			<section class="modal-input">
+				<input type="hidden" class="hiddenInput" name="action" value="createTemplate">
+				<button class="btn btn-dark" name="action" value="createTemplate" type="submit">Create</button>
+				<button class="btn btn-dark discard" value="cancelTemplate" type="submit">Cancel</button>
+			</section>
+		</form>
+	</section>
+	<!-- END CREATE SUBTEMPLATE FORM -->
+
+</section>
+<link rel="stylesheet" type="text/css" href="./static/css/yasgui.css">
+<script src='static/js/yasr.bundled.min.js'></script>
+<script src='static/js/yasqe.bundled.min.js'></script>
+<script src="static/js/sparql.js"></script>
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>

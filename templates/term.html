@@ -7,8 +7,8 @@ $var main_lang = main_lang
 
 
 <!-- Resources -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <section class="row articleBox">
 	<section class="col-md-7">
@@ -29,7 +29,7 @@ $var main_lang = main_lang
 					<section class="related-resources-container">
 						$ res_class_count = len(results[res_class]['results'])
 						<h4 class="articleSubtitle">$res_class ($res_class_count)</h4>
-						<button class="showRes" data-count="$res_class_count" data-offset="0" data-limit="10" data-uri="$uri" data-class="$results[res_class]['class']">show</button><br>
+						<button class="showRes" data-count="$res_class_count" data-offset="0" data-limit="10" data-uri="$uri" data-class="$results[res_class]['class']" data-subclasses="$results[res_class]['subclasses']">show</button><br>
 						<section class="related-resources">
 						
 						</section>

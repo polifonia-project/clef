@@ -1,13 +1,24 @@
-$def with (user,data,subclass_data,title,r_base,alll,filters,is_git_auth,project,main_lang)
+$def with (user,data,subclass_data,title,r_base,alll,filters,is_git_auth,project,main_lang,extraction_config)
 
 $var user = user
+$var records = '' #modify 
 $var is_git_auth = is_git_auth
 $var project = project
 $var main_lang = main_lang
 
+<!-- Header -->
 <header class="row">
 	<h3 class="col-md-12 col-lg-12 col-sm-12">Explore $project</h3>
 </header>
+
+<!-- Resources -->
+<script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+<script src="https://cdn.amcharts.com/lib/5/xy.js"></script> <!-- bar charts -->
+<script src="https://cdn.amcharts.com/lib/5/percent.js"></script> <!-- pie charts -->
+<script src="https://cdn.amcharts.com/lib/5/map.js"></script> <!-- maps -->
+<script src="https://cdn.amcharts.com/lib/5/geodata/worldLow.js"></script> <!-- maps -->
+<script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+
 <ul class="corners nav nav-tabs mb-3" id="resource_classes_tab" role="tablist">
 	$ first_class=list(data.keys())[0]
 	$for res_class, data_val in data.items():
@@ -43,10 +54,19 @@ $var main_lang = main_lang
 									$for res_subclass_uri,subclass_info in subclass_data[res_class].items():
 										<button class="filter_btn" value="$res_subclass_uri" onclick="filterBySubclass(this)">$subclass_info["label"] ($subclass_info["count"])</button>
 								</section>
+								$if "other" in subclass_data[res_class]:
+									<section class="homeheading col-md-12 col-sm-12" id="other-filters">
+										<hr>
+										<button class="filter_btn active" value="other" onclick="filterBySubclass(this)">All ($subclass_data[res_class]["other"]["count"])</button>
+										$for other_value_uri,other_value_info in subclass_data[res_class]["other"]["other"].items():
+											<button class="filter_btn" value="other-$other_value_uri" onclick="filterBySubclass(this)">$other_value_info["label"] ($other_value_info["count"])</button>
+									</section>
 							</section>
 						$if res_class in filters and len(filters[res_class]) > 0:
 							$for filter in filters[res_class]:
-								<section class="row change_background">
+								$ data_subclass = "; ".join(filter[5])
+								$ display = "display: none" if len(filter[5]) > 0 else ""
+								<section class="row change_background" data-subclass="$data_subclass" style="$display">
 									<section class="homeheading col-md-4 col-sm-12">
 										<p class="item caption">$filter[1]</p>
 										<h2>Browse by $filter[1]</h2>
@@ -54,17 +74,17 @@ $var main_lang = main_lang
 									<section class="homeheadingtext col-md-7 col-sm-12">
 										$if filter[2] == 'Textbox' and filter[3] == 'Literal':
 											<p>Filter alphabetically</p>
-												<section class="wrapAllparent" id="toc_resources_$res_id">
-													<section class="alphabet" id="alphabet_$res_id">
-													</section>
-													$for record in data[res_class]:
-														$if record[5] != 'not modified':
-															$ new_id = res_id+"_"+upper(record[1][0])
-															<section class="list $new_id" id="$new_id">
-																<a href="view-$record[0].rsplit('/')[-2]" class="resource_collapse" data-subclass="$record[7]">$record[1]</a>
-															</section>
-
+											<section class="wrapAllparent" id="toc_resources_$res_id">
+												<section class="alphabet" id="alphabet_$res_id">
 												</section>
+												$for record in data[res_class]:
+													$if record[5] != 'not modified':
+														$ new_id = res_id+"_"+upper(record[1][0])
+														<section class="list $new_id" id="$new_id">
+															<a href="view-$record[0].rsplit('/')[-2]" class="resource_collapse" data-subclass="$record[7]">$record[1]</a>
+														</section>
+											</section>
+
 										$elif filter[2] in ['Textbox', 'Skos', 'Subtemplate'] and (filter[3] == 'URI' or filter[3] == 'Place' or filter[3] == 'URL'):
 											<p>Filter by most recurring values</p>
 											$ elemID = res_id+filter[1].replace(' ','')
@@ -105,10 +125,48 @@ $var main_lang = main_lang
 											<section class="resultAccordion">
 												<section id="$results" class="$results collapse"></section>
 											</section>
+										$elif filter[2] == 'KnowledgeExtractor':
+											<p>Filter by most recurring values</p>
+											$ elemID = "extracted-keywords"
+											$ results = elemID+"results"
+											<section id="$elemID" class="indexURI">
+											</section>
+											<button class="showMore" type="button">show more</button>
+											<script type="text/javascript">
+												getPropertyValue("$elemID", "$filter[0]", "$filter[3]", "$filter[2]","$res_owl_class","",JSON.parse("$filter[4]".replace(/&#39;/g, '"')));
+											</script>
+											<section class="resultAccordion">
+												<section id="$results" class="$results collapse"></section>
+											</section>
 										$else:
 											<p>-</p>
 									</section>
 								</section>
+							$if res_class in extraction_config and extraction_config[res_class]["keywords_classes"] != {}:
+								$ res_extraction_classes = extraction_config[res_class]["keywords_classes"]
+								$ res_extraction_properties = extraction_config[res_class]["extraction_properties"]
+								<script type="text/javascript">
+									var res_extraction_classes = JSON.parse('$res_extraction_classes'.replace(/&#39;/g, '"'));
+									var res_extraction_properties = JSON.parse('$res_extraction_properties'.replace(/&#39;/g, '"'));
+								</script>
+								<section class="row change_background">
+									<section class="homeheading col-md-4 col-sm-12">
+										<p class="item caption">Subjects</p>
+										<h2>Browse by Subjects</h2>
+									</section>
+									<section class="homeheadingtext col-md-7 col-sm-12">
+										$ elemID = res_id+"extracted-keywords"
+										$ results = elemID+"results"
+										<section id="$elemID" class="indexURI">
+										</section>
+										<script type="text/javascript">
+											getKeywordsValue("$elemID","$res_owl_class",res_extraction_classes,res_extraction_properties);
+										</script>
+										<section class="resultAccordion">
+											<section id="$results" class="$results collapse"></section>
+										</section>
+									</section>
+								<section class="homeheadingtext col-md-7 col-sm-12">
 					</section>
 					<section class="col-md-2 col-sm-12">
 

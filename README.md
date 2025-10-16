@@ -3,14 +3,12 @@ component-id: clef-software
 type: WebApplication
 name: CLEF
 description: CLEF, Crowdsourcing Linked Entities via web Form, is a lightweight Linked Open Data native cataloguing system tailored to small-medium crowdsourcing projects.
-work-package:
-- WP1
 project: polifonia-project
 resource: https://github.com/polifonia-project/clef/releases
 demo: https://projects.dharc.unibo.it/musow/
-release-date: 2023/05/13
-release-number: v1.0.2
-release-link: https://github.com/polifonia-project/clef/releases/tag/v1.0.2
+release-date: 2025/10/16
+release-number: v3.1
+release-link: https://github.com/polifonia-project/clef/releases/tag/v3.1
 doi: 10.5281/zenodo.7906320
 changelog: https://github.com/polifonia-project/clef/releases/latest
 licence:
@@ -18,6 +16,7 @@ licence:
 contributors:
 - Marilena Daquino <https://github.com/marilenadaquino>
 - Martin Hlosta <https://github.com/hlostam>
+- Sebastiano Giacomini <https://github.com/Sebastiano-G>
 related-components:
 - persona: Laurent
 - story: Laurent#1_MusicArchives
@@ -38,6 +37,7 @@ Some highlights:
  * collaborative: allow everybody to contribute to your catalogue and grant permissions to smaller groups of collaborators
  * peer-review: allow collaborators to review records before publication
  * autocompletion: ensure collaborators reference the same contents. Autocomplete suggestions from Wikidata, geonames and your own catalogue make it easier!
+ * knowledge extraction: enrich your catalogue by extracting key entities from SPARQL endpoints, APIs, static files, and websites
  * synchronization with github: use github to authenticate collaborators, to backup and version your data
  * web archiving: save your web sources for future use in Internet archive
  * release 5-star data store, serve, and query your data as Linked Open Data
@@ -46,15 +46,19 @@ Some highlights:
 
 Full documentation: https://polifonia-project.github.io/clef/.
 
-See a working demo: https://projects.dharc.unibo.it/musow/.
+See working demos: 
+
+* https://projects.dharc.unibo.it/musow/.
+* https://projects.dharc.unibo.it/atlas/.
+* https://projects.dharc.unibo.it/knot/.
 
 
-CLEF is part of [Polifonia](https://polifonia-project.eu/) H2020 project (Deliverable 1.9). This repository moved from: https://github.com/polifonia-project/registry_app. 
+CLEF has been funded by (https://polifonia-project.eu/) (Deliverable 1.9), a H2020 project (101004746), and [ATLAS](https://dh-atlas.github.io/), a Next Generation EU project (PRIN 2022, Mission 4 Component 1 CUP J53D23013000006). This repository moved from: https://github.com/polifonia-project/registry_app.
 
 Cite this repository as:
 
 ```
-Daquino Marilena et al. (2022). CLEF (v1.0.1). DOI: 10.5281/zenodo.6559445
+Daquino Marilena et al. (2022). CLEF (v3.0). DOI: 10.5281/zenodo.479251315
 ```
 
 or cite our journal paper:

@@ -109,10 +109,12 @@ def getRecordsPagination(page, filterRecords='',userURI=None):
 			  ?g prov:generatedAtTime ?date2
 			  filter (?date2 > ?date)
 			}
+			
 
 		  }
 		  """+filterRecords+"""
 		  FILTER( str(?g) != '"""+conf.base+"""vocabularies/' )
+		  FILTER( !CONTAINS(str(?g), "/extraction-") )
 
 		}
 		GROUP BY ?g ?title ?userLabel ?modifierLabel ?date ?stage

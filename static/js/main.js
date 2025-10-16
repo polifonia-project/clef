@@ -1624,9 +1624,6 @@ function getPropertyValue(elemID, prop, typeProp, typeField, elemClass='', elemS
       class_restriction += `?s a <${elemSubclass}> . `;
     } else if (elemSubclass === "other" || elemSubclass === "other-all") {
       class_restriction += `FILTER NOT EXISTS { ?s a ?otherType . FILTER (?otherType != <${elemClass}>) } `;
-    } else if (elemSubclass.startsWith("other-")) {
-      class_restriction += `FILTER NOT EXISTS { ?s a ?otherType . FILTER (?otherType != <${elemClass}>) } `;
-      class_restriction += `?s <http://purl.org/dc/terms/type> <${elemSubclass.substring(6)}> . `;
     }
   }
 
@@ -1750,13 +1747,8 @@ function getKeywordsValue(elemID, elemClass, extractionClasses, extractionProper
     if (!elemSubclass.startsWith("other")) { class_restriction += "?s a <"+elemSubclass+"> . "; }
     // ATLAS only - filters for "Other" values
     else if (elemSubclass === "other" || elemSubclass === "other-all") { class_restriction += "FILTER NOT EXISTS { ?s a ?otherType . FILTER (?otherType != <"+elemClass+">) }" } 
-    else if (elemSubclass.startsWith("other-")) { 
-      console.log("here", class_restriction)
-      class_restriction += "FILTER NOT EXISTS { ?s a ?otherType . FILTER (?otherType != <"+elemClass+">) }"
-      class_restriction += "?s <http://purl.org/dc/terms/type> <"+elemSubclass.substring(6)+"> .";
-    }
   };
-  var query = "select distinct ?o ?oLabel ?class (COUNT(?s) AS ?count) "+inGraph+" where { GRAPH ?g { ?g ?prop ?extractionGraph. "+class_restriction+" } GRAPH ?extractionGraph { ?o rdfs:label ?oLabel . OPTIONAL {?o a ?class}} ?g <http://dbpedia.org/ontology/currentStatus> ?stage .     FILTER(CONTAINS(STR(?extractionGraph), 'extraction')) } GROUP BY ?o ?oLabel ?class ORDER BY DESC(?count) lcase(?oLabel)";
+  var query = "select distinct ?o ?oLabel ?class (COUNT(?s) AS ?count) "+inGraph+" where { GRAPH ?g { ?g ?prop ?extractionGraph. "+class_restriction+" ?g <http://dbpedia.org/ontology/currentStatus> ?stage . FILTER( str(?stage) != 'not modified' ) } GRAPH ?extractionGraph { ?o rdfs:label ?oLabel . OPTIONAL {?o a ?class}} ?g <http://dbpedia.org/ontology/currentStatus> ?stage .     FILTER(CONTAINS(STR(?extractionGraph), 'extraction')) } GROUP BY ?o ?oLabel ?class ORDER BY DESC(?count) lcase(?oLabel)";
   const len = 10;
   var encoded = encodeURIComponent(query);
   console.log(query);
@@ -1946,11 +1938,6 @@ function filterBySubclass(btn) {
 
   // hide "other" filters (for ATLAS only)
   if (! subclassURI.startsWith("other")) {
-    $(btn).closest(".change_background").find("#other-filters").animate(
-      { opacity: 0, top: "-30px" }, 500, function () {
-        $(btn).closest(".change_background").find("#other-filters").css("display", "none");
-      }
-    );
 
     // hide excluded alphabet filters
     if (subclassURI !== "") {
@@ -1969,24 +1956,9 @@ function filterBySubclass(btn) {
     console.log(subclassURI)
     // show "other" filters (for ATLAS only)
     if (subclassURI === "other") {
-      $("#other-filters button:first-of-type").addClass("active");
-      $(btn).closest(".change_background").find("#other-filters")
-          .css({ display: "block", opacity: 0, top: "-30px" })
-          .animate({ opacity: 1, top: "0px" }, 600);
-      
       tab.find(".list > a.resource_collapse[data-subclass]").each(function() {
         console.log(subclassURI, $(this).data("subclass"))
-        if (! $(this).data("subclass").startsWith("other-")) {
-          $(this).parent().addClass("hidden");
-          if ($(this).closest(".toBeWrapped").find(".list:not(.hidden)").length == 0) {
-            var target = $(this).parent().attr("id");
-            $("[data-target='#"+target+"']").hide();
-          }
-        }
-      });
-    } else {
-      tab.find(".list > a.resource_collapse[data-subclass]").each(function() {
-        if (! $(this).data("subclass").split("; ").includes(subclassURI)) {
+        if ($(this).data("subclass") !== "") {
           $(this).parent().addClass("hidden");
           if ($(this).closest(".toBeWrapped").find(".list:not(.hidden)").length == 0) {
             var target = $(this).parent().attr("id");

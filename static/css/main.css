@@ -72,7 +72,7 @@ header,
 
 .primary .btn {
   background-image: none !important;
-  background-color: var(--secondary-color) !important;
+  background-color: lightgray !important;
   color: black !important
 }
 

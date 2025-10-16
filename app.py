@@ -845,7 +845,7 @@ class Modify(object):
 				#u.update_knowledge_extraction(recordData,KNOWLEDGE_EXTRACTION)
 				userID = session['username'].replace('@','-at-').replace('.','-dot-')
 				graphToClear = conf.base+name+'/'
-				if is_external_user:
+				if is_git_auth and is_external_user:
 					queries.clearGraph(graphToClear)
 					stage = 'not modified'
 				else:
@@ -1090,7 +1090,7 @@ class Records:
 				if "other_subclass" in template and template["other_subclass"] == "True":
 					count_by_subclass[template["name"]]["other"] = {"label": "Other", "count": str(init_count_subclass)}
 
-					# ATLAS - show additional values from taxonomies
+					""" # ATLAS - show additional values from taxonomies
 					count_by_other_values,records_other_value = queries.countAllOtherValues(res_class,res_subclasses)
 					count_by_subclass[template["name"]]["other"]["other"] = count_by_other_values
 					for i, record in enumerate(records_by_template[template["name"]]):
@@ -1098,7 +1098,7 @@ class Records:
 							print(record)
 							record_info_list = list(record)
 							record_info_list[7] = "other-"+records_other_value[record[0]]
-							records_by_template[template["name"]][i] = tuple(record_info_list)
+							records_by_template[template["name"]][i] = tuple(record_info_list) """
 
 				filtersBrowse = queries.getBrowsingFilters(template["template"])
 				filters_by_template[template["name"]] = filtersBrowse

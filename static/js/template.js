@@ -134,7 +134,7 @@ function add_field(field, res_type, backend_file=null) {
     const isSubclassSelected = $('select').filter(function() {
         return $(this).val() === "Subclass";
     }).length > 0;
-    if (isSubclassSelected) {
+    if (isSubclassSelected && field==="Subclass") {
         showErrorPopup("Subclass field already exists", "Only one Subclass field is allowed.");
         return false;
     }
@@ -256,6 +256,18 @@ function add_field(field, res_type, backend_file=null) {
         </section>\
     </section>";
 
+    var field_extraction_classes = "<section class='row'>\
+        <label class='col-md-3'>CLASSES<br><span class='comment'>define values as URI, label pairs</span></label>\
+        <section class='col-md-8'>\
+            <ul class='col-md-12 values-list' id='values__"+temp_id+"'>\
+                <li>\
+                    <label class='inner-label col-md-12'>Values List</label>\
+                </li>\
+                <li><label class='add-option'>ADD NEW VALUE <i class='fas fa-plus-circle' onclick='addLabelURI(this, "+temp_id+")'></i></label></li>\
+            </ul>\
+        </section>\
+    </section>";
+
     var field_reconciliation = "<section class='row'>\
         <label class='col-md-3'>URI RECONCILIATION <br><span class='comment'>select an entity reconciliation service for missing URIs</span></label>\
         <select class='col-md-8 ("+res_type+") custom-select' id='service__"+temp_id+"' name='service__"+temp_id+"'>\
@@ -267,17 +279,17 @@ function add_field(field, res_type, backend_file=null) {
     </section>"
 
     var field_browse = "<section class='row'>\
-        <label class='col-md-11 col-sm-6' for='browse__"+temp_id+"'>Use this value as a filter in <em>Explore</em> page</label>\
+        <label class='left col-11' for='browse__"+temp_id+"'>Use this value as a filter in <em>Explore</em> page</label>\
         <input type='checkbox' id='browse__"+temp_id+"' name='browse__"+temp_id+"'>\
     </section>";
 
     var field_mandatory = "<section class='row'>\
-        <label class='col-md-11 col-sm-6' for='mandatory__"+temp_id+"'>Make this value mandatory</label>\
+        <label class='left col-11' for='mandatory__"+temp_id+"'>Make this value mandatory</label>\
         <input type='checkbox' id='mandatory__"+temp_id+"' name='mandatory__"+temp_id+"'>\
     </section>";
 
     var field_hide = "<section class='row'>\
-        <label class='col-md-11 col-sm-6' for='hidden__"+temp_id+"'>Hide this field from the front-end view</label>\
+        <label class='left col-11' for='hidden__"+temp_id+"'>Hide this field from the front-end view</label>\
         <input type='checkbox' id='hidden__"+temp_id+"' name='hidden__"+temp_id+"' onclick='hide_field(this)'>\
     </section>";
 
@@ -314,18 +326,6 @@ function add_field(field, res_type, backend_file=null) {
         </section>\
     </section>";
 
-    var field_subclass_values = "<section class='row'>\
-        <label class='col-md-3'>SUBCLASSES <br><span class='comment'>define values as URI, label pairs</span></label>\
-        <section class='col-md-8'>\
-            <ul class='col-md-12 values-list' id='subclass__"+temp_id+"'>\
-                <li>\
-                    <label class='inner-label col-md-12'>Subclasses List</label>\
-                </li>\
-                <li><label class='add-option'>ADD NEW VALUE <i class='fas fa-plus-circle' onclick='addLabelURI(this, "+temp_id+")'></i></label></li>\
-            </ul>\
-        </section>\
-    </section>";
-
     // todo: modify the following script
     var field_subclass_restriction = "";
     if (is_subclass_active) {
@@ -356,7 +356,7 @@ function add_field(field, res_type, backend_file=null) {
     else if (field =='Multimedia') { contents += field_multimedia + field_placeholder + field_subclass_restriction + field_mandatory + field_hide; }
     else if (field =='WebsitePreview') { contents += field_placeholder + field_subclass_restriction + field_mandatory + field_hide; }
     else if (field =='Subtemplate') { contents += field_subtemplate_import + field_cardinality + field_data_inheritance + field_subclass_restriction + field_mandatory + field_hide + field_browse; }
-    else if (field =='Subclass') { contents += field_subclass_values + field_mandatory + field_hide; }
+    else if (field =='Subclass') { contents += field_mandatory + field_hide; }
     else if (field =='KnowledgeExtractor') { contents += open_addons + field_reconciliation + field_subclass_restriction; }
     else {contents += field_values + field_subclass_restriction + field_mandatory + field_hide + field_browse; };
     contents += close_addons + up_down;
@@ -373,7 +373,7 @@ function add_field(field, res_type, backend_file=null) {
             });
         }
 
-        $(this).parent().remove();
+        $(this).closest(".block_field").remove();
     });
 };
 
@@ -453,12 +453,12 @@ function change_fields(sel) {
 // if value == literal add disambiguate checkbox
 function add_disambiguate(temp_id, el) {
     var field_disambiguate = "<section class='row'>\
-      <label class='left col-md-11 col-sm-6' for='disambiguate__"+temp_id+"'>Use this value as primary label (e.g. book title)</label>\
+      <label class='left col-11' for='disambiguate__"+temp_id+"'>Use this value as primary label (e.g. book title)</label>\
       <input class='disambiguate' onClick='disable_other_cb(this)' type='checkbox' id='disambiguate__"+temp_id+"' name='disambiguate__"+temp_id+"'>\
       </section>";
   
     var field_browse = "<section class='row'>\
-      <label class='col-md-11 col-sm-6' for='browse__"+temp_id+"'>Use this value as a filter in <em>Explore</em> page</label>\
+      <label class='left col-11' for='browse__"+temp_id+"'>Use this value as a filter in <em>Explore</em> page</label>\
       <input type='checkbox' id='browse__"+temp_id+"' name='browse__"+temp_id+"'>\
     </section>";
   
@@ -475,7 +475,7 @@ function add_disambiguate(temp_id, el) {
         } else { $("section[id*='addons__"+temp_id+"']").after(field_browse); }
   
         // YASQE editor for SPARQL query patterns
-        if (el.value == 'URI') {
+        /* if (el.value == 'URI') {
             var field_SPARQL_constraint = $("<section class='row'>\
                 <label class='col-md-3'>SPARQL CONSTRAINTS <br><span class='comment'>select a service to modify, or add a constraint (optional)</span></label>\
                 <select class='custom-select col-md-8' name='service__"+temp_id+"'>\
@@ -489,7 +489,7 @@ function add_disambiguate(temp_id, el) {
                 SPARQL_constraint_editor(el,this,temp_id);
             });
             $(el).parent().after(field_SPARQL_constraint);
-        }
+        } */
   
         updateindex();
         moveUpAndDown() ;
@@ -810,37 +810,43 @@ function add_skos_vocab(element) {
   
 function save_vocab(element) {
     // access the section containing the list of available vocabularies
-    var vocabs_section = $(element).parent().parent().children().eq(0).find(".col-md-8").eq(0);
+    var $blockField = $(element).closest(".block_field");
+    var $vocabsSection = $blockField.find(".skos_vocab_generator").eq(0).prev("section").find("section");
   
     // extract a label, a url, a query, and an endpoint to store a new vocab
-    var label = $('#vocabLabel').val();
-    var url = $('#vocabUrl').val();
-    var query = yasqe_to_hidden_field($(element).parent());
-    console.log(query)
+    var label = $blockField.find('#vocabLabel').val();
+    var url = $blockField.find('#vocabUrl').val();
+    var query = yasqe_to_hidden_field($(element), true);
     var endpoint = $('#vocabEndpoint').val();
+
     // combine the pieces of information together and check whether some info is missing
     var infoArray = [label, url, query, endpoint];
-    var infoTogether = infoArray.join("__"); 
-    if (check_input_form(infoArray)) {
-        return null
-    };
+    if (check_input_form(infoArray)) return null;
   
     // get the number of available vocabs (defined in template.html as a string)
-    var i = available_skos_vocabularies.split("//").length+1;
-    available_skos_vocabularies += "//" + label;
-    console.log(i);
+    var vocabCount = available_skos_vocabularies.split("//").length + 1;
+    available_skos_vocabularies += `//${label}`;
+
     // get the 'for' attribute of the label for the first vocab of the list (e.g.: "vocab6__1690443665556") 
     // to retrieve the id number of the field (e.g.: "1690443665556")
-    var temp_id_list = vocabs_section.find("label").eq((1)).attr('for').split("__");
-    var temp_id = temp_id_list[temp_id_list.length - 1];
+    var $firstLabel = $vocabsSection.find("label").eq(1);
+    var tempIdList = $firstLabel.attr('for')?.split("__") || [];
+    var tempId = tempIdList[tempIdList.length - 1] || "unknown";
+
     // get the index of the field in the template
-    var idx = parseInt(vocabs_section.find("label").eq((1)).attr('id'));
-    console.log(i, temp_id, idx);
+    var idx = parseInt($firstLabel.attr('id')) || 0;
+    console.log(vocabCount, tempId, idx);
   
     // generate a new checkbox to select the vocabulary and add it at the end of the list
-    var new_voc = "<label class='newVocab' for='vocab"+i+"__"+temp_id+"'>"+label.toUpperCase()+"<input type='checkbox' id='"+idx+"__vocab"+i+"__"+temp_id+"' name='"+idx+"__vocab"+i+"__"+temp_id+"' value='"+infoTogether+"' checked></label></br>";
-    var lastChild = vocabs_section.children().last();
-    lastChild.prev().after(new_voc);
+    var newVocab = `
+        <label class='newVocab' for='vocab${vocabCount}__${tempId}'>
+            ${label.toUpperCase()}
+            <input type='checkbox' id='${idx}__skos${vocabCount}__${tempId}' 
+                   name='${idx}__skos${vocabCount}__${tempId}' 
+                   value='${infoArray.join("__")}' checked>
+        </label><br>
+    `;
+    $vocabsSection.children().last().prev().after(newVocab);
   
     // delete the form
     $('.skos_vocab_generator').remove(); 
@@ -878,7 +884,7 @@ function yasqe_to_hidden_field(el,keep=false) {
         });
         value += '\n';
     });
-    if (keep===false){ yasqe_div.remove(); } else { yasqe_div.hide(); }
+    if (keep===false){ yasqe_div.remove(); }
     return value
 }
 
@@ -999,7 +1005,7 @@ function removeLabelURI(btn) {
     }
 }
 
-function saveLabelURI(btn,fieldId,modifySubclass=null) {
+function saveLabelURI(btn,fieldId,modifySubclass=null,otherSubclass=null) {
     // save input values then update the list
     console.log(modifySubclass)
     var ul = $(btn).closest("ul"); 
@@ -1012,10 +1018,11 @@ function saveLabelURI(btn,fieldId,modifySubclass=null) {
     if (label === "") {
         showErrorPopup("Invalid label", "Please, provide a label");
         return false;
-    } else if (uri === "") {
+    }   else if (uri === "") {
         showErrorPopup("Invalid URI", "Please, provide a URI");
         return false;
-    } else if (uri in subclasses && uri !== modifySubclass) {
+    } 
+    else if (uri in subclasses && uri !== modifySubclass) {
         // alert in case the uri is already in use, except for subclass value modifying
         showErrorPopup("Invalid URI", "This URI is already in use. Please, provide a new one");
         return false;
@@ -1085,52 +1092,8 @@ function storeLabelURI(index, fieldId, uri, label, ul, block) {
     if (ul.attr("id").split("__").includes("subclass")) {
         subclasses[uri] = label;
         var currentIndex = ul.closest("section.block_field").data("id");
-        updateSubclassRestrictionField(currentIndex);
     }
     updateindex();
-
-}
-
-// subclass list update
-function updateSubclassRestrictionField(currentIndex) {
-    $(".block_field").each(function() {
-        var tempId = $(this).data("id");
-        if (tempId !== currentIndex) {
-            let selectedValues = [];
-            var subclassRestrictionSection = $(this).find(".subclass");
-            if (subclassRestrictionSection.length > 0) {
-                // find previously selected values
-                selectedValues = subclassRestrictionSection.find("input[type='checkbox']:checked")
-                    .map(function () {
-                        return $(this).val();
-                    }).get();
-                subclassRestrictionSection.remove();
-            }
-
-            // prepare the new checkbox section then check previously selected values
-            var fieldSubclassRestriction = $(`<section class='subclass row'>
-                <label class='col-md-3'>SUBCLASS RESTRICTED <br><span class='comment'>make this field available once a subclass has been selected</span></label>
-                <section class='col-md-8'>
-                    <ul>
-                        <li><label class='inner-label col-md-12'>Subclasses List</label></li>
-                        ${Object.entries(subclasses).map(([uri, label], index) => `
-                            <li><label for='subclass${index}__${tempId}'>${label}</label> <input type='checkbox' value='${encodeURIComponent(uri)}' name='subclass${index}__${tempId}'></li>
-                        `).join('\n')}
-                    </ul>
-                </section>
-            </section>`);
-            selectedValues.forEach(element => {
-                fieldSubclassRestriction.find("[value='"+element+"']").prop("checked", true);
-            });
-
-            var lastInputField = $(this).find(".col-md-3:first-child").last();
-            var lastInputRow = lastInputField.closest(".row");
-            var newId = $(this).data("index")+"__restricted__"+$(this).data("id");
-            fieldSubclassRestriction.find("select").attr("name", newId);
-            fieldSubclassRestriction.find("select").attr("id", newId);
-            lastInputRow.after(fieldSubclassRestriction);
-        }
-    })
 
 }
 

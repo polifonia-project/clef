@@ -56,9 +56,28 @@ $(document).ready(function() {
         
 
     // TEMPLATE SELECTION
-    $("select.template-select").closest(".row").children("section").first().css({'padding': '1em 10em 0em 0em'});
+    $("select.template-select").closest(".row").children("section").first().addClass('template-select-section');
     $("select.template-select").closest(".row").next(".buttonsSection").css({'padding-left': '0'});
+
+    // scroll to save button on Template Selection
+    $("select.template-select").on("change", function() {
+        var buttonOffset = $("input#save_record").offset().top;
+        $('html, body').animate({
+            scrollTop: buttonOffset - 500
+        }, 800);
+
+        var value = $(this).val();
+        $("#templates-description").empty();
+        if (value !== "" && templatesDescription[value]["description"] !== "") {
+            var title = $("option[value='" + value + "']").text();
+            var content = $("<div style='display: none;'><h3>" + title + "</h3><p>" + templatesDescription[value]["description"] + "</p></div>");
+        
+            $("#templates-description").append(content);
+            content.fadeIn(500);
+        }
+    })
     
+
     // SCROLL TO TOP
     if ($('#scrollToTop').length > 0) {
         var scrollToTop = $('#scrollToTop');
@@ -80,69 +99,89 @@ $(document).ready(function() {
         });
     }
 
-    // SUBCLASS RESTRICTED FIELD
+    // SUBCLASS RESTRICTED FIELD - Create and Modify
+    $(".showOtherSubclass").append("<option value='other' class='valid-value'>Other</option>");
+
     $("[data-subclass]:not([data-subclass=''])").each(function() {
         $(this).closest("section.form_row.block_field").hide();
     });
 
-    $("[data-subclassck='True']").each(function() {
-        var checked = $(this).prop("checked");
-        console.log(checked)
-        // on change function
-        $(this).on("click", function() {
-            console.log("here")
-            var checked = $(this).prop("checked");
-            var selectedValue = $(this).val().split(",")[0];
-            var subclass = selectedValue.trim();
-            var supertemplate = $(this).data("supertemplate"); // warning: check whether this must be changed to data("subrecord");
-            
-            console.log(checked,subclass)
+    $("[data-subclassdropdown='True']").each(function() {
 
-            if (checked) {
-                // show required fields
-                $("[data-supertemplate='"+supertemplate+"'][data-subclass*='"+subclass+"']").closest("section.form_row.block_field").each(function() {
-                    $(this).fadeIn(400);
-                    var inputId = $(this).find("input, textarea, select").first().attr("id");
-                    $("li[data-id='"+inputId+"'").fadeIn(400);
-                });
-            } else {
-                // hide unrequired fields
-                $("[data-supertemplate='"+supertemplate+"'][data-subclass*='"+subclass+"']").closest("section.form_row.block_field").each(function() {
-                    $(this).fadeOut(400);
-                    var inputId = $(this).find("input, textarea, select").first().attr("id");
-                    $("li[data-id='"+inputId+"']").fadeOut(400);
-                })
-            }
+        // on change function
+        $(this).on("change", function() {
+            var selectedVal = $(this).val();
+            var selectedValue = selectedVal.split(",")[0];
+            var subclass = selectedValue.trim();
+            var subform = $(this).data("subform");
+            var supertemplate = $(this).data("supertemplate");
+            var subformFilter = subform !== undefined ? "[data-subform='"+subform+"']" : "[data-supertemplate='"+supertemplate+"']";
+                
+            // hide all fields
+            $(subformFilter+"[data-subclass!='']").closest("section.form_row.block_field").each(function() {
+                $(this).fadeOut(400);
+                var inputId = $(this).find("input, textarea, select, .imported_graphs").first().attr("id");
+                $("li[data-id='"+inputId+"']").fadeOut(400);
+            })
+
+            // show required fields
+            $(subformFilter+"[data-subclass*='"+subclass+"']").closest("section.form_row.block_field").each(function() {
+                $(this).fadeIn(400);
+                var inputId = $(this).find("input, textarea, select, .imported_graphs").first().attr("id");
+                $("li[data-id='"+inputId+"'").fadeIn(400);
+            });
         });
 
         // trigger the on change function to show subclass restricted fields (modify and review page)
         if ($("#modifyForm").length > 0) {
-            if ($(this).prop("checked") === true) {
-                var selectedValue = $(this).val().split(",")[0];
-                var subclass = selectedValue.trim();
-                var supertemplate = $(this).data("supertemplate");
+            var selectedText = $(this).find("option:selected").text();
+            var selectedVal = $(this).val();
+            var selectedValue = selectedText.toLowerCase() === "other" && selectedVal === ""
+                ? "other"
+                : selectedVal.split(",")[0];            var subclass = selectedValue.trim();
+            var supertemplate = $(this).data("supertemplate");
 
-                // show required fields
-                $("[data-supertemplate='"+supertemplate+"'][data-subclass*='"+subclass+"']").closest("section.form_row.block_field").each(function() {
-                    $(this).fadeIn(400);
-                    var inputId = $(this).find("input, textarea, select").first().attr("id");
-                    $("li[data-id='"+inputId+"'").fadeIn(400);
-                });
-            }
+            // show required fields
+            $("[data-supertemplate='"+supertemplate+"'][data-subclass*='"+subclass+"']").closest("section.form_row.block_field").each(function() {
+                $(this).fadeIn(400);
+                var inputId = $(this).find("input, textarea, select").first().attr("id");
+                $("li[data-id='"+inputId+"']").fadeIn(400);
+            });
         }
     });
+
+    // SUBCLASS RESTRICTED FIELD - Modify only
+
+    // check if any value exists for "other"-restricted fields
+    $("#modifyForm [data-subclass='other']").each(function() {
+        var isOther = false;
+
+        if ($(this).is('textarea, select, input:not([type="checkbox"])') && $(this).val() !== "") {
+            isOther = true;
+            $("[data-subclassdropdown='True']").val("other").change();
+        } else if ($(this).is('input:not([type="checkbox"])')) {
+            var fieldId = $(this).attr("id");
+            if ($("span[data-input='"+fieldId+"']").length) {
+                isOther = true;
+                $("[data-subclassdropdown='True']").val("other").change();
+            }
+        }
+    })
 
     // TABLE OF CONTENTS
     // table of contents: input fields
     $('section.label.col-12').each(function() {
         var section = $(this);
-        console.log(section)
         if (section.next('.input_or_select').find('[data-supertemplate="None"]').length > 0 || section.hasClass("checkbox_group_label")) {
-            console.log(section)
             var itemTitle = section.find(".title").contents().filter(function() {
                 return this.nodeType === 3;
             }).text().trim();
-            var itemId = section.next('.input_or_select').find("input, textarea, select").first().attr("id");
+            let itemId;
+            if (section.hasClass("checkbox_group_label")) {
+                itemId = section.next('section.col-md-12').find("input").first().attr("id");
+            } else {
+                itemId = section.next('.input_or_select').find("input, textarea, select").first().attr("id");
+            }
             var listItem = $("<li data-id='"+itemId+"'>"+itemTitle+"</li>");
             listItem.on('click', function() {
                 $('html, body').animate({
@@ -160,7 +199,8 @@ $(document).ready(function() {
     $('.import-form > section.label.col-12').each(function() {
         var section = $(this);
         var itemTitle = $(this).find(".title").text();
-        var listItem = $("<li>"+itemTitle+"</li>");
+        var itemId = $(this).closest('.import-form').find('.imported_graphs').eq(0).attr('id');
+        var listItem = $("<li data-id='"+itemId+"'>"+itemTitle+"</li>");
         listItem.on('click', function() {
             $('html, body').animate({
                 scrollTop: section.parent().offset().top - 100
@@ -172,6 +212,17 @@ $(document).ready(function() {
         $('.fields-list').append(listItem);
     });
 
+    // FORMS - disable search suggestion on blur
+    let clickInsideResult = false;
+    $("#searchresult").on("mousedown", function() {
+        clickInsideResult = true;
+    });
+    $("input").on("blur", function() {
+        if (!clickInsideResult) {
+            $("#searchresult").empty();
+        }
+        clickInsideResult = false; // reset
+    });
 
     // DETECT URLs - wayback machine popup
     detectInputWebPage("detect_web_page");
@@ -210,7 +261,7 @@ function checkMandatoryFields(subrecordButton=false){
 
     if (subrecordButton) { var fields = $(subrecordButton).parent().parent().find('[data-mandatory="True"]:visible'); } else { var fields = $('[data-mandatory="True"]:visible'); }
     fields.each(function() {
-        if ($(this).val() === '' && !$('[data-input="'+$(this).attr('id')+'"]').length) {
+        if ($(this).val() === '' && (! $(this).find("option:selected").hasClass("valid-value")) && !$('[data-input="'+$(this).attr('id')+'"]').length) {
             console.log($(this));
             /* in principle, the header could be changed through the back-end application. 
             However, this would cause the loss of all inserted values. */
@@ -239,7 +290,7 @@ function checkMandatoryFields(subrecordButton=false){
 //////////////////////
 
 function setFormDocumentation() {
-    $(".documentation").removeClass('col-md-7').addClass('col-md-12 col-sm-4');
+    $(".documentation").removeClass('col-md-7').addClass('col-12');
     $(".documentation").find("section.articleSection").each(function() {
         $(this).find(".articleSubsection").hide();
         $(this).after($("<hr>"));
@@ -281,7 +332,7 @@ function setSearchResult(searchtermId,searchtermElement=null){
     var leftpos = searchtermId !== "search" ? offset.left+15 : offset.left;
     var height = element.height();
     var width = element.width();
-    var top = offset.top + height + 15 + "px";
+    var top = searchtermId !== "search" ? offset.top + height + 15 + "px" : height + 40 + "px";
 
     $('#searchresult, #searchresultmenu').css( {
         'position': 'absolute',
@@ -305,7 +356,7 @@ function searchGeonames(searchterm) {
     $("#searchresult").show();
     var q = $('#'+searchterm).val();
 
-    $.getJSON("http://api.geonames.org/searchJSON", {
+    $.getJSON("https://secure.geonames.org/searchJSON", {
         q: q,
         username: "palread",
         maxRows: 10,
@@ -374,7 +425,8 @@ function searchGeonames(searchterm) {
                                 e.preventDefault();
                                 var oldID = this.getAttribute('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
                                 var oldLabel = $(this).text();
-                                $('#'+searchterm).after("<span class='tag "+oldID+"' data-input='"+searchterm+"' data-id='"+oldID+"'>"+oldLabel+"</span><input type='hidden' class='hiddenInput "+oldID+"' name='"+searchterm+"_"+oldID+"' value=\" "+oldID+","+encodeURIComponent(oldLabel)+"\"/>");
+                                var fieldName = (searchterm.split('_').length == 2) ? searchterm.split('_')[0] + "_" + oldID + "_" + searchterm.split('_')[1] : searchterm + '_' + oldID;
+                                $('#'+searchterm).after("<span class='tag "+oldID+"' data-input='"+searchterm+"' data-id='"+oldID+"'>"+oldLabel+"</span><input type='hidden' class='hiddenInput "+oldID+"' name='"+fieldName+"' value=\" "+oldID+","+encodeURIComponent(oldLabel)+"\"/>");
                                 $("#searchresult").hide();
                                 $('#'+searchterm).val('');
                             });
@@ -394,7 +446,8 @@ function searchGeonames(searchterm) {
                 $('a[data-id="'+ item.geonameId+'"]').each( function() {
                     $(this).bind('click', function(e) {
                         e.preventDefault();
-                        $('#'+searchterm).after("<span class='tag "+item.geonameId+"' data-input='"+searchterm+"' data-id='"+item.geonameId+"'>"+item.name+"</span><input type='hidden' class='hiddenInput "+item.geonameId+"' name='"+searchterm+"_"+item.geonameId+"' value=\""+item.geonameId+","+encodeURIComponent(item.name)+"\"/>");
+                        var fieldName = (searchterm.split('_').length == 2) ? searchterm.split('_')[0] + "_" + item.geonameId + "_" + searchterm.split('_')[1] : searchterm + '_' + item.geonameId;
+                        $('#'+searchterm).after("<span class='tag "+item.geonameId+"' data-input='"+searchterm+"' data-id='"+item.geonameId+"'>"+item.name+"</span><input type='hidden' class='hiddenInput "+item.geonameId+"' name='"+fieldName+"' value=\""+item.geonameId+","+encodeURIComponent(item.name)+"\"/>");
                         $("#searchresult").hide();
                         $('#'+searchterm).val('');
                         //colorForm();
@@ -459,7 +512,7 @@ function searchOrcid(searchterm) {
                     var familyName = returnedJson["expanded-result"][i]["family-names"];
                     var affiliations = returnedJson["expanded-result"][i]["institution-name"];
                     console.log(affiliations)
-                    var item = "<div class='wditem'><a class='blue orangeText' target='_blank' href='https://orcid.org/"+orcid+"'>"+orcidImgIcon+"</a> <a class='blue' data-id='"+orcid+"'>"+givenName+" "+familyName+"</a>";
+                    var item = "<div class='wditem'><a class='blue orangeText' target='_blank' href='https://orcid.org/"+orcid+"'>"+orcidImgIcon+"</a> <a class='blue' data-id='"+orcid+"'>"+givenName+" "+familyName+" ("+orcid+")</a>";
                     if (affiliations.length) {
                         item += " - " + affiliations.join("; ");
                     }
@@ -472,8 +525,8 @@ function searchOrcid(searchterm) {
                     $(this).bind('click', function (e) {
                         e.preventDefault();
                         var orcid = this.getAttribute('data-id');
-                        var label = $(this).text();
-                        $('#' + searchterm).after("<span class='tag " + orcid + "' data-input='" + searchterm + "' data-id='" + orcid + "'>" + label + "</span><input type='hidden' class='hiddenInput " + orcid + "' name='" + searchterm + "_" + orcid + "' value=\"orcid" + orcid + "," + encodeURIComponent(label) + "\"/>");
+                        var inputName = (searchterm.split('_').length == 2) ? searchterm.split('_')[0] + "_" + orcid + "_" + searchterm.split('_')[1] : searchterm + '_' + orcid;
+                        $('#' + searchterm).after("<span class='tag " + orcid + "' data-input='" + searchterm + "' data-id='" + orcid + "'>" + orcid + "</span><input type='hidden' class='hiddenInput " + orcid + "' name='" + inputName + "' value=\"orcid" + orcid + "," + orcid + "\"/>");
                         $("#searchresult").hide();
                         $('#' + searchterm).val('');
                     });
@@ -503,48 +556,59 @@ function searchWorldcat(searchterm) {
 // SEARCH CATALOGUE
 // search bar menu
 function searchCatalogue(searchterm) {
-    $('#'+searchterm).off('keyup').on('keyup', function(e) {
-        $("#searchresultmenu").show();
-        var q = $('#'+searchterm).val();
-        var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s (STR(?o) AS ?o_str) "+inGraph+" where { ?o bds:search '"+q+"*'. ?o bds:minRelevance '0.3'^^xsd:double . graph ?g {?s rdfs:label ?o ; a ?class .}}"
-        var encoded = encodeURIComponent(query)
-        if (q == '') { $("#searchresultmenu").hide();}
-        $.ajax({
-            type: 'GET',
-            url: myPublicEndpoint+'?query=' + encoded,
-            headers: { Accept: 'application/sparql-results+json; charset=utf-8'},
-            success: function(returnedJson) {
-                $("#searchresultmenu").empty();
-                // autocomplete positioning
-                setSearchResult(searchterm);
+  $('#' + searchterm).off('keyup').on('keyup', function (e) {
+    $("#searchresultmenu").show();
+    var q = $('#' + searchterm).val();
+    var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?g ?s (STR(?o) AS ?o_str) " + inGraph + " where { ?o bds:search '" + q + "*'. ?o bds:minRelevance '0.3'^^xsd:double . graph ?g { ?s rdfs:label ?o ; a ?class .}}";
+    var encoded = encodeURIComponent(query);
+    if (q == '') { $("#searchresultmenu").hide(); return; }
+    $.ajax({
+      type: 'GET',
+      url: myPublicEndpoint + '?query=' + encoded,
+      headers: { Accept: 'application/sparql-results+json; charset=utf-8' },
+      success: function (returnedJson) {
+        $("#searchresultmenu").empty();
+        // autocomplete positioning
+        setSearchResult(searchterm);
 
-                // if no result
-                if (!returnedJson.length) {
-                    $("#searchresultmenu").empty();
-                    var nores = "<div class='wditem noresults'>Searching...</div>";
-                    $("#searchresultmenu").append(nores);
-                    // remove messages after 1 second
-                    setTimeout(function(){
-                        if ($('.noresults').length > 0) {
-                        $('.noresults').remove();
-                        }
-                        }, 1000);
-                };
-
-                // process results
-                for (i = 0; i < returnedJson.results.bindings.length; i++) {
-                    var myUrl = returnedJson.results.bindings[i].s.value;
-                    // exclude named graphs from results
-                    if ( myUrl.substring(myUrl.length-1) != "/") {
-                        var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1)
-                        $("#searchresultmenu").append("<div class='wditem'><a class='blue orangeText' target='_blank' href='view-"+resID+"'><i class='fas fa-external-link-alt'></i> " + returnedJson.results.bindings[i].o_str.value + "</a></div>");
-                    };
-                };
-
+        // if no result
+        if (!returnedJson.results.bindings.length) {
+          $("#searchresultmenu").empty();
+          var nores = "<div class='wditem noresults'>Searching...</div>";
+          $("#searchresultmenu").append(nores);
+          // remove messages after 1 second
+          setTimeout(function () {
+            if ($('.noresults').length > 0) {
+              $('.noresults').remove();
             }
-        });
+          }, 1000);
+          return;
+        };
+
+        const seenLabels = new Set();
+
+        // process results
+        for (i = 0; i < returnedJson.results.bindings.length; i++) {
+          var myUrl = returnedJson.results.bindings[i].s.value;
+          var graphUri = returnedJson.results.bindings[i].g.value;
+          if (myUrl.substring(myUrl.length - 1) != "/") {
+            var resID = myUrl.substr(myUrl.lastIndexOf('/') + 1);
+            var label = returnedJson.results.bindings[i].o_str.value;
+            var normalized = label.trim().toLowerCase().replace(/\s+/g, ' ');
+            if (seenLabels.has(normalized)) continue;
+            seenLabels.add(normalized);
+            if (graphUri.includes(resID)) {
+                $("#searchresultmenu").append("<div class='wditem'><a class='blue orangeText' target='_blank' href='view-" + resID + "'><i class='fas fa-external-link-alt'></i> " + label + "</a></div>");
+            }
+            else {
+                $("#searchresultmenu").append("<div class='wditem'><a class='blue orangeText' target='_blank' href='term?id=" + resID + "'><i class='fas fa-external-link-alt'></i> " + label + "</a></div>");
+            }
+          };
+        };
+      }
     });
-};
+  });
+}
 
 // search catalogue through advanced triple patterns
 function searchCatalogueAdvanced(searchterm) {
@@ -598,7 +662,7 @@ function searchCatalogueByClass(searchterm,fieldId,singleValue) {
     var resource_class = $('#'+searchterm).attr('data-class');
     var resource_classes = resource_class.split(';').map(cls => cls.trim()).filter(cls => cls !== "");
     var class_triples = resource_classes.map(cls => `?s a <${cls}> .`).join(" ");
-    var filter_clause = `FILTER NOT EXISTS { ?s a ?otherClass . FILTER (?otherClass NOT IN (${resource_classes.map(cls => `<${cls}>`).join(", ")})) }`;
+    console.log(resource_classes, class_triples)
 
     // other ids
     var dataSubform = $("#"+searchterm).attr('data-subform');
@@ -611,14 +675,23 @@ function searchCatalogueByClass(searchterm,fieldId,singleValue) {
     $('.disambiguate[data-class="' + resource_class + '"]:not([data-subform="'+dataSubform+'"]').each(function() {
         yet_to_save_keys.push($(this).val());
         var key_id = $(this).attr('id');
-        var subrecord = $('input[type="hidden"][value*="'+key_id+'"]');
-        yet_to_save_resources.push(subrecord.attr('id'));
+        var subrecord_id = key_id.split("_")[2];
+        yet_to_save_resources.push(subrecord_id);
     });
+    console.log(yet_to_save_keys, yet_to_save_resources)
 
     // on key up look for suggestions based on the new input string
     $('#'+searchterm).off('keyup').on('keyup', function(e) {
-        var useful_yet_to_save_keys = yet_to_save_keys.filter(function(value) {
-            return value.toLowerCase().includes($('#'+searchterm).val().toLowerCase()) && value.trim() !== '';
+        var useful_yet_to_save_keys = [];
+        var useful_yet_to_save_resources = [];
+        yet_to_save_keys.forEach(function(value, index) {
+            if (
+                value.toLowerCase().includes($('#'+searchterm).val().toLowerCase()) &&
+                value.trim() !== ''
+            ) {
+                useful_yet_to_save_keys.push(value);
+                useful_yet_to_save_resources.push(yet_to_save_resources[index]);
+            }
         });
 
         // autocomplete positioning;
@@ -640,7 +713,7 @@ function searchCatalogueByClass(searchterm,fieldId,singleValue) {
 
         // prepare the query
         var query_term = $('#'+searchterm).val();
-        var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s (STR(?o) as ?o_str) where { ?o bds:search '"+query_term+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o . "+class_triples+filter_clause+"}";
+        var query = "prefix bds: <http://www.bigdata.com/rdf/search#> select distinct ?s (sample(str(?o)) as ?o_str) where { ?o bds:search '"+query_term+"*'. ?o bds:minRelevance '0.3'^^xsd:double . ?s rdfs:label ?o . "+class_triples+"} group by ?s";
         var encoded = encodeURIComponent(query);
 
         // send the query request to the catalogue
@@ -684,11 +757,12 @@ function searchCatalogueByClass(searchterm,fieldId,singleValue) {
                         </button>\
                         </section>");
                         subformHeading.find('button.delete').on('click', function() {
+                            $(this).closest(".block_field").find(".add-span").show();
                             cancelSubrecord($(this).parent());
                         })
                         
                         if ($('[name="'+fieldId+'-subrecords"]').length && $('[name="'+fieldId+'-subrecords"]').val()!="" && !singleValue) {
-                            $('[name="'+fieldId+'-subrecords"]').val($('[name="'+fieldId+'-subrecords"]').val()+","+oldID+";"+oldLabel);
+                            $('[name="'+fieldId+'-subrecords"]').val($('[name="'+fieldId+'-subrecords"]').val()+",,"+oldID+";"+oldLabel);
                         } else {
                             $('[name="'+fieldId+'-subrecords"]').remove();
                             const new_sub = $("<input type='hidden' name='"+fieldId+"-subrecords' value='"+oldID+";"+oldLabel+"'>")
@@ -700,13 +774,13 @@ function searchCatalogueByClass(searchterm,fieldId,singleValue) {
 
                 // once external resources have been added, include newly created resources (yet to be saved)
                 for (let j = 0; j < useful_yet_to_save_keys.length; j++) {
-                    var resource_id = yet_to_save_resources[j];
+                    var resource_id = useful_yet_to_save_resources[j];
                     var resource_name = useful_yet_to_save_keys[j];
                     $('#searchresult').append("<div class='wditem'><a class='blue orangeText unsaved' target='"+resource_id+"'>"+resource_name+"</a></div>")
                 }
 
                 // add tag if the user chooses an item from yet to save resources
-                $('.unsaved a[target]').each(function () {
+                $('a[target].unsaved').each(function () {
                     $(this).bind('click', function (e) {
                         e.preventDefault();
                         var target = $(this).attr('target');
@@ -727,18 +801,19 @@ function searchCatalogueByClass(searchterm,fieldId,singleValue) {
                             cancelSubrecord($(this).parent());
                         })
                         
-                        if ($('[name="'+fieldId+'-subrecords"]').length) {
-                            $('[name="'+fieldId+'-subrecords"]').val($('[name="'+fieldId+'-subrecords"]').val()+","+target+";"+label);
+                        if ($('[name="'+fieldId+'-subrecords"]').length && $('[name="'+fieldId+'-subrecords"]').val()!="" && !singleValue) {
+                            $('[name="'+fieldId+'-subrecords"]').val($('[name="'+fieldId+'-subrecords"]').val()+",,"+target+";"+label);
                         } else {
-                            const new_sub = $("<input type='hidden' name='"+fieldId+"-subrecords' value='"+target+";"+label+"'>")
+                            $('[name="'+fieldId+'-subrecords"]').remove();
+                            const new_sub = $("<input type='hidden' id='"+fieldId+"-subrecords' name='"+fieldId+"-subrecords' value='"+target+";"+label+"'>")
                             $('#recordForm, #modifyForm').append(new_sub)
                         }
                     });
 
                 });
             },
-            error: function (error) {
-                reject(error);
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.error('Error:', textStatus, errorThrown);
             }
         });
     })
@@ -823,8 +898,8 @@ function searchWD(searchterm) {
                             $('a[data-id="' + item.viafid + '"]').each(function () {
                             $(this).bind('click', function (e) {
                                 e.preventDefault();
-                                var input_name = (searchterm.split('_').length == 2) ? searchterm.split('')[0] + item.viafid + searchterm.split('_')[1] : searchterm + '-' + item.viafid;
-                                $('#' + searchterm).next('div').append("<span class='tag " + item.viafid + "' data-input='" + searchterm + "' data-id='" + item.viafid + "'>" + item.term + "</span><input type='hidden' class='hiddenInput " + item.viafid + "' name='" + input_name + "' value=\"viaf" + item.viafid + "," + encodeURIComponent(item.term) + "\"/>");
+                                var inputName = (searchterm.split('_').length == 2) ? searchterm.split('')[0] + item.viafid + searchterm.split('_')[1] : searchterm + '-' + item.viafid;
+                                $('#' + searchterm).next('div').append("<span class='tag " + item.viafid + "' data-input='" + searchterm + "' data-id='" + item.viafid + "'>" + item.term + "</span><input type='hidden' class='hiddenInput " + item.viafid + "' name='" + inputName + "' value=\"viaf" + item.viafid + "," + encodeURIComponent(item.term) + "\"/>");
                                 $("#searchresult").hide();
                                 $('#' + searchterm).val('');
                                 //colorForm();
@@ -853,8 +928,8 @@ function searchWD(searchterm) {
             $('a[data-id="' + item.title + '"]').each(function () {
                 $(this).bind('click', function (e) {
                     e.preventDefault();
-                    var input_name = (searchterm.split('_').length == 2) ? searchterm.split('_')[0] + "_" + item.title + "_" + searchterm.split('_')[1] : searchterm + '_' + item.title;
-                    $('#' + searchterm).next('div').append("<span class='tag " + item.title + "' data-input='" + searchterm + "' data-id='" + item.title + "'>" + item.label + "</span><input type='hidden' class='hiddenInput " + item.title + "' name='" + input_name + "' value=\"" + item.title + "," + encodeURIComponent(item.label) + "\"/>");
+                    var inputName = (searchterm.split('_').length == 2) ? searchterm.split('_')[0] + "_" + item.title + "_" + searchterm.split('_')[1] : searchterm + '_' + item.title;
+                    $('#' + searchterm).next('div').append("<span class='tag " + item.title + "' data-input='" + searchterm + "' data-id='" + item.title + "'>" + item.label + "</span><input type='hidden' class='hiddenInput " + item.title + "' name='" + inputName + "' value=\"" + item.title + "," + encodeURIComponent(item.label) + "\"/>");
                     $("#searchresult").hide();
                     $('#' + searchterm).val('');
                     //colorForm();
@@ -890,7 +965,8 @@ function searchWD(searchterm) {
                     e.preventDefault();
                     var oldID = this.getAttribute('data-id').substr(this.getAttribute('data-id').lastIndexOf('/') + 1);
                     var oldLabel = $(this).text();
-                    $('#' + searchterm).next('div').append("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + searchterm + "_" + oldID + "' value=\" " + oldID + "," + encodeURIComponent(oldLabel) + "\"/>");
+                    var inputName = (searchterm.split('_').length == 2) ? searchterm.split('')[0] + oldID + searchterm.split('_')[1] : searchterm + '-' + oldID;
+                    $('#' + searchterm).next('div').append("<span class='tag " + oldID + "' data-input='" + searchterm + "' data-id='" + oldID + "'>" + oldLabel + "</span><input type='hidden' class='hiddenInput " + oldID + "' name='" + inputName + "' value=\" " + oldID + "," + encodeURIComponent(oldLabel) + "\"/>");
                     $("#searchresult").hide();
                     $('#' + searchterm).val('');
                 });
@@ -965,8 +1041,8 @@ function searchWDAdvanced(searchterm) {
                     $('a[data-id="' + item.viafid + '"]').each(function () {
                         $(this).bind('click', function (e) {
                         e.preventDefault();
-                        var input_name = (searchterm.split('_').length == 2) ? searchterm.split('')[0] + item.viafid + searchterm.split('_')[1] : searchterm + '-' + item.viafid;
-                        $('#' + searchterm).next('.tags-url').append("<span class='tag " + item.viafid + "' data-input='" + searchterm + "' data-id='" + item.viafid + "'>" + item.term + "</span><input type='hidden' class='hiddenInput " + item.viafid + "' name='" + input_name + "' value=\"viaf" + item.viafid + "," + encodeURIComponent(item.term) + "\"/>");
+                        var inputName = (searchterm.split('_').length == 2) ? searchterm.split('')[0] + item.viafid + searchterm.split('_')[1] : searchterm + '-' + item.viafid;
+                        $('#' + searchterm).next('.tags-url').append("<span class='tag " + item.viafid + "' data-input='" + searchterm + "' data-id='" + item.viafid + "'>" + item.term + "</span><input type='hidden' class='hiddenInput " + item.viafid + "' name='" + inputName + "' value=\"viaf" + item.viafid + "," + encodeURIComponent(item.term) + "\"/>");
                         $("#searchresult").hide();
                         $('#' + searchterm).val('');
                         });
@@ -1062,8 +1138,8 @@ function searchWDCatalogueAdvanced(searchterm){
                     $('a[data-id="' + item.viafid + '"]').each(function () {
                         $(this).bind('click', function (e) {
                         e.preventDefault();
-                        var input_name = (searchterm.split('_').length == 2) ? searchterm.split('')[0] + item.viafid + searchterm.split('_')[1] : searchterm + '-' + item.viafid;
-                        $('#' + searchterm).next('.tags-url').append("<span class='tag " + item.viafid + "' data-input='" + searchterm + "' data-id='" + item.viafid + "'>" + item.term + "</span><input type='hidden' class='hiddenInput " + item.viafid + "' name='" + input_name + "' value=\"viaf" + item.viafid + "," + encodeURIComponent(item.term) + "\"/>");
+                        var inputName = (searchterm.split('_').length == 2) ? searchterm.split('')[0] + item.viafid + searchterm.split('_')[1] : searchterm + '-' + item.viafid;
+                        $('#' + searchterm).next('.tags-url').append("<span class='tag " + item.viafid + "' data-input='" + searchterm + "' data-id='" + item.viafid + "'>" + item.term + "</span><input type='hidden' class='hiddenInput " + item.viafid + "' name='" + inputName + "' value=\"viaf" + item.viafid + "," + encodeURIComponent(item.term) + "\"/>");
                         $("#searchresult").hide();
                         $('#' + searchterm).val('');
                         //colorForm();
@@ -1145,32 +1221,34 @@ function addURL(searchterm, iframe=false) {
         var newID = 'MD'+now;
         // check the input value against the regex
         if ($('#'+searchterm).val().length > 0 && regexURL.test($('#'+searchterm).val()) ) {
+            var newSearchTerm = (searchterm.split('_').length == 2) ? searchterm.split('_')[0] + "_" + newID + "_" + searchterm.split('_')[1] : searchterm + '_' + newID;
+
             // generate iframe if requested 
             if (iframe) {
-            var url;
-            if (!$('#'+searchterm).val().startsWith("https://") && !$('#'+searchterm).val().startsWith("http://")) {
-                url = "https://" + $('#'+searchterm).val();
-            } else {
-                url = $('#'+searchterm).val();
-            }
-            itemTable.find('tbody').append($("<tr>\
-                <td><span class='"+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'><a href='"+url+"'>"+$('#'+searchterm).val()+"</a></span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"_"+newID+"' value=\""+newID+","+encodeURIComponent(url)+"\"/></td>\
-                <td>\
-                <button class='btn btn-dark delete' title='delete-iframe' onclick='deleteUrlInput(this)'><i class='far fa-trash-alt'></i></button>\
-                <button class='btn btn-dark' title='expand-iframe' onclick='expandUrlInput(event, this)'><i class='fa fa-expand'></i></button>\
-                </td>\
-            </tr>"));
-            $('#'+searchterm).next('.tags-url').prepend(itemTable);
+                var url;
+                if (!$('#'+searchterm).val().startsWith("https://") && !$('#'+searchterm).val().startsWith("http://")) {
+                    url = "https://" + $('#'+searchterm).val();
+                } else {
+                    url = $('#'+searchterm).val();
+                }
+                itemTable.find('tbody').append($("<tr>\
+                    <td><span class='"+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'><a href='"+url+"'>"+$('#'+searchterm).val()+"</a></span><input type='hidden' class='hiddenInput "+newID+"' name='"+newSearchTerm+"' value=\""+newID+","+encodeURIComponent(url)+"\"/></td>\
+                    <td>\
+                    <button class='btn btn-dark delete' title='delete-iframe' onclick='deleteUrlInput(this)'><i class='far fa-trash-alt'></i></button>\
+                    <button class='btn btn-dark' title='expand-iframe' onclick='expandUrlInput(event, this)'><i class='fa fa-expand'></i></button>\
+                    </td>\
+                </tr>"));
+                $('#'+searchterm).next('.tags-url').prepend(itemTable);
             }
             else {
-            itemTable.find('tbody').append($("<tr>\
-                <td><span class='"+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'><a href='"+$('#'+searchterm).val()+"'>"+$('#'+searchterm).val()+"</a></span><input type='hidden' class='hiddenInput "+newID+"' name='"+searchterm+"_"+newID+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/></td>\
-                <td>\
-                <button class='btn btn-dark delete' title='delete-url' onclick='deleteUrlInput(this)'><i class='far fa-trash-alt'></i></button>\
-                <button class='btn btn-dark' title='open-url' onclick='expandUrlInput(event, this)'><i class='fa fa-expand'></i></button>\
-                </td>\
-            </tr>"));
-            $('#'+searchterm).next('.tags-url').append(itemTable);        
+                itemTable.find('tbody').append($("<tr>\
+                    <td><span class='"+newID+"' data-input='"+searchterm+"' data-id='"+newID+"'><a href='"+$('#'+searchterm).val()+"'>"+$('#'+searchterm).val()+"</a></span><input type='hidden' class='hiddenInput "+newID+"' name='"+newSearchTerm+"' value=\""+newID+","+encodeURIComponent($('#'+searchterm).val())+"\"/></td>\
+                    <td>\
+                    <button class='btn btn-dark delete' title='delete-url' onclick='deleteUrlInput(this)'><i class='far fa-trash-alt'></i></button>\
+                    <button class='btn btn-dark' title='open-url' onclick='expandUrlInput(event, this)'><i class='fa fa-expand'></i></button>\
+                    </td>\
+                </tr>"));
+                $('#'+searchterm).next('.tags-url').append(itemTable);        
             }
 
             // popover Wayback Machine
@@ -1239,11 +1317,11 @@ function searchYear(searchYear) {
 
         let options = []; // create an empty array to be populated with the 'year' options
         let inputYearString = $('#'+searchYear).val();
-        // remove 'A.C.' or 'B.C.', if present, when the user presses backspace
-        if (e.which == 8 && (inputYearString.includes("A.C") || inputYearString.includes("B.C"))) {
-            var expression = / [AB].C/i;
-            var regex = new RegExp(expression);
-            var newValue = inputYearString.replace(regex, "");
+        // remove 'A.D.' or 'B.C.', if present, when the user presses backspace
+        console.log(e.which)
+        if (e.which == 8 && (inputYearString.includes("A.D") || inputYearString.includes("B.C"))) {
+            var expression = /\b(A\.D|B\.C)\b/gi;
+            var newValue = inputYearString.replace(expression, "").trim();
             $('#'+searchYear).val(newValue);
             inputYearString = newValue;
         }
@@ -1262,7 +1340,7 @@ function searchYear(searchYear) {
                 options.push(inputYearString+parseInt(i));
             }
             }
-        // generate options after one digit 'd' has been inserted (available options: 'd A.C.', 'd B.C.')
+        // generate options after one digit 'd' has been inserted (available options: 'd A.D.', 'd B.C.')
         } else if (inputYearString.length == 1) {
             options.push(inputYearString);
         } else if (inputYearString.length > 4) {
@@ -1276,9 +1354,9 @@ function searchYear(searchYear) {
         if (inputYearString.length > 0) {
             $.each(options, function(i, item) {
             $("#searchresult").append("<div class='yearOptions'><a data-id='"+item+"B.C.'>"+item+" B.C.</a></div>")
-            $("#searchresult").append("<div class='yearOptions'><a data-id='"+item+"A.C.'>"+item+" A.C.</div>")
+            $("#searchresult").append("<div class='yearOptions'><a data-id='"+item+"A.D.'>"+item+" A.D.</div>")
 
-            $('a[data-id="'+ item +'B.C."], a[data-id="'+ item +'A.C."]').each(function () {
+            $('a[data-id="'+ item +'B.C."], a[data-id="'+ item +'A.D."]').each(function () {
                 $(this).bind('click', function (e) {
                 e.preventDefault();
                 $("#searchresult").hide();
@@ -1327,9 +1405,12 @@ function searchSkos(searchterm) {
 
                     // the string 'QUERY-TERM' inside the query must be replaced with the input value; special charachters must be checked 
                     var query = (obj[vocabulary_name].query).replace("QUERY-TERM", ("^" + $('#' + searchterm).val())).replace("&gt;", ">").replace("&lt;", "<").replace(/&quot;/g, '"');
+                    let url = new URL(window.location.href);
+                    let baseUrl = url.origin + url.pathname.substring(0, url.pathname.lastIndexOf('/'));
+
                     var request_parameters = {
                         type: 'GET',
-                        url: '/sparqlanything?action=searchentities&q=' + encodeURIComponent(query) + '&service=none'
+                        url: baseUrl+'/sparqlanything?action=searchentities&q=' + encodeURIComponent(query) + '&service=skos'
                     }
                     const request = $.ajax(request_parameters);
 
@@ -1407,17 +1488,17 @@ function searchSkos(searchterm) {
                         $("#searchresult").append("<div class='vocableitem'><a class='blue' data-id='"+uri+"'>"+label+"</a> - "+vocabulary_noun+"</div>")
 
                         $('a[data-id="'+ uri +'"]').each(function () {
-                        $(this).bind('click', function (e) {
-                            e.preventDefault();
-                            if (!skos_vocabs.includes("oneVocableAccepted") || $('#' + searchterm).nextAll("span").length == 0) {
-                            $('#' + searchterm).after("<span class='tag " + uri + "' data-input='" + searchterm + "' data-id='" + uri + "'>" + label+" - "+vocabulary_noun + "</span><input type='hidden' class='hiddenInput " + uri + "' name='" + searchterm + "_" + uri + "' value=\"" + uri + "," + label + " - " + vocabulary_noun + "\"/>");
-                            }
-                            else if (skos_vocabs.includes("oneVocableAccepted") && $('#' + searchterm).nextAll("span").length > 0) {
-                            alert("Only one term is accepted!");
-                            }
-                            $("#searchresult").hide();
-                            $('#' + searchterm).val("");
-                        });
+                            $(this).bind('click', function (e) {
+                                e.preventDefault();
+                                if (!skos_vocabs.includes("oneVocableAccepted") || $('#' + searchterm).nextAll("span").length == 0) {
+                                    $('#' + searchterm).after("<span class='tag " + uri + "' data-input='" + searchterm + "' data-id='" + uri + "'>" + label+" - "+vocabulary_noun + "</span><input type='hidden' class='hiddenInput " + uri + "' name='" + searchterm + "_" + uri + "' value=\"" + uri + "," + label + " - " + vocabulary_noun + "\"/>");
+                                }
+                                else if (skos_vocabs.includes("oneVocableAccepted") && $('#' + searchterm).nextAll("span").length > 0) {
+                                    alert("Only one term is accepted!");
+                                }
+                                $("#searchresult").hide();
+                                $('#' + searchterm).val("");
+                            });
                         });
                     });
 
@@ -1512,6 +1593,7 @@ function addMultimedia(searchterm) {
 // generate extraction input field (during form loading)
 function generateExtractionField(res, recordId, subtemplate=null) {
     // retrieve field's description and name
+    const subtemplateClone = subtemplate;
     extractorsArray.forEach((element, index) => {
 
         if (element === res) {
@@ -1520,6 +1602,9 @@ function generateExtractionField(res, recordId, subtemplate=null) {
             var fieldName = extractorsNames[resIndex];
             var fieldDescription = extractorsPrepend[resIndex];
             var fieldService = extractorsService[resIndex];
+            var fieldSubclassRestriction = extractorsRestriction[resIndex];
+            var dataSupertemplate = subtemplateClone ? subtemplateClone : "None" // modify for Subtemplate!!
+            console.log(subtemplate,dataSupertemplate)
 
             // predefined HTML node (extraction input field)
             var extractionRow = $('<section class="form_row block_field import-form">\
@@ -1537,13 +1622,13 @@ function generateExtractionField(res, recordId, subtemplate=null) {
                 </thead>\
                 <tbody></tbody>\
                 </table>\
-                <span class="imported_graphs add-span" id="imported-graphs-'+resId+'" data-reconciliation="'+fieldService+'" onclick="generateExtractor(\'imported-graphs-'+resId+'\', \''+recordId+'\')"><i class="material-icons">playlist_add</i><span> Extract Entities</span></span>\
+                <span class="imported_graphs add-span" id="imported-graphs-'+resId+'" data-supertemplate="'+dataSupertemplate+'" data-reconciliation="'+fieldService+'" data-extractor-index="'+resIndex+'" data-subclass="'+fieldSubclassRestriction+'" onclick="generateExtractor(\'imported-graphs-'+resId+'\', \''+recordId+'\')"><i class="material-icons">playlist_add</i><span> Extract Entities</span></span>\
             </section>\
             </section>');
             console.log(extractionRow)
 
             // add the extraction node to the form
-            if (subtemplate===null) {
+            if (subtemplateClone===null) {
                 subtemplate = $('#recordForm > section.row > section , #modifyForm > section.row > section');
             }
             console.log(subtemplate)
@@ -1589,7 +1674,23 @@ function generateExtractionTagList(subtemplate,extractorId,recordId,results,id) 
                 var uri = results[idx][key].value;
             }
         }
-        table.find("#graph-" + id).append("<span class='tag' data-id='" + uri + "'>" + label + "</span><input type='hidden' name='keyword_"+id+"_"+label+"' value='"+encodeURIComponent(uri)+"'/>");
+        let $graph = table.find("#graph-" + id);
+
+        // create the <span> element
+        let $span = $("<span>")
+            .addClass("tag")
+            .attr("data-id", uri)
+            .text(label);
+
+        // create the hidden <input>
+        let $input = $("<input>")
+            .attr("type", "hidden")
+            .attr("name", "keyword_" + id + "_" + label) // set name
+            .val(encodeURIComponent(uri));  // set value 
+
+        // append both elements to the target container
+        $graph.append($span, $input);
+
     }
     table.removeClass('hidden');
     table.next("span").css({'margin-top': '3.5em'});
@@ -1645,10 +1746,11 @@ function generateExtractor(ul,recordId,modifyId=null) {
                 <option value='api'>API</option>\
                 <option value='sparql'>SPARQL</option>\
                 <option value='file'>Static File</option>\
+                <option value='web'>Website</option>\
             </select>\
         </section>\
         <section class='row extractor-0'>\
-            <input id='sparql-back0' class='btn btn-dark extractor-0' style='margin-left:20px' value='Back' onClick='prevExtractor(this, \"block_field\", \"form_row\", true,\""+extractorId+'-'+extractionInternalId+"\")'>\
+            <input id='sparql-back0' class='btn btn-dark extractor-0' type='button' style='margin-left:20px' value='Back' onClick='prevExtractor(this, \"block_field\", \"form_row\", true,\""+extractorId+'-'+extractionInternalId+"\",\""+recordId+"\")'>\
         </section>\
     </section>");
     $('#'+ul).after(extractor);
@@ -1685,7 +1787,7 @@ function modifyExtractor(event,extractionField,id) {
     var extractions = extractionsObj[record][extractionField];
     const extraction = extractions.find(obj => obj.internalId == extractionNumber);
     const extractionParameters = extraction ? extraction["metadata"] : undefined;
-    const extractorType = extractionParameters.type
+    const extractorType = extractionParameters.type;
 
     // hide the extraction table row
     if ($("#graph-"+id).parent().parent().find('tr').length == 1) {
@@ -1699,6 +1801,10 @@ function modifyExtractor(event,extractionField,id) {
     var extractor = $('#extractor');
     extractor.val(extractorType);
     addExtractionForm(extractor,record,extractionField,extractionNumber);
+
+    // OPTIONAL: select extracted entities' class 
+    const extractorClass = extractionParameters.class;
+    $("#extract-entity-type").val(extractorClass);
 
     // fill the extraction form with previously provided values
     if (extractorType == 'api') {
@@ -1755,94 +1861,228 @@ function addExtractionForm(element,recordId,extractorId,extractionInternalId) {
     $(element).parent().parent().parent().find('.block_field.col-md-12 section').not(":first").remove();
     var extractionId = extractorId+'-'+extractionInternalId.toString(); // it will be used to create hidden inputs later
     var extractionType = $(element).find(":selected").val(); // selected option (API, SPARQL, or static file)
+    var classes = keywords_classes; // get optional classes for extracted entities
+    console.log(classes)
 
     $(element).parent().parent().find(".extractor-1, hr").remove() // remove previously created forms (in case the user changes the selected option)
-    if (extractionType == 'api') {
-        var form = $("<hr><section class='row extractor-1'>\
-            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>API access point<br><span class='comment'>url of the API</span></label>\
-            <input type='text' id='ApiUrl' placeholder='e.g.: https://exampleApi.org/search'></input>\
-        </section>\
-        <section class='row extractor-1'>\
-            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY PARAMETERS<br><span class='comment'>write one value per row</span></label>\
-            <div class='extraction-form-div'>\
-                <span class='extraction-form-label'>KEY</span><span class='extraction-form-label'>VALUE</span>\
-            </div>\
-            <p class='extractor-comment'>No parameters available: add a new one</p><span class='add-parameter'>Add new <i class='fas fa-plus'></i></span>\
-        </section>\
-        <section class='row extractor-1'>\
-            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>RESULT DICTIONARY<br><span class='comment'>write one value per row</span></label>\
-            <div class='extraction-form-div'>\
-                <span class='extraction-form-label'>KEY</span><span class='extraction-form-label'>VALUE</span>\
-            </div>\
-            <div class='extraction-form-div api-results-parameter'>\
-                <input type='text' class='extraction-form-input' value='Array'><input type='text' class='extraction-form-input'>\
-            </div>\
-            <div class='extraction-form-div api-results-parameter'>\
-                <input type='text' class='extraction-form-input' value='URI'><input type='text' class='extraction-form-input'>\
-            </div>\
-            <div class='extraction-form-div api-results-parameter'>\
-                <input type='text' class='extraction-form-input' value='Label'><input type='text' class='extraction-form-input'>\
-            </div>\
-        </section>\
-        ")
-    } else if (extractionType == 'sparql') {
-        var form = $("<hr><section class='row extractor-1'>\
-            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>SPARQL endpoint<br><span class='comment'>url of the endpoint</span></label>\
-            <input type='text' id='SparqlUrl' placeholder='e.g.: https://exampleSparql.org/sparql'></input>\
-        </section>\
-            <section class='row extractor-1'>\
-            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY<br><span class='comment'>a sparql query to be performed</span></label>\
-            <div id='yasqe' class='col-md-12' data-id='"+extractionId+"'>\
-        </section>");
-    } else if (extractionType == 'file') {
-        var form = $("<hr><section class='row extractor-1'>\
-            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>FILE URL<br><span class='comment'>a URL to an external resource (.json, .csv, and .xml formats allowed)</span></label>\
-            <input type='text' id='FileUrl' placeholder='http://externalResource.csv'></input>\
-        </section>\
-        <section class='row extractor-1'>\
-            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY METHOD<br><span class='comment'>how to access your data</span></label>\
-            <select onchange='fileExtractionType(this)' class='custom-select' name='extractor' id='ExtractionType'>\
-                <option value='None'>Select</option>\
-                <option value='manual'>MANUAL (parse the file and build a query)</option>\
-                <option value='sparql'>SPARQL</option>\
-            </select>\
-        </section>\
-        <section class='row extractor-1 manual-extraction' style='display: none;'>\
-            <input id='parse-file' class='btn btn-dark extractor-1' style='margin-left:20px;' value='Parse File' onClick='parseFile(this)'>\
-        </section>\
-        <section class='row extractor-1 sparql-extraction' style='display: none;'>\
-            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>QUERY<br><span class='comment'>a sparql query to be performed</span></label>\
-            <div id='yasqe' class='col-md-12' data-id='"+extractionId+"'>\
-        </section>\
-        <section class='row extractor-1 manual-query' style='display: none;'>\
-            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>KEYS<br><span class='comment'>the set of keys to be retrieved</span></label>\
-            <input type='text' id='file-keys' placeholder='firstName'></input>\
-            <div class='tags-extraction'></div>\
-        </section>\
-        <section class='row extractor-1 manual-query' style='display: none;'>\
-            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>FILTERS<br><span class='comment'>filter your keys</span></label>\
-            <div class='extraction-form-div'>\
-                <span class='extraction-form-label'>TYPE</span><span class='extraction-form-label'>VALUE</span>\
-            </div>\
-            <p class='extractor-comment'>No filter available: add a new one</p><span class='add-parameter'>Add new <i class='fas fa-plus'></i></span>\
-        </section>");
-    } else {
-        var form = "";
+    var prepend = "<hr>";
+    if (Object.keys(classes).length) {
+        var classOptions = "<option value='None'>Select</option>";
+        $.each(classes, function(key, value) {
+        classOptions += "<option value='" + key + "'>" + value + "</option>";
+        });
+
+        prepend += "<section class='row extractor-1'>\
+            <label class='col-md-12' style='text-align: left !important; margin-left: 5px'>Select entity type</label>\
+            <select class='custom-select' id='extract-entity-type' name='extract-entity-type'>"+
+                classOptions +
+            "</select>\
+        </section><hr class='extractor-1'>";
+    }
+    
+
+    let form = "";
+    if (extractionType === 'api') {
+    form = $(prepend + `
+        <section class='row extractor-1'>
+        <label class='col-md-12' style='text-align:left!important; margin-left:5px'>
+            API ACCESS POINT<br>
+            <span class='comment'>URL of the API</span>
+        </label>
+        <input type='text' id='ApiUrl' placeholder='https://exampleApi.org/search'>
+        </section>
+
+        <section class='row extractor-1'>
+        <label class='col-md-12' style='text-align:left!important; margin-left:5px'>
+            QUERY PARAMETERS<br>
+            <span class='comment'>Write one value per row</span>
+        </label>
+        <div class='extraction-form-div'>
+            <span class='extraction-form-label-large'>KEY</span>
+            <span class='extraction-form-label-large'>VALUE</span>
+        </div>
+        <p class='extractor-comment'>No parameters available: add a new one</p>
+        <span class='add-parameter'>Add new <i class='fas fa-plus'></i></span>
+        </section>
+
+        <section class='row extractor-1'>
+        <label class='col-md-12' style='text-align:left!important; margin-left:5px'>
+            RESULT DICTIONARY<br>
+            <span class='comment'>Write one value per row</span>
+        </label>
+        <div class='extraction-form-div'>
+            <span class='extraction-form-label-large'>KEY</span>
+            <span class='extraction-form-label-large'>VALUE</span>
+        </div>
+
+        <div class='extraction-form-div api-results-parameter'>
+            <input type='text' class='extraction-form-input-large' value='Array'>
+            <input type='text' class='extraction-form-input-large'>
+        </div>
+        <div class='extraction-form-div api-results-parameter'>
+            <input type='text' class='extraction-form-input-large' value='URI'>
+            <input type='text' class='extraction-form-input-large'>
+        </div>
+        <div class='extraction-form-div api-results-parameter'>
+            <input type='text' class='extraction-form-input-large' value='Label'>
+            <input type='text' class='extraction-form-input-large'>
+        </div>
+        </section>
+
+        <section class='row extractor-1'>
+        <label class='col-md-12' style='text-align:left!important; margin-left:5px'>
+            FILTER RESULTS<br>
+            <span class='comment'>Write one value per row</span>
+        </label>
+        <div class='extraction-form-div'>
+            <span class='extraction-form-label-small'>TYPE</span>
+            <span class='extraction-form-label-small'>VARIABLE</span>
+            <span class='extraction-form-label-small'>VALUE</span>
+        </div>
+        <p class='extractor-comment'>No parameters available: add a new one</p>
+        <span class='add-filter'>Add new <i class='fas fa-plus'></i></span>
+        </section>
+    `);
+
+    } else if (extractionType === 'sparql') {
+    form = $(prepend + `
+        <section class='row extractor-1'>
+        <label class='col-md-12' style='text-align:left!important; margin-left:5px'>
+            SPARQL ENDPOINT<br>
+            <span class='comment'>URL of the SPARQL endpoint</span>
+        </label>
+        <input type='text' id='SparqlUrl' placeholder='https://exampleSparql.org/sparql'>
+        </section>
+
+        <section class='row extractor-1'>
+        <label class='col-md-12' style='text-align:left!important; margin-left:5px'>
+            QUERY<br>
+            <span class='comment'>A SPARQL query to be performed</span>
+        </label>
+        <div id='yasqe' class='col-md-12' data-id='${extractionId}'></div>
+        </section>
+    `);
+
+    } else if (extractionType === 'file') {
+    form = $(prepend + `
+        <section class='row extractor-1'>
+        <label class='col-md-12' style='text-align:left!important; margin-left:5px'>
+            FILE URL<br>
+            <span class='comment'>A URL to an external resource (.json, .csv, .xml)</span>
+        </label>
+        <input type='text' id='FileUrl' placeholder='http://externalResource.csv'>
+        </section>
+
+        <section class='row extractor-1'>
+        <label class='col-md-12' style='text-align:left!important; margin-left:5px'>
+            QUERY METHOD<br>
+            <span class='comment'>How to access your data</span>
+        </label>
+        <select onchange='fileExtractionType(this)' class='custom-select' name='extractor' id='ExtractionType'>
+            <option value='None'>Select</option>
+            <option value='manual'>MANUAL (parse the file and build a query)</option>
+            <option value='sparql'>SPARQL</option>
+        </select>
+        </section>
+
+        <section class='row extractor-1'>
+        <label class='col-md-12' style='text-align:left!important; margin-left:5px'>
+            CSV HEADER (CSV only)
+        </label>
+        <div class='col-md-12' style='text-align:left!important; margin-left:5px'>
+            <input type='checkbox' id='hasHeader' name='hasHeader'>
+            <span class='comment'>Tick this box if the first row of your CSV file contains column names</span>
+        </div>
+        </section>
+
+        <section class='row extractor-1 manual-extraction' style='display:none;'>
+        <input id='parse-file' class='btn btn-dark extractor-1' style='margin-left:20px;' 
+                type='button' value='Parse File' onClick='parseFile(this)'>
+        </section>
+
+        <section class='row extractor-1 sparql-extraction' style='display:none;'>
+        <label class='col-md-12' style='text-align:left!important; margin-left:5px'>
+            QUERY<br><span class='comment'>A SPARQL query to be performed</span>
+        </label>
+        <div id='yasqe' class='col-md-12' data-id='${extractionId}'></div>
+        </section>
+
+        <section class='row extractor-1 manual-query' style='display:none;'>
+        <label class='col-md-12' style='text-align:left!important; margin-left:5px'>
+            KEYS<br><span class='comment'>The set of keys to be retrieved</span>
+        </label>
+        <input type='text' id='file-keys' placeholder='firstName'>
+        <div class='tags-extraction'></div>
+        </section>
+
+        <section class='row extractor-1 manual-query' style='display:none;'>
+        <label class='col-md-12' style='text-align:left!important; margin-left:5px'>
+            FILTERS<br><span class='comment'>Filter your keys</span>
+        </label>
+        <div class='extraction-form-div'>
+            <span class='extraction-form-label-large'>TYPE</span>
+            <span class='extraction-form-label-large'>VALUE</span>
+        </div>
+        <p class='extractor-comment'>No filter available: add a new one</p>
+        <span class='add-filter'>Add new <i class='fas fa-plus'></i></span>
+        </section>
+    `);
+
+    } else if (extractionType === 'web') {
+    form = $(prepend + `
+        <section class='row extractor-1'>
+        <label class='col-md-12' style='text-align:left!important; margin-left:5px'>
+            WEBSITE URL<br>
+            <span class='comment'>A URL to an external website</span>
+        </label>
+        <input type='text' id='WebsiteUrl' placeholder='http://example.org/'>
+        </section>
+
+        <section class='row extractor-1'>
+        <label class='col-md-12' style='text-align:left!important; margin-left:5px'>
+            HTML SELECTOR<br>
+            <span class='comment'>A CSS selector to search for in the loaded DOM</span>
+        </label>
+        <input type='text' id='WebsiteSelector' placeholder='section.container > ul > li.result'>
+        </section>
+
+        <section class='row extractor-1'>
+        <label class='col-md-12' style='text-align:left!important; margin-left:5px'>
+            HTML ATTRIBUTE<br>
+            <span class='comment'>An attribute whose value should be extracted (leave blank for inner text)</span>
+        </label>
+        <input type='text' id='WebsiteAttribute' placeholder='title'>
+        </section>
+
+        <section class='row extractor-1'>
+        <label class='col-md-12' style='text-align:left!important; margin-left:5px'>
+            REGEX (Pattern & Replacement)<br>
+            <span class='comment'>A regex pattern and replacement to transform the extracted text</span>
+        </label>
+        <input type='text' id='WebsiteRegex' placeholder='"^(.*),\\\\s*(.*)$" , "$2 $1"'>
+        </section>
+    `);
     }
 
+    else {
+    form = "";
+    }
+
+
     // navigation button
-    var buttons = $("<section class='row extractor-1'>\
-        <input id='"+extractionType+"-back-1' class='btn btn-dark extractor-1' style='margin-left:20px' value='Back' onClick='prevExtractor(this, \"extractor-1\", \"form_row\", true,\""+recordId+"\",\""+extractionId+"\")'>\
-        <input id='"+extractionType+"-next-1' class='btn btn-dark extractor-1' style='margin-left:20px' value='Next' onClick='nextExtractor(this, \""+recordId+"\", \""+extractionId+"\", \""+extractionType+"\")'>\
-    </section>");
+    var buttons = $("<hr class='extractor-1'>\
+        <section class='row extractor-1'>\
+            <input id='"+extractionType+"-back-1' class='btn btn-dark extractor-1' style='margin-left:20px' type='button' value='Back' onClick='prevExtractor(this, \"extractor-1\", \"form_row\", true,\""+extractionId+"\",\""+recordId+"\")'>\
+            <input id='"+extractionType+"-next-1' class='btn btn-dark extractor-1' style='margin-left:20px' type='button' value='Next' onClick='nextExtractor(this, \""+recordId+"\", \""+extractionId+"\", \""+extractionType+"\")'>\
+        </section>");
 
     // add event listener to form buttons
-    form.find('.add-parameter').on('click', function() {
-        if (extractionType === 'api') {         
-            generateExtractionParameter(this); 
-        } else if (extractionType === 'file')  {
-            generateExtractionFilter(this);
-        }
+    form.find('.add-parameter').on('click', function() {       
+        generateExtractionParameter(this);
+    });
+
+    form.find('.add-filter').on('click', function() {
+        generateExtractionFilter(this, extractionType);
     });
 
     // add the new form to the webpage and show YASQE editor when needed
@@ -1870,14 +2110,21 @@ function fileExtractionType(element) {
 
 // parse the static file 
 function parseFile(element) {
+    $(element).blur();
+
+    // get the URL to send the ajax query
+    let url = new URL(window.location.href);
+    let baseUrl = url.origin + url.pathname.substring(0, url.pathname.lastIndexOf('/'));
+
     var extractionBlockField = $(element).parent().parent();
+    var hasCSVHeader = extractionBlockField.find("#hasHeader").prop('checked');
     var fileUrl = extractionBlockField.find("#FileUrl").val();
     if (fileUrl !== "" && (fileUrl.endsWith(".xml") || fileUrl.endsWith(".csv") || fileUrl.endsWith(".json"))) {
         var encoded = encodeURIComponent(fileUrl);
         showLoadingPopup("We are parsing your file:", fileUrl);
         $.ajax({
             type: 'GET',
-            url: '/sparqlanything?action=searchclasses&q=' + encoded,
+            url: baseUrl+'/sparqlanything?action=searchclasses&q=' + encoded + '&csvheader=' + hasCSVHeader,
             success: function(resultsJsonObject) {
                 extractionBlockField.find(".manual-query").show();
                 parsedFile = resultsJsonObject;
@@ -1889,7 +2136,7 @@ function parseFile(element) {
                         var key = keysInputField.val();
                         setSearchResult(null,searchtermElement=$(this));
                         parsedFile.forEach(function(element,index) {
-                            if (element.includes(key)) {
+                            if (key !== "" && element.includes(key)) {
                                 $("#searchresult").append("<div class='viafitem'><a class='blue' data-id='" + index + "'>" + element + "</a></div>")
                         
                                 // add tag if the user chooses an item
@@ -1920,6 +2167,8 @@ function parseFile(element) {
 
 // parse the extraction parameters and send requests
 function nextExtractor(element, recordId, id, type) {
+    $(element).blur();
+
     // retrieve extractor Id and extraction count
     var splitId = id.split('-');
     var extractionCount = parseInt(splitId[1]);
@@ -1947,14 +2196,10 @@ function nextExtractor(element, recordId, id, type) {
         objectItem["url"] = extractionBlockField.find('#ApiUrl').val();
         var queryParameters = getExtractionParameters('query',element);
         var resultsParameters = getExtractionParameters('results',element);
-
-        if (queryParameters !== false && resultsParameters !== false) {
-            objectItem["query"] = queryParameters
-            objectItem["results"] = resultsParameters
-        } else {
-            alert("Please, check your parameters before proceeding");
-            return null
-        }
+        var filters = getExtractionFilters(element)
+        objectItem["query"] = queryParameters
+        objectItem["results"] = resultsParameters
+        objectItem["filters"] = filters
         console.log(objectItem);
     } else if (type == "sparql") {
         objectItem["type"] = "sparql";
@@ -1964,7 +2209,9 @@ function nextExtractor(element, recordId, id, type) {
         objectItem["type"] = "file";
         objectItem["url"] = extractionBlockField.find('#FileUrl').val();
         var extractionType = extractionBlockField.find('#ExtractionType').val();
+        var hasCSVHeader = extractionBlockField.find("#hasHeader").prop('checked');
         objectItem["extractionType"] = extractionType;
+        objectItem["hasCSVHeader"] = hasCSVHeader;
 
         // manual query or sparql.anything query 
         if (extractionType === "sparql") {
@@ -1973,7 +2220,7 @@ function nextExtractor(element, recordId, id, type) {
             // retrieve parameters elements
             var fileUrl = extractionBlockField.find('#FileUrl').val();
             var rawKeys = extractionBlockField.find('.tags-extraction input');
-            var rawFilters = extractionBlockField.find('.manual-query .file-query-parameter')
+            var rawFilters = extractionBlockField.find('.manual-query .file-query-filter')
 
             var manualQuery, keysArray, filtersArray;
             [manualQuery, keysArray, filtersArray] = buildQuery(fileUrl,rawKeys,rawFilters);
@@ -1981,26 +2228,53 @@ function nextExtractor(element, recordId, id, type) {
             objectItem["keys"] = keysArray;
             objectItem["filters"] = filtersArray
         }
+    } else if (type == "web") {
+        objectItem["type"] = "web";
+        var webUrl = extractionBlockField.find('#WebsiteUrl').val();
+        var selector = extractionBlockField.find('#WebsiteSelector').val();
+        var attribute = extractionBlockField.find('#WebsiteAttribute').val();
+        var regex = extractionBlockField.find('#WebsiteRegex').val();
+        objectItem["url"] = webUrl;
+        objectItem["selector"] = selector;
+        objectItem["attribute"] = attribute;
+        objectItem["regex"] = regex;
+
+        // get the query
+        var websiteQuery = buildWebQuery(webUrl,selector,attribute,regex);
+        objectItem["query"] = websiteQuery;
+    }
+
+    // get selected entity class (if any)
+    if (extractionBlockField.find('#extract-entity-type').length > 0) {
+        objectItem["class"] = extractionBlockField.find('#extract-entity-type').val();
     }
 
 
     // extract data with provided queries
     if (type == "api") {
         // API QUERY:
-        $.getJSON(objectItem["url"], objectItem["query"],
-            function(data) {
-                // show the query results in a table
-                console.log(data)
-                var bindings = showExtractionResult(data,type,id,recordId,objectItem);
-                objectItem["output"] = bindings;
-        }).error(function(jqXHR, textStatus, errorThrown) {
-            showErrorPopup(("error: check your parameters"))
+        showLoadingPopup("Processing your request...", "Your query is being executed. This may take a few moments. Please wait...", true);
+
+        let request = $.getJSON(objectItem["url"], objectItem["query"], function(data) {
+            hidePopup();
+
+            // show the query results in a table
+            var bindings = showExtractionResult(data, type, id, recordId, objectItem);
+            objectItem["output"] = bindings;
+
+        }).fail(function(jqXHR, textStatus, errorThrown) {
+            hidePopup();
+            showErrorPopup("Error:", "Please, check your query parameters before proceeding!");
+        });
+
+        $("#cancelBtn").on("click", function() {
+            request.abort();  // abort query to API
+            hidePopup();
+            showErrorPopup("Query Canceled", "The query has been stopped by the user.");
         })
-    } else if (type == "file" || type == 'sparql') {
+    } else if (type == "file" || type == 'sparql' || type == "web") {
         // FILE QUERY and SPARQL QUERY:
-        console.log(objectItem)
         callSparqlanything(objectItem,id,recordId,type);
-        console.log(objectItem)
     }
 
     // add the extraction information, including the results, to the Extractions Object
@@ -2020,6 +2294,8 @@ function prevExtractor(element, toHide, toShow, remove=false, id=null, recordId=
     extractionBlockField.find('.'+toShow).filter(function() {
         return $(this).find('.original-subtemplate').length === 0;
     }).show();
+    $('.manual-extraction, .sparql-extraction, .manual-query').hide(); // static file extraction
+    $('#ExtractionType').val("None");
 
     if (remove) {
 
@@ -2044,6 +2320,41 @@ function prevExtractor(element, toHide, toShow, remove=false, id=null, recordId=
     }  
 }
 
+// add filters for API and Static Files queries
+function generateExtractionFilter(element,extractorType) {
+    // hide the comment "no filter available"
+    if ($(element).prev('.extractor-comment').length>0) {
+        $(element).prev('.extractor-comment').hide();
+    }
+    let newFilterDiv;
+
+    // add a new couple (type,value) of input fields 
+    if (extractorType === "file") {
+        newFilterDiv = $("<div class='extraction-form-div file-query-filter'>\
+            <select class='custom-select extraction-form-input-large' id='extractor-filter' name='extractor-filter'>\
+                <option value='None'>Select</option>\
+                <option value='regex'>Regex</option>\
+                <option value='counter'>Min. count</option>\
+            </select>\
+            <input type='text' class='extraction-form-input-large' id='extractor-value' name='extractor-value'>\
+            <i class='fas fa-times' onclick='removeExtractionParameter(this)'></i>\
+        </div>");
+    } else if (extractorType === "api") {
+        newFilterDiv = $("<div class='extraction-form-div api-query-filter'>\
+            <select class='custom-select extraction-form-input-small' id='extractor-filter' name='extractor-filter'>\
+                <option value='None'>Select</option>\
+                <option value='regex'>Regex</option>\
+                <option value='mincounter'>Greater than</option>\
+                <option value='maxcounter'>Lower than</option>\
+            </select>\
+            <input type='text' class='extraction-form-input-small' id='extractor-variable' name='extractor-variable'>\
+            <input type='text' class='extraction-form-input-small' id='extractor-value' name='extractor-value'>\
+            <i class='fas fa-times' onclick='removeExtractionParameter(this)'></i>\
+        </div>");
+    }
+    $(element).before(newFilterDiv);
+}
+
 /* API */
 
 // generate a couple of input fields to add a query parameter
@@ -2055,8 +2366,8 @@ function generateExtractionParameter(element) {
 
     // add a new couple (key,value) of input fields 
     var newParameterDiv = $("<div class='extraction-form-div api-query-parameter'>\
-        <input type='text' class='extraction-form-input' id='"+ new Date().valueOf() +"'>\
-        <input type='text' class='extraction-form-input'>\
+        <input type='text' class='extraction-form-input-large' id='"+ new Date().valueOf() +"'>\
+        <input type='text' class='extraction-form-input-large'>\
         <i class='fas fa-times' onclick='removeExtractionParameter(this)'></i>\
     </div>");
     $(element).before(newParameterDiv);
@@ -2073,10 +2384,9 @@ function removeExtractionParameter(element) {
 
 // get parameters for API query
 function getExtractionParameters(type,element) {
-    var extractionForm = $(element).parent().parent();
+    var extractionForm = $(element).closest(".block_field");
     var extractionQueryParameters = extractionForm.find('.api-'+type+'-parameter');
     var parametersObj = new Object();
-    var hasEmptyParameter = false;
 
     extractionQueryParameters.each(function() {
         console.log($(this).find('input').eq(0));
@@ -2089,24 +2399,41 @@ function getExtractionParameters(type,element) {
                 parameterKey = parameterKey.toLowerCase();
             }
             parametersObj[parameterKey] = parameterValue;
-        } else {
-            hasEmptyParameter = true;
-            return false
         }
     });
 
-    if (hasEmptyParameter) {
-        return false;
-    } else {
-        return parametersObj; 
-    }
+    return parametersObj;
+}
+
+// retrieve filters for API and Static Files queries
+function getExtractionFilters(element) {
+    var extractionForm = $(element).closest(".block_field");
+    var extractionQueryFilters = extractionForm.find('.api-query-filter');
+    var filtersArray = []
+
+    extractionQueryFilters.each(function() {
+        var filterObj = new Object();
+        console.log($(this).find('input').eq(0));
+
+        var filterKey = $(this).find('input').eq(0).val();
+        var filterType = $(this).find('select').eq(0).val();
+        var filterValue = $(this).find('input').eq(1).val();
+
+
+        if (filterKey !== '' && filterValue !== '') {
+            filterObj["key"] = filterKey;
+            filterObj["type"] = filterType;
+            filterObj["value"] = filterValue;
+            filtersArray.push(filterObj);
+        }
+    });
+    return filtersArray
 }
 
 /* SPARQL, File */
 
 // call back-end API to perform SPARQL.Anything queries
 function callSparqlanything(objectItem, id, recordId, type) {
-    console.log(objectItem)
     var q = objectItem.query;
     var endpoint = objectItem.url;
     var service = $("#imported-graphs-"+id.split("-")[0]).data("reconciliation");
@@ -2116,48 +2443,59 @@ function callSparqlanything(objectItem, id, recordId, type) {
     if (type === 'file') {
         encoded = encodeURIComponent(q.includes("<x-sparql-anything:"+endpoint+">") ? q : q.replace("{", "{ SERVICE <x-sparql-anything:"+endpoint+"> {").replace("}", "}}"));
     } else if (type === 'sparql') {
-        encoded = q.includes("SERVICE") ? encodeURIComponent(q) : encodeURIComponent(q.replace("{", "{ SERVICE <" + endpoint + "> {").replace("}", "}}"));
+        encoded = encodeURIComponent(q);
+    } else if (type === 'web') {
+        encoded = encodeURIComponent(q);
     };
 
-    // send the query to the back-end API and parse the results
-    $.ajax({
-        type: 'GET',
-        url: '/sparqlanything?action=searchentities&q=' + encoded + '&service=' + service,
-        success: function(resultsJsonObject) {
-            // show results inside a table
-            var bindings = showExtractionResult(resultsJsonObject,type,id,recordId);
+    // get the URL to send the query
+    let url = new URL(window.location.href);
+    let baseUrl = url.origin + url.pathname.substring(0, url.pathname.lastIndexOf('/'));
+    let eventSource = new EventSource(baseUrl + '/sparqlanything?action=searchentities&q=' + encoded + '&service=' + service + '&endpoint=' +encodeURIComponent(endpoint) );
+    let length;
+    let swalInstance;
+
+    showLoadingPopup("Processing your request...", "Your query is being executed. This may take a few moments. Please wait...", true);
+    $("#cancelBtn").on("click", function() {
+        eventSource.close(); // abort query
+        hidePopup();
+        showErrorPopup("Query Canceled", "The query has been stopped by the user.");
+    })
+
+    eventSource.onmessage = function(event) {
+        let data = JSON.parse(event.data);
+
+        // Show the total number of retrieved entities
+        if (data.length !== undefined) {
+            hidePopup();
+            swalInstance = showLoadingPopup("Successful query!", "We are processing the results:\n0/" + data.length, true);
+            length = data.length;
+
+            // close the event on "Cancel" button click
+            $("#cancelBtn").on("click", function() {
+                eventSource.close();
+                hidePopup();
+            })
+        } 
+        // Display the number of processed results
+        else if (data.count !== undefined) {
+            // Update Swal text
+            $('.swal2-html-container').text("We are processing the results:\n" + data.count + "/" + length);
+        } 
+        // Close the event and save results
+        else if (data.data !== undefined) {
+            hidePopup();
+            showAutoCloseTimerPopup("Successful query!", "Query results have been processed")
+            eventSource.close();  // End connection
+            console.log(data.data)
+            var bindings = showExtractionResult(data.data,type,id,recordId);
             objectItem['output'] = bindings
             return objectItem;
-        },
-        error: function() {
-            alert(("error: check your parameters"))
         }
-    });
+    };
 }
 
-/* FILE */
-
-// add filters for manual queries
-function generateExtractionFilter(element) {
-    // hide the comment "no filter available"
-    if ($(element).prev('.extractor-comment').length>0) {
-        $(element).prev('.extractor-comment').hide();
-    }
-
-    // add a new couple (type,value) of input fields 
-    var newParameterDiv = $("<div class='extraction-form-div file-query-parameter'>\
-        <select class='custom-select extraction-form-input' id='extractor-filter' name='extractor-filter'>\
-            <option value='None'>Select</option>\
-            <option value='regex'>Regex</option>\
-            <option value='counter'>Min. count</option>\
-        </select>\
-        <input type='text' class='extraction-form-input'>\
-        <i class='fas fa-times' onclick='removeExtractionParameter(this)'></i>\
-    </div>");
-    $(element).before(newParameterDiv);
-}
-
-// build SPARQL query from manual paramaters
+// build SPARQL query on static files from manual paramaters
 function buildQuery(fileURL, keys, queryFilters) {
     // this function first create the main query then add filters
 
@@ -2186,7 +2524,11 @@ function buildQuery(fileURL, keys, queryFilters) {
                 
                 FILTER(isLiteral(?namePart) && datatype(?namePart) = xsd:string)
                 }
-            } GROUP BY ?name`;
+            } GROUP BY ?name } 
+            #regexFilter 
+            }
+            #countFilter
+        `;
     } else if (fileFormat === "csv") {
         var keyProperties = keys.map(function(index, element) {
             return 'rdf:_' + decodeURIComponent($(element).val()) + '';
@@ -2199,8 +2541,12 @@ function buildQuery(fileURL, keys, queryFilters) {
                 ${valuesClause} .
                 
                 FILTER(isLiteral(?label) && datatype(?label) = xsd:string)
+                #regexFilter 
                 }
-            }`;
+                } 
+            }
+        } 
+        #countFilter`;
     } else if (fileFormat === "json") {
         var keyProperties = keys.map(function(index, element) {
             return 'xyz:' + decodeURIComponent($(element).val()) + '';
@@ -2215,6 +2561,7 @@ function buildQuery(fileURL, keys, queryFilters) {
                 {
                         ?name ${keyProperties.join('|')} ?label .
                         FILTER(isLiteral(?label) && datatype(?label) = xsd:string)
+                        #regexFilter
                     }
                     UNION {
                         ?name ?keyProperties ?node .
@@ -2223,34 +2570,78 @@ function buildQuery(fileURL, keys, queryFilters) {
                         ?descendantNode ?labelProperty ?label .
                         
                         FILTER(isLiteral(?label) && datatype(?label) = xsd:string)
+                        #regexFilter
                     }
                     
-                }
-            }`;
+                }   
+            }
+        }} 
+        #countFilter`;
         /* WARNING: when retrieving Array's items, the max. amount of retrievable items is set to 10.
         To get a higher number of values, further rdf:_n properties must included within the query */
     }
 
     // add query filters
     if (queryFilters.length > 0) {
-        query = `SELECT ?label WHERE { {` + query.replace("SELECT DISTINCT ","SELECT ") + `}` ;
+        query = `SELECT DISTINCT ?label WHERE { {` + query.replace("SELECT DISTINCT ","SELECT ") ;
         queryFilters.each(function(index, element) {
             var filterType = $(element).find('select').val();
             var filterValue = $(element).find('input').val();
             filtersArray.push({filterType: filterValue})
 
             if (filterType === "regex") {
-                query+= `FILTER(REGEX(?label, "${filterValue}", "i")) }`
+                query = query.replaceAll("#regexFilter", `FILTER(REGEX(?label, "${filterValue}", "i"))`)
             }
             else if (filterType === "counter") {
-                query+= `}
-                GROUP BY ?label
-                HAVING (COUNT(?label) >= ${filterValue})`;
+                query = query.replaceAll("#countFilter", `GROUP BY ?label HAVING (COUNT(?label) >= ${filterValue})`);
             }
         });
     }
-
+    console.log(query)
     return [query, keysArray, filtersArray]
+}
+
+// build SPARQL query on websites from manual parameters
+function buildWebQuery(webUrl,selector,attribute,regex) {
+    let query = `PREFIX xyz: <http://sparql.xyz/facade-x/data/>
+PREFIX ns: <http://sparql.xyz/facade-x/ns/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX fx: <http://sparql.xyz/facade-x/ns/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX what: <https://html.spec.whatwg.org/#>
+PREFIX xhtml: <http://www.w3.org/1999/xhtml#>
+PREFIX ex: <http://www.example.com/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT DISTINCT ?label WHERE {
+SERVICE <x-sparql-anything:> {
+    fx:properties
+    fx:location "${webUrl}" ;
+    fx:blank-nodes "false" ;
+    fx:media-type "text/html" ;
+    fx:html.browser "firefox" ;
+    fx:html.browser.wait "5" ;
+    fx:http.header.User-Agent "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0" ;
+    fx:html.selector "${selector}" .
+`
+    var objectVariable = regex ? "?o" : "?label";
+    if (attribute) {
+        console.log(attribute);
+        query += `?s xhtml:${attribute} ${objectVariable} .\n`;
+    } else {
+        query += `?s what:innerText ${objectVariable} .\n`;
+    }
+ 
+    if (regex) {
+        console.log(regex);
+        query += `BIND(REPLACE(?o, ${regex}) AS ?label) .\n`
+    }
+
+    query += `  }
+}
+`;  
+    console.log(query);
+    return query
 }
 
 
@@ -2268,39 +2659,70 @@ function showExtractionResult(jsonData,type,extractionId,recordId,objectItem=nul
         resultTable.append("<tr><th>LABEL</th><th>URI</th></tr>");
 
         // set the results paths
+        let resultsArray = jsonData;        
         var jsonResults = objectItem["results"];
-        console.log(jsonResults)
-        var mainPath = jsonResults.array.split(".");
-        let resultsArray = jsonData;
-        mainPath.forEach(key => {
-            resultsArray = resultsArray[key];
-        });
+        var jsonFitlers = objectItem["filters"];
+        if ('array' in jsonResults) { 
+            var mainPath = jsonResults.array.split(".");
+            
+            mainPath.forEach(key => {
+                resultsArray = resultsArray[key];
+            });
+        }
         
         if (resultsArray === undefined) {
-            showErrorPopup(("error: check your parameters"))
+            showErrorPopup("Error:","Please, check your query parameters before proceeding!");
             return false;
         }
         resultsArray.forEach(function(res) {
-            // extract a label for each term
-            let labelPath = jsonResults.label.split(".");
-            let label = res;
-            labelPath.forEach(key => {
-                label = label[key];
-            });
-            // extract the URI value for each term
-            let uriPath = jsonResults.uri.split(".");
-            let uri = res;
-            uriPath.forEach(key => {
-                uri = uri[key];
-            });
+            let moveOn = true;
+            // check filters
+            jsonFitlers.forEach(function(filter) {
+                let filterPath = filter.key.split(".");
+                let filterKey = res;
+                filterPath.forEach(key => {
+                    filterKey = filterKey[key];
+                });
+                if (filter.type === "mincounter") {
+                    if (!(parseInt(filterKey) > parseInt(filter.value))) {
+                        moveOn = false;
+                    }
+                } else if (filter.type === "maxcounter") {
+                    if (!(parseInt(filterKey) < parseInt(filter.value))) {
+                        moveOn = false;
+                    }
+                } else if (filter.type === "regex") {
+                    let regex = new RegExp(filter.value);
+                    if (!regex.test(filterKey)) {
+                        moveOn = false;
+                    }
+                }
             
-            // create a new table row, append it to the table, and store each term information
-            var resultTableRow = $('<tr><td><span>' + label + '</span><i class="far fa-edit"></i></td><td><a href="' + uri + '">' + uri + '</a><i class="far fa-edit"></i></td></tr>');
-            resultTable.append(resultTableRow);
-            bindings.push({"uri": {'value':uri, 'type':'uri'}, 'label': {'value':label, 'type':'literal'}});
+            })
+
+            if (moveOn) {
+                // extract a label for each term
+                let labelPath = jsonResults.label.split(".");
+                let label = res;
+                labelPath.forEach(key => {
+                    label = label[key];
+                });
+                label = typeof(label) === "object" ? label[0] : label 
+                // extract the URI value for each term
+                let uriPath = jsonResults.uri.split(".");
+                let uri = res;
+                uriPath.forEach(key => {
+                    uri = uri[key];
+                });
+                
+                // create a new table row, append it to the table, and store each term information
+                var resultTableRow = $('<tr><td><span>' + label + '</span><i class="far fa-edit"></i></td><td><a href="' + uri + '">' + uri + '</a><i class="far fa-edit"></i></td></tr>');
+                resultTable.append(resultTableRow);
+                bindings.push({"uri": {'value':uri, 'type':'uri'}, 'label': {'value':label, 'type':'literal'}});
+            }
         });
 
-    } else if (type==='sparql' || type==='file') {
+    } else if (type==='sparql' || type==='file' || type==='web') {
 
         var labels = ["label", "uri"]
         var tr = $('<tr></tr>');
@@ -2318,7 +2740,6 @@ function showExtractionResult(jsonData,type,extractionId,recordId,objectItem=nul
 
             for (let i=0; i<labels.length; i++){
                 var label = labels[i];
-                console.log(label)
                 if (result[label].value !== null && result[label].value !== "") {
                     if (result[label].value.startsWith("https://") || result[label].value.startsWith("http://")) {
                         var item = "<a href='"+result[label].value+"' target='_blank'>"+result[label].value+"</a><i class='far fa-edit'></i>";
@@ -2336,15 +2757,16 @@ function showExtractionResult(jsonData,type,extractionId,recordId,objectItem=nul
     resultSection.append(resultTable);
     resultSection.find('i.fa-edit').each(function(index, element) {
         $(element).on('click', function() {
-            modifyExtractionResult($(this),index,extractionId,recordId);
+            modifyExtractionResult($(this),Math.floor(index/2),extractionId,recordId);
         });
     });
 
     // manage navigation buttons 
-    var buttonList = "<section class='row extractor-2'>\
-        <input id='api-back2' class='btn btn-dark extractor-2' style='margin-left:20px' value='Back' onClick='prevExtractor(this, \"extractor-2\", \"extractor-1\")'>\
-        <input id='api-next2' class='btn btn-dark extractor-2' style='margin-left:20px' value='Import' onClick='prevExtractor(this, \"extractor-2\", \"form_row\", true,\""+extractionId+"\",\""+recordId+"\")'>\
-    </section>";
+    var buttonList = $("<hr class='extractor-2'>\
+        <section class='row extractor-2'>\
+            <input id='api-back2' class='btn btn-dark extractor-2' style='margin-left:20px' type='button' value='Back' onClick='prevExtractor(this, \"extractor-2\", \"extractor-1\")'>\
+            <input id='api-next2' class='btn btn-dark extractor-2' style='margin-left:20px' type='button' value='Import' onClick='prevExtractor(this, \"extractor-2\", \"form_row\", true,\""+extractionId+"\",\""+recordId+"\")'>\
+        </section>");
     $('.extractor-1').hide();
     $('.import-form.block_field .block_field').append(resultSection);
     $('.import-form.block_field .block_field').append(buttonList);
@@ -2359,7 +2781,7 @@ function modifyExtractionResult(icon,index,extractionId,recordId) {
 
     const [extractorId, extractionCountStr] = extractionId.split('-');
     const extractionCount = parseInt(extractionCountStr);
-
+    console.log(icon,index,extractionId,recordId,extractionCount)
     // remove previous Event Listeners on click and get the Element to be modified
     $(icon).off("click");
     var stringElement = $(icon).prev();
@@ -2416,8 +2838,9 @@ function extractorPagination(extractionId,results) {
     var page_section = $('<section id="paginate" class="pagination row justify-content-md-center justify-content-lg-center extractor-2"></section>')
     for (let n=0; n<total;n++) {
         var page_n = n + 1
-        var button=$('<input id="page_'+page_n+'" class="btn btn-dark extractor-2" value="'+page_n+'" onClick="changeResultsPage(\''+page_n+'\', \''+length+'\')">');
-        page_section.append(button)
+        var activeClass = page_n == 1 ? " active-page" : "";
+        var button=$('<input id="page_'+page_n+'" type="button" class="btn btn-dark extractor-2'+activeClass+'" value="'+page_n+'" onClick="changeResultsPage(\''+page_n+'\', \''+length+'\')">');
+        page_section.append(button);
     }
 
     var extractionFieldId = "imported-graphs-"+extractionId.split("-")[0];
@@ -2425,8 +2848,9 @@ function extractorPagination(extractionId,results) {
 }
 
 function changeResultsPage(page_n, length) {
+    $(".active-page").removeClass("active-page");
+    $("#page_"+page_n).addClass("active-page");
     var starting_result = 25 * (parseInt(page_n)-1);
-    console.log(page_n, starting_result)
 
     $('.extractor-2').find('tr').addClass('hidden-result');
     if (length >= starting_result+25) {
@@ -2490,7 +2914,7 @@ function detectInputWebPage(input_elem) {
 };
   
 // destroy popovers for wayback machine
-function destroyPopover(el='savetheweb') {
+function destroyPopover(el='popover') {
     $("."+el).popover('hide');
   
 }
@@ -2498,10 +2922,10 @@ function destroyPopover(el='savetheweb') {
 // call an internal api to send a post request to Wayback machine
 function saveTheWeb(input_url) {
     console.log(input_url);
-    $(".savetheweb").popover('hide');
-    $(".savedtheweb").popover({
+    $(".popover").popover('hide');
+    $(".popover").popover({
         html: true,
-        title : "<span onclick=destroyPopover('savedtheweb')>x</span><h4>Thank you!</h4>",
+        title : "<span onclick=destroyPopover('popover')>x</span><h4>Thank you!</h4>",
         content: "<p>We sent a request to the Wayback machine.</p>",
         placement: "bottom",
     }).popover('show');
@@ -2510,7 +2934,11 @@ function saveTheWeb(input_url) {
         type: 'GET',
         url: "/savetheweb-"+encodeURI(input_url),
         success: function(returnedJson) {
+            $(".popover").popover('hide');
             console.log(returnedJson);
+        }, error: function(error) {
+            console.log(error);
+            
         }
     });
   

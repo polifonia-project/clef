@@ -39,7 +39,7 @@ def initialize_session(app):
 	Sessions are pickled in folder /sessions"""
 	if web.config.get('_session') is None:
 		store = web.session.DiskStore('sessions')
-		session = web.session.Session(app, store, initializer={'logged_in': 'False', 'username': 'anonymous', 'gituser': 'None', 'bearer_token': 'None', 'ip_address': 'None'})
+		session = web.session.Session(app, store, initializer={'logged_in': 'False', 'username': 'anonymous', 'gituser': 'None', 'bearer_token': 'None', 'ip_address': 'None', 'is_member': 'False'})
 		web.config._session = session
 		session_data = session._initializer
 	else:
@@ -85,8 +85,14 @@ def check_ip(ip_add, current_time):
 def get_dropdowns(fields):
 	""" retrieve Dropdowns ids to render them properly
 	in Modify and Review form"""
-	ids_dropdown= [field['id'] for field in fields if field['type'] == 'Dropdown']
+	ids_dropdown= [field['id'] for field in fields if field['type'] in ['Dropdown', 'Subclass']]
 	return ids_dropdown
+
+def get_subtemplates(fields):
+	""" retrieve Subtemplates ids to render them properly
+	in Modify and Review form"""
+	ids_subtemplates= [field['id'] for field in fields if field['type'] == 'Subtemplate']
+	return ids_subtemplates
 
 def get_timestamp():
 	""" return timestamp when creating a new record """
@@ -129,16 +135,13 @@ def get_LOV_labels(term, term_type=None):
 
 def get_LOV_namespace(term):
 	""" get prefixed name of a property"""
-	print("TERM:",term)
 	term, label = term, split_uri(term)
-	print("TERM2:",term, label)
 	lov_api = "https://lov.linkeddata.es/dataset/lov/api/v2/term/search?q="
 	label_en = "http://www.w3.org/2000/01/rdf-schema#label@en"
 	req = requests.get(lov_api+label+"&type=property")
 
 	if req.status_code == 200:
 		res = req.json()
-		print(res)
 		for result in res["results"]:
 			if result["uri"][0] in [term, term.replace("https","http")]:
 				prefixed_name = result["prefixedName"]
@@ -160,14 +163,48 @@ def toid(s):
 	s = s.replace(" ", "_")
 	return s
 
+def config_template(tpl_name,data):
+	""" save initial settings about the new template in template_list.json
+	
+	Parameters
+	----------
+	tpl_name: string
+		the name of the configured template
+	data: dict
+		initial settings from front-end
+	"""
+	with open(TEMPLATE_LIST, 'r', encoding='utf-8') as tpl_file:
+		tpl_list = json.load(tpl_file)
+
+	tpl = next(tpl_item for tpl_item in tpl_list if tpl_item['short_name'] == tpl_name)
+
+	for k, v in data.items():
+		if "description" in k:
+			tpl["description"] = v
+		elif "hideTemplate" in k:
+			tpl["hidden"] = "True"
+		elif "subclass" in k and v:
+			uri, label = v.split(",", 1)
+			tpl["subclasses"][uri.strip()] = label.strip()
+		elif "otherSubclass" in k:
+			tpl["other_subclass"] = "True"
+		elif "keyword-class" in k and v:
+			uri, label = v.split(",", 1)
+			tpl["keywords_classes"][uri.strip()] = label.strip()
+
+	with open(TEMPLATE_LIST, 'w', encoding='utf-8') as tpl_file:
+		json.dump(tpl_list, tpl_file, indent=1)
+
+
 def fields_to_json(data, json_file, skos_file):
 	""" setup/update the json file with the form template
 	as modified via the web page *template* """
 
 	list_dicts = defaultdict(dict)
 	#list_ids = sorted([k.split("__")[0] for k in data.keys()])
-	template_config = {'hidden': 'True',
-					'subclasses': {}}
+	with open(TEMPLATE_LIST, 'r') as file:
+		tpls = json.load(file)
+	tpl_config = next(template for template in tpls if template["template"] == json_file)
 
 	for k,v in data.items():
 		if k != 'action' and '__template__' not in k:
@@ -176,9 +213,6 @@ def fields_to_json(data, json_file, skos_file):
 			idx, json_key , field_id = k.split("__")
 			list_dicts[int(idx)]["id"] = field_id
 			list_dicts[int(idx)][json_key] = v
-		elif '__template__' in k:
-			if v == 'on':
-				template_config['hidden'] = 'False'
 			
 	list_dicts = dict(list_dicts)
 	for n,d in list_dicts.items():
@@ -189,17 +223,19 @@ def fields_to_json(data, json_file, skos_file):
 			#d["value"] = "URI"
 			#d['values'] = { pair.split(",")[0].strip():pair.split(",")[1].strip() for pair in values_pairs } if values_pairs[0] != "" else {}
 			
-		if d["type"] in ["Subclass", "Dropdown", "Checkbox"]:
+		if d["type"] in ["Dropdown", "Checkbox"]:
 			values = [d[value_key] for value_key in d if value_key.startswith("value")]
-			print("b",values)
 			d["value"] = "URI"
 			d["values"] = { urllib.parse.unquote(pair.split(",")[0]).strip():urllib.parse.unquote(pair.split(",")[1]).strip() for pair in values } if len(values) > 0 else {}
-			print("a:",d["values"])
 
 		# set subclasses
 		if d["type"] == "Subclass":
+			d["value"] = "URI"
 			d["restricted"] = []
-			template_config["subclasses"] = d["values"]
+			d["values"] = tpl_config["subclasses"]
+			if tpl_config["other_subclass"] == "True":
+				d["values"]["other"] = "Other"
+
 		else:
 			d["restricted"] = [urllib.parse.unquote(d[subclass_key]) for subclass_key in d if subclass_key.startswith("subclass")] 
 		
@@ -227,8 +263,8 @@ def fields_to_json(data, json_file, skos_file):
 		if d["type"] in ["Textarea"]:
 			d["value"] = "Literal"
 		if d['type'] == 'KnowledgeExtractor':
+			d["value"] = "URI"
 			d['knowledgeExtractor'] = "True"
-			d["value"] = "undefined"
 		else:
 			if len(d["label"]) == 0:
 				d["label"] = "no label"
@@ -246,7 +282,7 @@ def fields_to_json(data, json_file, skos_file):
 		vocab_data = update_skos_vocabs(d, SKOS_VOCAB)
 		d['skosThesauri'] = vocab_data[0]
 		for idx in range(len(vocab_data[1])):
-			d['skos'+vocab_data[1][idx]] = d['skos'][idx] 
+			d['skos'+vocab_data[1][idx]] = d['skosThesauri'][idx] 
 
 		# imported subtemplates
 		d["import_subtemplate"] = [RESOURCE_TEMPLATES+field_key+".json" for field_key in d if field_key.startswith("template-")]
@@ -277,12 +313,6 @@ def fields_to_json(data, json_file, skos_file):
 	with open(TEMPLATE_LIST, 'r') as file:
 		tpls = json.load(file)
 
-	# Modify the template status in tpl_list
-	for tpl in tpls:
-		if tpl['template'] == json_file:
-			tpl['hidden'] = template_config['hidden']
-			tpl['subclasses'] = template_config['subclasses']
-
 	with open(TEMPLATE_LIST, 'w') as file:
 		json.dump(tpls, file, indent=1)
 
@@ -290,7 +320,7 @@ def validate_setup(data):
 	""" Validate user input in setup page and check errors / missing values"""
 
 	data["myEndpoint"] = data["myEndpoint"] if "myEndpoint" in data and data["myEndpoint"].startswith("http") else "http://127.0.0.1:3000/blazegraph/sparql"
-	data["myPublicEndpoint"] = data["myPublicEndpoint"] if data["myPublicEndpoint"].startswith("http") else "http://127.0.0.1:3000/blazegraph/sparql"
+	data["myPublicEndpoint"] = data["myPublicEndpoint"] if data["myPublicEndpoint"].startswith("http") else "http://127.0.0.1:8080/bigdata/sparql"
 	data["sparqlAnythingEndpoint"] = data["sparqlAnythingEndpoint"] if data["sparqlAnythingEndpoint"].startswith("http") else "http://127.0.0.1:8081/sparql.anything"
 	data["base"] = data["base"] if data["base"].startswith("http") else "http://example.org/base/"
 	# data["main_entity"] = data["main_entity"] if data["main_entity"].startswith("http") else "http://example.org/entity/"
@@ -347,10 +377,13 @@ def updateTemplateList(res_name=None,res_type=None,remove=False):
 		res = {}
 		res["name"] = res_name
 		res["short_name"] = res_name.replace(' ','_').lower()
+		res["description"] = ""
 		res["type"] = res_type
 		res["template"] = RESOURCE_TEMPLATES+'template-'+res_name.replace(' ','_').lower()+'.json'
 		res["hidden"] = "False"
 		res["subclasses"] = {}
+		res["other_subclass"] = "False"
+		res["keywords_classes"] = {}
 		data.append(res)
 
 		with open(TEMPLATE_LIST,'w') as tpl_file:
@@ -373,13 +406,14 @@ def updateTemplateList(res_name=None,res_type=None,remove=False):
 
 def get_template_from_class(res_type):
 	print("###res_type",res_type)
-	""" Return the template file path given the URI of the OWL class
+	""" Return the template file path and a list of subclasses given the URI of the OWL class
 
 	Parameters
 	----------
-	res_type: str
+	res_type: list
 		URI of the class associated to the template. Becomes dictionary value
 	"""
+	res_subclasses = []
 
 	with open(TEMPLATE_LIST,'r') as tpl_file:
 		data = json.load(tpl_file)
@@ -387,9 +421,10 @@ def get_template_from_class(res_type):
 	for t in data:
 		for s in t["subclasses"]:
 			if s in res_type:
+				res_subclasses.append(s) 
 				res_type.remove(s)
-	res_template = [t["template"] for t in data if t["type"] == sorted(res_type)][0]
-	return res_template
+	res_template = next((t["template"] for t in data if t["type"] == sorted(res_type)), None)
+	return res_template, res_subclasses
 
 def get_class_from_template(res_tpl):
 	print("###res_template",res_tpl)
@@ -490,6 +525,23 @@ def change_template_names(is_git_auth=True):
 				del ask_tpl[0]['values'][tpl_file]
 	return ask_tpl
 
+def get_templates_description():
+	""" Return a list of descriptions of available templates """
+	with open(TEMPLATE_LIST,'r') as tpl_file:
+		data = json.load(tpl_file)
+
+	descriptions_dict = {tpl["template"]: {"description": tpl.get("description", ""), "name": tpl.get("name", "")} for tpl in data}
+	return descriptions_dict
+
+
+def get_keywords_classes(tpl_name):
+	""" Returns a dictionary of classes that can be assigned to keywords. """
+	with open(conf.template_list) as tpl_file:
+		tpl_list = json.load(tpl_file)
+
+	keywords_classes = next((t["keywords_classes"] for t in tpl_list if t["template"] == tpl_name), None)
+	return keywords_classes
+
 # UTILS
 
 def key(s):
@@ -546,7 +598,7 @@ def update_skos_vocabs(d, skos):
 
 
 # KNOWLEDGE EXTRACTION
-def has_extractor(res_template, record_name=None, processed_templates=[]):
+def has_extractor(res_template, record_name=None, processed_templates=[], res_subclasses=[]):
 	"""Return a list of Knowledge Extraction input fields (if record_name == None) 
 	or a list of named graphs that may contain extractions (if record_name != None)
 
@@ -571,7 +623,11 @@ def has_extractor(res_template, record_name=None, processed_templates=[]):
 
 			#check whether the Graph may contain any Extraction
 			if 'knowledgeExtractor' in field and field['knowledgeExtractor'] == 'True':
-				result.append((graph_uri, field['property'], field['label'], field['id']))
+				if res_subclasses != []:
+					if field['restricted'] == [] or any(res_subclass in field['restricted'] for res_subclass in res_subclasses):
+						result.append((graph_uri, field['property'], field['label'], field['id'], field['value']))
+				else:
+					result.append((graph_uri, field['property'], field['label'], field['id'], field['value']))
 
 			#check whether the Graph may contain any sub-Record
 			if 'import_subtemplate' in field and field['import_subtemplate'] != []:
@@ -596,9 +652,10 @@ def has_extractor(res_template, record_name=None, processed_templates=[]):
 					pre = field['prepend'] if 'prepend' in field else ""
 					field_id = field['id'] if 'id' in field else ""
 					service = field['service'] if 'service' in field else ""
+					subclass_restriction = "; ".join(field['restricted']) if 'restricted' in field else ""
 
 					# store the extractor details as a tuple
-					result.append((res_template, label, pre, field_id, service))
+					result.append((res_template, label, pre, field_id, service, subclass_restriction))
 
 				elif 'import_subtemplate' in field and field['import_subtemplate'] != []:
 					# iterate over sub-templates
@@ -639,7 +696,6 @@ def get_query_templates(res_tpl):
 			field_thesauri = field['skosThesauri']
 			query_dict[field_id] = []
 			for thesaurus in field_thesauri:
-				print(query_dict[field_id])
 				if thesaurus in skos_file:
 					included_thesauri = query_dict[field_id]
 					included_thesauri.append({ thesaurus: skos_file[thesaurus] })

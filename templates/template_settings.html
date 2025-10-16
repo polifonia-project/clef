@@ -1,0 +1,171 @@
+$def with(user,res_config,is_git_auth,project,main_lang)
+$var user = user
+$var is_git_auth = is_git_auth
+$var project = project
+$var main_lang = main_lang
+
+$ res_name = res_config['name']
+$ res_type = '; '.join(res_config['type'])
+$ res_description = res_config['description']
+$ res_subclasses = res_config['subclasses']
+$ res_other_subclass = res_config['other_subclass']
+$ res_keywords_classes = res_config['keywords_classes']
+$ is_hidden = res_config['hidden']
+
+<script>
+	var subclasses = JSON.parse('$res_subclasses'.replace(/&#39;/g, '"'))
+</script>
+
+<header class="row">
+	<h3 class="col-md-12 col-sm-12">$res_name</h3>
+	<p class="col-md-12 col-sm-12" id='res_type' class='col-md-8'>
+		$res_type
+		<span class="tip" data-toggle="tooltip" data-placement="bottom"
+			title="" data-original-title="You cannot change template name and class.">
+			<i class="fas fa-info-circle"></i></span>
+	</p>
+</header>
+<section class="corners row set_template_field">
+
+	<!-- TEMPLATE FORM -->
+	<section class="col-lg-8 col-md-12 col-sm-12">
+
+		<form id="templateForm" class="col-md-12 col-sm-12 col-lg-12" action="" method="POST">
+			<section class="row">
+				<section class="sortable homeheading col-md-12 col-lg-12 col-sm-12">
+
+					<section id="stepper">
+						<div class="stepper">
+							<div class="step-wrapper active">
+								<div class="step">1</div>
+								<span class="stepper-label">Step 1: Initial settings</span>
+							</div>
+							<div class="line"></div>
+							<div class="step-wrapper">
+								<div class="step">2</div>
+								<span class="stepper-label">Step 2: Configure fields</span>
+							</div>
+						</div>
+					</section>
+
+					<!-- SETTINGS -->
+					<section class="block_field" data-id="">
+						<!-- Template Description -->
+						<section class="row">
+							<label class='col-md-3'>DESCRIPTION <br><span class="comment">a short explanation of the resource type represented in this template</span></label>
+							<textarea id='description' class='col-md-8 align-self-start' name='description' rows="5" placeholder="e.g., description of research outputs such as journal articles, datasets, software, or reports">$res_description</textarea>
+						</section>
+						<!-- Template Subclasses -->
+						<section class="row">
+							<label class='col-md-3'>SUBCLASSES <br><span class="comment">define values as URI, label pairs</span></label>
+							<section class="col-md-8">
+								<ul id="subclass" class="col-md-12 values-list">
+									<li><label class="inner-label col-md-12">Subclasses List</label></li>
+									$ idx = 0
+									$for uri,lab in res_subclasses.items():
+										$if uri != "other":
+											$ idx +=1
+											$ value_id = "value" + str(idx) + "__subclasses"
+											<li>
+												<label>$lab.strip() <i class="far fa-edit" onclick="modifyLabelURI(this)"></i> <i class="far fa-trash-alt" onclick="removeLabelURI(this)"></i></label>
+												<input type="hidden" id="$value_id" name="$value_id" value="$uri.strip(),$lab.strip()">
+											</li>
+									<li><label class="add-option">ADD NEW VALUE <i class="fas fa-plus-circle" onclick="addLabelURI(this, 'subclass')"></i></label></li>
+								</ul>
+							</section>
+						</section>
+						<section class='row'>
+							<!-- Include Other option -->
+							$ checked = 'checked="checked"' if res_other_subclass == "True" else ''
+							<label class='col-md-3'>"OTHER" SUBCLASS <br><span class='comment'>add an "Other" option to the Subclass dropdown</span></label>
+							<section class='col-md-8'>
+								<label for="otherSubclass">
+									Enable "Other" option
+									<input type="checkbox" id="otherSubclass" name="otherSubclass" value="true" $checked>
+								</label>
+							</section>
+						</section>
+						<!-- Template Keywords Classes -->
+						<section class="row">
+							<label class='col-md-3'>EXTRACTION CLASSES <br><span class='comment'>a list of classes that can be assigned to extracted entities and keywords </span></label>
+							<section class="col-md-8">
+								<ul id="keyword-class" class="col-md-12 values-list">
+									<li><label class="inner-label col-md-12">Extraction Classes List</label></li>
+									$ idx = 0
+									$for uri,lab in res_keywords_classes.items():
+										$if uri != "other":
+											$ idx +=1
+											$ value_id = "value" + str(idx) + "__keyword-class"
+											<li>
+												<label>$lab.strip() <i class="far fa-edit" onclick="modifyLabelURI(this, 'keyword-class')"></i> <i class="far fa-trash-alt" onclick="removeLabelURI(this)"></i></label>
+												<input type="hidden" id="$value_id" name="$value_id" value="$uri.strip(),$lab.strip()">
+											</li>
+									<li><label class="add-option">ADD NEW VALUE <i class="fas fa-plus-circle" onclick="addLabelURI(this, 'keyword-class')"></i></label></li>
+								</ul>
+							</section>
+						</section>
+						<!-- Hide Template -->
+						<section class="row">
+							<!-- Hide Template -->
+							$ checked = 'checked="checked"' if is_hidden == "True" else ''
+							<label class="col-md-3">HIDE TEMPLATE <br><span class="comment">check this option to hide the template from users</span></label>
+							<section class="col-md-8">
+								<label for="hideTemplate">
+									Hide this template
+									<input type="checkbox" id="hideTemplate" name="hideTemplate" value="true" $checked>
+								</label>
+							</section>
+						</section>
+					</section>
+					
+
+						
+				</section>
+			</section>
+			<section class="buttonsSection">
+				<button id="update-template-settings" name="action" value="modifyFields-$res_name" class="btn btn-dark" type="submit">Save</button>
+				<button class="btn btn-dark delete_template" data-toggle="modal" data-target="#popup" name="action" value="deleteTemplate-$res_name" type="submit" title="delete">Delete <i class="far fa-trash-alt"></i></button>
+			</section>
+		</form>
+	</section>
+
+	<!-- TIPS SECTION -->
+	<section class="homeheading col-md-12 col-sm-12 col-lg-4">
+		<p class="caption">Tips</p>
+		<p>Here is a short guide to help you configure the template settings before defining your fields.</p>
+		<h5>Description</h5>
+		<p>
+			Provide a short description of the type of resources covered by this template.
+			For example: <code>Research products are the tangible outcomes of research activities, including Digital Scholarly Editions, Text Collections, Linked Open Data, Software, Ontologies, and more.</code>
+			This helps clarify the scope of the template and guide users in its correct application.
+		</p>
+		<h5>Subclasses</h5>
+		<p>
+			Define additional categories of resources by specifying <code>URI</code> and <code>label</code> pairs.
+			These subclasses allow you to specialize the template for different types of entities.
+			Once defined, subclasses can be used to restrict certain fields so that they appear only when a specific subclass is selected.
+		</p>
+		<h5>"Other" Subclass</h5>
+		<p>
+			Enable this option if you want the subclass dropdown to include an <code>Other</code> choice.
+			This is useful when the predefined list of subclasses may not cover all possible cases, giving users the flexibility
+			to classify resources outside the standard options.
+		</p>
+		<h5>Extraction Classes</h5>
+		<p>
+			Specify which classes can be assigned to entities and keywords automatically extracted from text.
+			For each class, provide the <code>URI</code> and a human-readable <code>label</code>.
+			This allows extracted terms (e.g., people, places, organizations) to be properly categorized and reused across records.
+		</p>
+		<h5>Hide Template</h5>
+		<p>
+			Check this option if you do not want the template to be visible to end users. 
+			Hidden templates remain available to administrators but cannot be selected when creating new records.
+		</p>
+	</section>
+</section>
+<link rel="stylesheet" type="text/css" href="./static/css/yasgui.css">
+<script src='static/js/yasr.bundled.min.js'></script>
+<script src='static/js/yasqe.bundled.min.js'></script>
+<script src="static/js/sparql.js"></script>
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>

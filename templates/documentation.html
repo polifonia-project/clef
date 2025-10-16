@@ -44,8 +44,8 @@ $var main_lang = main_lang
 			<h4>Tips: Knowledge Extraction</h4>
 			<section class="articleSubsection">
 				<p>Some fields are not expected to be filled as usual. Instead, they provide an advanced functionality for extracting Key Entities from various sources.
-					A dropdown allows you to select the option you prefer to run your query (a SPARQL endpoint, an API service, a static file).</p>
-				<p><i class="fas fa-exclamation-circle"></i> <em>To properly use this Knowledge Extraction tool, you must always retrieve <code>uri</code>-<code>label</code> pairs. In case a URI is not available, you should use the <code>uri</code> variable to retrieve the best suited label for entity reconciliation. The system will automatically retrieve the best URI from the configured service.</em></p>
+					A dropdown allows you to select the option you prefer to run your query (a SPARQL endpoint, an API service, a static file, a website).</p>
+				<p><i class="fas fa-exclamation-circle"></i> <em>To properly use this Knowledge Extraction tool, you must always retrieve <code>uri</code>-<code>label</code> pairs. In case a URI is not available, you should use the <code>uri</code> variable to retrieve the best suited label for entity reconciliation. The system will automatically retrieve the best URI from the configured service. Conversely, if a label is missing, it will also be automatically retrieved from the configured service.</em></p>
 				<h3 class="articleSubtitle">API</h3>
 				<p>Required parameters to send a query to an API service include:</p>
 				<ul>
@@ -58,6 +58,7 @@ $var main_lang = main_lang
 							<code>label</code>,prefLabel<br>
 						</p>
 					</li>
+					<li>Filter results (<em>optional</em>): allows you to refine the retrieved data by applying one or more filters to specific variables returned by the query. Each filter must specify: the <em>filter type</em> (<code>Regex</code>, <code>Greater than</code>, <code>Less than</code>), the <em>target variable</em> (the field to which the filter applies), and the <em>filter value</em> (the threshold or regex pattern). For example: <code>("Greater than", "Mentions counter", "10")</code> retrieves only items where the "Mentions counter" value exceeds 10.</li>
 				</ul>
 				<h3 class="articleSubtitle">SPARQL</h3>
 				<p>Required parameters to send a query to an API service include:</p>
@@ -71,8 +72,15 @@ $var main_lang = main_lang
 					<li>Manual query: provide the URL of a compatible file. Its content will be parsed to extract <em>json keys</em>, <em>csv column labels</em>, or <em>xml tags</em>. You can use these outputs to retrieve meaningful entities. However, variables disambiguation is not available, so you should get labels and let the system automatically retrieve URIs.</li>
 					<li>SPARQL query: provide the URL of a compatible file and a SPARQL query to retrieve <code>?uri</code> and <code>?label</code>. Please follow SPARQL Anything recomendations to properly interrogate different file formats.</li>
 				</ul>
+				<h3 class="articleSubtitle">Websites</h3>
+				<p>Required parameters to extract information from websites include:</p>
+				<ul>
+					<li>Website URL (<em>mandatory</em>): the URL of the target website to be processed.</li>
+					<li>HTML Selector (<em>mandatory</em>): a valid selector used to isolate meaningful HTML elements within the loaded DOM structure.</li>
+					<li>HTML Attribute (<em>optional</em>): by default, the inner text of the selected HTML element is retrieved and used as the label for Entity Reconciliation to obtain a URI. Alternatively, you can specify the name of an attribute (e.g., <code>href</code>, <code>src</code>, <code>title</code>) to extract its corresponding values.</li>
+					<li>Regex (<em>optional</em>): a regular expression used to transform or clean the extracted text. You must provide two patterns — one for search and one for replacement — separated by a comma (e.g., <code>"pattern_to_find","replacement_pattern"</code>). The modified label will then be available for entity reconciliation.</li>
+				</ul>
 			</section>
 		</section>
-
 	</section>
 </section>

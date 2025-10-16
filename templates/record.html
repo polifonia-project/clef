@@ -1,4 +1,4 @@
-$def with(record_form,pageID,user,alert,limit,is_git_auth,invalid,project,template,query_templates,knowledge_extractor,main_lang)
+$def with(record_form,pageID,user,alert,limit,is_git_auth,invalid,project,template,query_templates,knowledge_extractor,main_lang,descriptions_dict,keywords_classes=None)
 $var user = user
 $var is_git_auth = is_git_auth
 $var project = project
@@ -10,8 +10,14 @@ $if alert == False:
 			const query_templates_str = '$query_templates'.replace(/&#39;/g, '"');
 			const query_templates = JSON.parse(query_templates_str);
 		</script>
+	$if keywords_classes!=None:
+		<script type="text/javascript">
+			const keywords_classes_str = '$keywords_classes'.replace(/&#39;/g, '"');
+			const keywords_classes = JSON.parse(keywords_classes_str);
+		</script>
 	<header class="row needDoc">
 		<button id="showRight"><i class="far fa-lightbulb"></i> help</button>
+		<button id="saveForm" form="recordForm" type="submit"><i class="far fa-save"></i> save</button>
 		$if template:
 			<button id="scrollToTop"><i class="fas fa-arrow-up"></i> top</button>
 		<script type="text/javascript">
@@ -20,8 +26,15 @@ $if alert == False:
 			} );
 			setTimeout( function(){ document.getElementById( "recordForm" ).reset(); }, 5 );
 		</script>
+		<script type="text/javascript">
+			const templatesDescriptionString = '$descriptions_dict'.replace(/&#39;/g, '"');
+			const templatesDescription = JSON.parse(templatesDescriptionString);
+		</script>
 		$if invalid == True:
 			<h3>The form is not valid, please check mandatory fields</h3>
+		$elif template:
+			<h3 class="col-md-12 col-sm-12">$descriptions_dict[template]["name"]</h3>			
+			<p class="col-md-12 col-sm-12">$descriptions_dict[template]["description"]</p>
 		$else:
 			<h3>Thanks for helping $project to grow!</h3>
 	</header>
@@ -31,14 +44,14 @@ $if alert == False:
 		</section>
 		$ form_section_id = ""
 		$if template:
-			<section class="col-md-3 col-lg-3 col-sm-3 homeheading" id="table-of-contents">
+			<section class="col-md-3 col-lg-3 col-sm-12 homeheading" id="table-of-contents">
 				<section>
 					<p class="caption">Table of contents</p>
 					<ul class="fields-list"></ul>
 				</section>
 			</section>
 			$ form_section_id += 'id=form-section'
-		<section class="col-md-8 col-lg-8 col-sm-8 homeheading" $form_section_id>
+		<section class="col-md-8 col-lg-8 col-sm-12 homeheading" $form_section_id>
 			<form id="recordForm" class="col-md-12 col-sm-12 col-lg-12" action="" method="POST">
 				<input type='hidden' name='recordID' value=$:pageID>
 				$if template:
@@ -90,7 +103,6 @@ $if alert == False:
 										</script>
 								</section>
 								<script type="text/javascript">
-									console.log('$id')
 									var elements = $$('#$id')[0].attributes;
 									var attrsToChange = [];
 
@@ -111,6 +123,7 @@ $if alert == False:
 							$ extractors_prepend = [tpl[2] for tpl in knowledge_extractor]
 							$ extractors_id = [tpl[3] for tpl in knowledge_extractor]
 							$ extractors_service = [tpl[4] for tpl in knowledge_extractor]
+							$ extractors_subclass_restriction = [tpl[5] for tpl in knowledge_extractor]
 							<script type="text/javascript">
 								const extractionsObj = {}
 								const extractorsArray = JSON.parse('$extractors_template_ids'.replace(/&#39;/g, '"'));
@@ -118,6 +131,7 @@ $if alert == False:
 								const extractorsPrepend = JSON.parse('$extractors_prepend'.replace(/&#39;/g, '"'));
 								const extractorsIds = JSON.parse('$extractors_id'.replace(/&#39;/g, '"'));
 								const extractorsService = JSON.parse('$extractors_service'.replace(/&#39;/g, '"'));
+								const extractorsRestriction = JSON.parse('$extractors_subclass_restriction'.replace(/&#39;/g, '"'));
 								if (extractorsArray.includes('$template')) {
 									generateExtractionField('$template','$pageID');
 								}
@@ -132,8 +146,9 @@ $if alert == False:
 		</section>
 		<section id="searchresult">
 		</section>
-		<section class="col-md-3" id="lookup">
-		</section>
+		$if not template:
+			<section class="col-lg-3 col-md-3 col-12" id="templates-description">
+			</section>
 	</section>
 	<link rel="stylesheet" type="text/css" href="./static/css/yasgui.css">
 	<script src='static/js/yasr.bundled.min.js'></script>

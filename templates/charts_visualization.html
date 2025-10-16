@@ -14,7 +14,11 @@ $var main_lang = main_lang
 <script src="https://cdn.amcharts.com/lib/5/percent.js"></script> <!-- pie charts -->
 <script src="https://cdn.amcharts.com/lib/5/map.js"></script> <!-- maps -->
 <script src="https://cdn.amcharts.com/lib/5/geodata/worldLow.js"></script> <!-- maps -->
+<script src="https://cdn.amcharts.com/lib/5/hierarchy.js"></script> <!-- direct tree -->
 <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+<script src="https://cdn.knightlab.com/libs/timeline3/latest/js/timeline.js"></script> <!-- timeline -->
+<link rel="stylesheet" href="https://cdn.knightlab.com/libs/timeline3/latest/css/timeline.css"> <!-- timeline style -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css">
 
 
 <!-- Charts -->
@@ -23,17 +27,17 @@ $var main_lang = main_lang
 	$for chart in charts["charts"]:
 		$ heading_class = "full-width" if chart["description"] == "" else ""
 		$if chart["type"] == "counter":
-			<section class="row counters">
+			<section class="row counters section-fade">
 				<section class="chart-heading $heading_class">
 					<h2>$chart["title"]</h2>
 					<p data-id="$chart['id']"></p>
 				</section>
-			$for counter in chart["counters"]:
-				$if "count" in counter:
-					<section class="counterBox col-md-2 col-sm-5">
-						<p class="counterNum">$counter["count"]</p>
+				$for counter in chart["counters"]:
+					<section class="counterBox col-lg-2 col-md-5 col-sm-5">
+						<p class="counterNum"> </p>
 						<p class="counterLabel">$counter["title"]</p>
 					</section>
+				<script type="application/json">$:chart["json"]</script>
 			</section>
 			<script>
 				var htmlContent = `$chart['description']`
@@ -46,20 +50,17 @@ $var main_lang = main_lang
 			$ map_type = chart["mapType"]
 			$ info = chart["info"]
 			$ info_data = info + "_data"
-			<section class="row stats-block">
-				<section class="chart-heading $heading_class">
+			<section class="row stats-block section-fade">
+				<section class="col-lg-5 col-md-12 col-sm-12 chart-heading $heading_class">
 					<h2>$chart["title"]</h2>
 					<p data-id="$chart['id']"></p>
 				</section>
-				<section class="col-md-6 col-sm-12">
-					<div id="$info" class="map-chart" style="height:55vh"></div>
+				<section class="col-lg-6 col-md-12 col-sm-12">
+					<div id="$info" class="chart-body map-chart" style="height:65vh">
+					</div>
 				</section>
 			</section>
-			<script id="$info_data" type="application/json">$:chart["stats"]</script>
-			$if map_type == "drilldown-map":
-				<script>mapDrillDown("$info");</script>
-			$else:
-				<script>map("$info");</script>
+			<script id="$info_data" type="application/json">$:chart["json"]</script>
 			<script>
 				var htmlContent = `$chart['description']`
 					.replace(/&lt;/g, "<")
@@ -68,53 +69,17 @@ $var main_lang = main_lang
 				$$("[data-id='$chart['id']']").html(htmlContent);
 			</script>
 		$elif chart["type"] == "chart":
-			$if chart["chartType"] == "bar":
-				$ info = chart["info"]
-				<section class="row stats-block">
-					<section class="chart-heading $heading_class">
-						<h2>$chart["title"]</h2>
-						<p data-id="$chart['id']"></p>
-					</section>
-					<div id="$info[0]" class="col-md-6 col-sm-12" style="height:55vh"></div>
+			$ info = chart["info"]
+			$ chart_heading_width = "col-lg-4" if "sorted" in chart and chart["sorted"] == "x" else "col-lg-5"
+			$ chart_body_width = "col-lg-7" if "sorted" in chart and chart["sorted"] == "x" else "col-lg-6"
+			<section class="row stats-block section-fade">
+				<section class="$chart_heading_width col-md-12 col-sm-12 chart-heading $heading_class">
+					<h2>$chart["title"]</h2>
+					<p data-id="$chart['id']"></p>
 				</section>
-				<script id="$info[0]_data" type="application/json">$:chart["stats"]</script>
-				$if chart["y-var"] == "?label":
-					<script>invertedBarchart("$info[0]","$info[1]","$info[2]"); </script>
-				$elif chart["x-var"] == "?label":
-					<script>barchart("$info[0]","$info[1]","$info[2]"); </script>
-			$elif chart["chartType"] == "pie":
-				$ info = chart["info"]
-				<section class="row stats-block">
-					<section class="chart-heading $heading_class">
-						<h2>$chart["title"]</h2>
-						<p data-id="$chart['id']"></p>
-					</section>
-					<div id="$info[0]" class="col-md-6 col-sm-12" style="height:70vh"></div>
-				</section>
-				<script id="$info[0]_data" type="application/json">$:chart["stats"]</script>
-				<script>piechart("$info[0]","$info[1]","$info[2]","$chart['legend']",donut=false,semi=false); </script>
-			$elif chart["chartType"] == "donut":
-				$ info = chart["info"]
-					<section class="row stats-block">
-						<section class="chart-heading $heading_class">
-							<h2>$chart["title"]</h2>
-							<p data-id="$chart['id']"></p>
-						</section>
-						<div id="$info[0]" class="col-md-6 col-sm-12" style="height:70vh"></div>
-					</section>
-					<script id="$info[0]_data" type="application/json">$:chart["stats"]</script>
-					<script>piechart("$info[0]","$info[1]","$info[2]","$chart['legend']",donut=true,semi=false); </script>
-			$elif chart["chartType"] == "semi-circle":
-				$ info = chart["info"]
-					<section class="row stats-block">
-						<section class="chart-heading $heading_class">
-							<h2>$chart["title"]</h2>
-							<p data-id="$chart['id']"></p>
-						</section>
-						<div id="$info[0]" class="col-md-g col-sm-12" style="height:70vh"></div>
-					</section>
-					<script id="$info[0]_data" type="application/json">$:chart["stats"]</script>
-					<script>piechart("$info[0]","$info[1]","$info[2]","$chart['legend']",donut=true,semi=true); </script>
+				<div id="$info[0]" class="chart-body $chart_body_width col-md-12 col-sm-12" style="height: 65vh"></div>
+			</section>
+			<script id="$info[0]_data" type="application/json">$:chart["json"]</script>
 			<script>
 				var htmlContent = `$chart['description']`
 					.replace(/&lt;/g, "<")
@@ -122,7 +87,33 @@ $var main_lang = main_lang
 					.replace(/&#39;/g, "'");
 				$$("[data-id='$chart['id']']").html(htmlContent);
 			</script>
-		<hr class="charthr">	
-		
+		$elif chart["type"] == "timeline":
+			$ info = chart["info"]
+			$ info_data = info + "_data"
+			<section class="row stats-block section-fade">
+				<section class="col-lg-12 col-md-12 col-sm-12 chart-heading $heading_class">
+					<div id="$info" class="chart-body timeline" style="height: 65vh"></div>
+				</section>
+			</section>
+			<script id="$info_data" type="application/json">$:chart["json"]</script>
+		$elif chart["type"] == "network":
+			$ info = chart["info"]
+			$ info_data = info + "_data"
+			<section class="row stats-block section-fade">
+				<section class="col-lg-4 col-md-12 col-sm-12 chart-heading $heading_class">
+					<h2>$chart["title"]</h2>
+					<p data-id="$chart['id']"></p>
+				</section>
+				<div id="$info" class="col-lg-7 chart-body" style="height: 65vh"></div>
+			</section>
+			<script>
+				var htmlContent = `$chart['description']`
+					.replace(/&lt;/g, "<")
+					.replace(/&gt;/g, ">")
+					.replace(/&#39;/g, "'");
+				$$("[data-id='$chart['id']']").html(htmlContent);
+			</script>
+			<script id="$info_data" type="application/json">$:chart["json"]</script>
+		<hr class="charthr">
 	</section>
 </section>

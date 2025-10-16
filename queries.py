@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import conf , os , operator , pprint , ssl , rdflib , json
-from SPARQLWrapper import SPARQLWrapper, JSON, POST
+from SPARQLWrapper import SPARQLWrapper, JSON, RDFXML,POST
 from collections import defaultdict
-from rdflib import URIRef , XSD, Namespace , Literal
+from rdflib import URIRef , XSD, Namespace , Literal, Graph
 from rdflib.namespace import OWL, DC , DCTERMS, RDF , RDFS
 from rdflib.plugins.sparql import prepareQuery
 from pymantic import sparql
+import json
 import utils as u
 import urllib.parse
 import re
@@ -81,8 +82,9 @@ def getRecords(res_class=None,res_subclasses=None):
 	return records
 
 
-def getRecordsPagination(page, filterRecords=''):
+def getRecordsPagination(page, filterRecords='',userURI=None):
 	""" get all the records created by users to list them in the backend welcome page """
+	filter_by_user = f"?g prov:wasAttributedTo <{userURI}> ." if userURI else "" 
 	newpage = int(page)-1
 	offset = str(0) if int(page) == 1 \
 		else str(( int(conf.pagination) *newpage))
@@ -92,6 +94,7 @@ def getRecordsPagination(page, filterRecords=''):
 		SELECT DISTINCT ?g ?title ?userLabel ?modifierLabel ?date ?stage (GROUP_CONCAT(DISTINCT ?class; SEPARATOR=";  ") AS ?classes)
 		WHERE
 		{ GRAPH ?g {
+			"""	+ filter_by_user + """
 			?s ?p ?o ; a ?class .
 			OPTIONAL { ?g rdfs:label ?title; prov:wasAttributedTo ?user; prov:generatedAtTime ?date ; <http://dbpedia.org/ontology/currentStatus> ?stage. ?user rdfs:label ?userLabel .
 				OPTIONAL {?g prov:wasInfluencedBy ?modifier. ?modifier rdfs:label ?modifierLabel .} }
@@ -106,10 +109,12 @@ def getRecordsPagination(page, filterRecords=''):
 			  ?g prov:generatedAtTime ?date2
 			  filter (?date2 > ?date)
 			}
+			
 
 		  }
 		  """+filterRecords+"""
 		  FILTER( str(?g) != '"""+conf.base+"""vocabularies/' )
+		  FILTER( !CONTAINS(str(?g), "/extraction-") )
 
 		}
 		GROUP BY ?g ?title ?userLabel ?modifierLabel ?date ?stage
@@ -129,13 +134,15 @@ def getRecordsPagination(page, filterRecords=''):
 	return records
 
 
-def getCountings(filterRecords=''):
+def getCountings(filterRecords='',userURI=None):
+	filter_by_user = f"?g prov:wasAttributedTo <{userURI}> ." if userURI else "" 
 	countRecords = """
 		PREFIX prov: <http://www.w3.org/ns/prov#>
 		PREFIX base: <"""+conf.base+""">
 		SELECT (COUNT(DISTINCT ?g) AS ?count) ?stage
 		WHERE
-		{ GRAPH ?g { ?s ?p ?o .
+		{ GRAPH ?g { """+filter_by_user+"""  
+				?s ?p ?o .
 			}
 			?g <http://dbpedia.org/ontology/currentStatus> ?stage .
 			"""+filterRecords+"""
@@ -157,11 +164,12 @@ def getCountings(filterRecords=''):
 	return all, notreviewed, underreview, published
 
 
-def countAll(res_class=None,res_subclasses=None,by_subclass=False,exclude_unpublished=False):
+def countAll(res_class=None,res_subclasses=None,by_subclass=False,exclude_unpublished=False,userURI=None):
 	include_class_list = by_subclass + res_class if res_subclasses != None and res_class != None and by_subclass else res_class
 	exclude_class_list = res_subclasses + res_class if res_subclasses != None and res_class != None else res_class if res_class != None else None
 	filter_class_exists = "\n".join([f"FILTER EXISTS {{ ?s a <{cls}> }}" for cls in include_class_list]) if include_class_list != None else ""
 	filter_class_not_exists = f"FILTER (NOT EXISTS {{ ?s a ?other_class FILTER (?other_class NOT IN ({', '.join([f'<{cls}>' for cls in exclude_class_list])})) }})" if exclude_class_list != None else ""
+	filter_by_user = f"?g prov:wasAttributedTo <{userURI}> ." if userURI else "" 
 
 	exclude = "" if exclude_unpublished is False \
 		else "?g <http://dbpedia.org/ontology/currentStatus> ?anyValue . FILTER (isLiteral(?anyValue) && lcase(str(?anyValue))= 'published') ."
@@ -170,7 +178,8 @@ def countAll(res_class=None,res_subclasses=None,by_subclass=False,exclude_unpubl
 		PREFIX base: <"""+conf.base+""">
 		SELECT (COUNT(DISTINCT ?g) AS ?count)
 		WHERE
-		{ GRAPH ?g { ?s ?p ?o .
+		{ GRAPH ?g { """+filter_by_user+""" 
+			?s ?p ?o .
 			"""+filter_class_exists+filter_class_not_exists+"""
 		}
 		"""+exclude+"""
@@ -184,6 +193,80 @@ def countAll(res_class=None,res_subclasses=None,by_subclass=False,exclude_unpubl
 	alll = results["results"]["bindings"][0]['count']['value']
 	return alll
 
+def can_user_edit_graph(graph_id, user_id):
+	"""Return True if the given user can still edit the graph.  
+	A graph remains editable only as long as no other authors have modified it.  
+
+	Parameters
+	----------
+	graph_id: str
+		the unique identifier of the graph
+	user_id: str
+		the identifier of the user requesting edit access
+	"""
+	query = """
+		PREFIX prov: <http://www.w3.org/ns/prov#>
+		SELECT ?modifier WHERE {
+			GRAPH <"""+graph_id+"""> {
+				<"""+graph_id+"""> prov:wasInfluencedBy ?modifier .
+			}
+		}
+	"""
+	sparql = SPARQLWrapper(conf.myEndpoint)
+	sparql.setQuery(query)
+	sparql.setReturnFormat(JSON)
+	results = sparql.query().convert()
+	if results["results"]["bindings"]:
+		modifier = results["results"]["bindings"][0]["modifier"]["value"]
+		modifier_id = modifier.replace(conf.base,"").replace('-at-','@').replace('-dot-','.')
+		if modifier_id == user_id:
+			return True
+		else:
+			return False
+	else:
+		return True
+
+
+# ATLAS - "Other" values
+def countAllOtherValues(res_class=None,res_subclasses=None):
+	include_class_list = res_class
+	exclude_class_list = res_subclasses + res_class
+	filter_class_exists = "\n".join([f"FILTER EXISTS {{ ?s a <{cls}> }}" for cls in include_class_list])
+	filter_class_not_exists = f"FILTER (NOT EXISTS {{ ?s a ?other_class FILTER (?other_class NOT IN ({', '.join([f'<{cls}>' for cls in exclude_class_list])})) }})"
+
+	countall = """
+		PREFIX prov: <http://www.w3.org/ns/prov#>
+		PREFIX base: <"""+conf.base+""">
+		PREFIX dcterms: <http://purl.org/dc/terms/>
+		PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+		SELECT (COUNT(DISTINCT ?g) AS ?count) ?s ?uri ?label
+		WHERE
+		{ GRAPH ?g { ?s ?p ?o .
+			"""+filter_class_exists+"""
+				?s dcterms:type ?uri .
+  				?uri skos:prefLabel ?label .
+			"""+filter_class_not_exists+"""
+		}
+			FILTER( str(?g) != '"""+conf.base+"""vocabularies/' && !CONTAINS(STR(?g), "/extraction-")) .
+		}
+		GROUP BY ?s ?uri ?label
+	"""
+	sparql = SPARQLWrapper(conf.myEndpoint)
+	sparql.setQuery(countall)
+	sparql.setReturnFormat(JSON)
+	results = sparql.query().convert()
+	alll = {}
+	records_value = {}
+	for val in results["results"]["bindings"]:
+		subj = val['s']['value']
+		uri = val['uri']['value']
+		if uri not in alll:
+			alll[uri] = {
+				"label": val['label']['value'],
+				"count": val['count']['value']
+			}
+		records_value[subj+"/"] = uri
+	return alll, records_value
 
 def getRecordCreator(graph_name):
 	""" get the label of the creator of a record """
@@ -258,7 +341,7 @@ def getClass(res_uri):
 		res_class.append(result["classes"]["value"].split(";  "))
 	return res_class[0] if len(res_class) > 0 else ""
 
-def getData(graph,res_template):
+def getData(graph,res_template,res_subclasses=[]):
 	""" get a named graph and rebuild results for modifying the record"""
 
 	def compare_sublists(l, lol):
@@ -293,8 +376,10 @@ def getData(graph,res_template):
 
 	properties_dict = {}
 	patterns = []
+	keyword_patterns = [] # looking for textareas' keywords
 	res_class = getClass(graph[:-1])
-	class_patterns = ".".join(['''?subject a <'''+single_class+'''>''' for single_class in res_class]) 
+	class_patterns = ".".join(['''?subject a <'''+single_class+'''>''' for single_class in res_class])
+	check_values = [] # do not remove conf.base to Checkbox, Dropdown and Subclass values
 
 	# check duplicate properties
 	for field in fields:
@@ -307,17 +392,26 @@ def getData(graph,res_template):
 	# add query pattern
 	for field in fields:
 		if field['type'] != 'KnowledgeExtractor':
-			pattern = ""
-			if len(properties_dict[field['property']]) > 1:
-				pattern = disambiguate_pattern(properties_dict[field['property']],fields,field['id']) 
-			if pattern == "":
-				pattern = 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. FILTER (lang(?'+field['id']+')!="")} ' if field['value'] == 'Literal' \
-					else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. FILTER (isURI(?'+field['id']+')) FILTER NOT EXISTS {?'+field['id']+' rdfs:label ?'+field['id']+'_label } FILTER NOT EXISTS { ?'+field['id']+' skos:prefLabel ?'+field['id']+'_label } } ' if field['value'] == 'URL' \
-					else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. FILTER (datatype(?'+field['id']+') = xsd:'+field['value'][0].lower() + field['value'][1:]+') } ' if field['value'] in ['Date', 'gYear', 'gYearMonth'] \
-					else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. ?'+field['id']+' skos:prefLabel ?'+field['id']+'_label .} .' if 'type' in field and field['type'] == 'Skos' \
-					else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. ?'+field['id']+' rdfs:label ?'+field['id']+'_label } .'
-			patterns.append(pattern)
+			if field['restricted'] == [] or field['restricted'] == ['other'] or any(restriction in field['restricted'] for restriction in res_subclasses) :
+				if field['type'] in ['Subclass', 'Dropdown', 'Checkbox']:
+					check_values.append(field['id'])
+				pattern = ""
+				if len(properties_dict[field['property']]) > 1:
+					pattern = disambiguate_pattern(properties_dict[field['property']],fields,field['id'])
+				if pattern == "":
+					pattern = 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. FILTER (lang(?'+field['id']+')!="") }' if field['value'] == 'Literal' \
+						else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. FILTER (isURI(?'+field['id']+')) FILTER NOT EXISTS {?'+field['id']+' rdfs:label ?'+field['id']+'_label } FILTER NOT EXISTS { ?'+field['id']+' skos:prefLabel ?'+field['id']+'_label } } ' if field['value'] == 'URL' \
+						else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. FILTER (datatype(?'+field['id']+') = xsd:'+field['value'][0].lower() + field['value'][1:]+') } ' if field['value'] in ['Date', 'gYear', 'gYearMonth'] \
+						else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. ?'+field['id']+' skos:prefLabel ?'+field['id']+'_label .} .' if 'type' in field and field['type'] == 'Skos' \
+						else 'OPTIONAL {?subject <'+field['property']+'> ?'+field['id']+'. ?'+field['id']+' rdfs:label ?'+field['id']+'_label } .'
+				patterns.append(pattern)
+
+				if field['type'] == 'Textarea':
+					keyword_pattern = 'OPTIONAL {<'+graph+'> schema:keywords <'+graph+'extraction-'+field['id']+'/> . GRAPH <'+graph+'extraction-'+field['id']+'/> { ?keywords_'+field['id']+' rdfs:label ?keywords_'+field['id']+'_label . OPTIONAL {?keywords_'+field['id']+' a ?keywords_'+field['id']+'_class } } }'
+					keyword_patterns.append(keyword_pattern)
+
 	patterns_string = ''.join(patterns)
+	keyword_patterns_string = ''.join(keyword_patterns)
 
 	queryNGraph = '''
 		PREFIX base: <'''+conf.base+'''>
@@ -329,18 +423,41 @@ def getData(graph,res_template):
 				GRAPH <'''+graph+'''>
 				{	'''+class_patterns+'''.
 					'''+patterns_string+'''
-					OPTIONAL {?subject schema:keywords ?keywords . ?keywords rdfs:label ?keywords_label . } }
+				}
 		}
 		'''
-	print(queryNGraph)
+	
+	keywords_query = '''
+		PREFIX base: <'''+conf.base+'''>
+		PREFIX schema: <https://schema.org/>
+		PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+		SELECT DISTINCT *
+		WHERE { <'''+graph+'''> rdfs:label ?graph_title ;
+								<http://dbpedia.org/ontology/currentStatus> ?stage .
+				'''+keyword_patterns_string+'''
+		}
+	'''
+
 	sparql = SPARQLWrapper(conf.myEndpoint)
+
+	# first query
+	print(queryNGraph)
 	sparql.setQuery(queryNGraph)
 	sparql.setReturnFormat(JSON)
 	sparql.setMethod(POST)
 	results = sparql.query().convert()
+	results_bindings = results.get("results", {}).get("bindings", [])
+
+	# second query 
+	print(keywords_query)
+	sparql.setQuery(keywords_query)
+	sparql.setReturnFormat(JSON)
+	sparql.setMethod(POST)
+	keywords = sparql.query().convert()
+	keywords_bindings = keywords.get("results", {}).get("bindings", [])
 
 	data = defaultdict(list)
-	for result in results["results"]["bindings"]:
+	for result in results_bindings + keywords_bindings:
 		result.pop('subject',None)
 		graph_label = result.pop('graph_title',None)
 		for k,v in result.items():
@@ -354,10 +471,12 @@ def getData(graph,res_template):
 			elif v['type'] == 'uri': # uri values
 
 				if k+'_label' in result:
-					if conf.base in v['value'] or 'wikidata' in v['value'] or 'geonames' in v['value']:
+					if (conf.base in v['value'] and k not in check_values) or 'wikidata' in v['value'] or 'geonames' in v['value']:
 						uri = v['value'].rsplit('/', 1)[-1]
 					elif 'viaf' in v['value']:
 						uri = "viaf"+v['value'].rsplit('/', 1)[-1] # Keep "viaf" at the beginning: needed in mapping.py (getRightURIbase)
+					elif 'orcid' in v['value']:
+						uri = "orcid"+v['value'].rsplit('/', 1)[-1] # Keep "orcid" at the beginning: needed in mapping.py (getRightURIbase)
 					else:
 						uri = v['value']
 					label = [value['value'] for key,value in result.items() if key == k+'_label'][0]
@@ -367,7 +486,13 @@ def getData(graph,res_template):
 					#label = [value['value'] if key == k+'_label' else v['value'] for key,value in result.items()][0]
 
 				if compare_sublists([uri,label], data[k]) == False:
-					data[k].append([uri,label])
+					if k+'_class' in result:
+						print(k+'_class')
+						uri_class = result[k+'_class']['value']
+						print("uri_class:", uri_class)
+						data[k].append([uri,label,uri_class])
+					else:
+						data[k].append([uri,label])
 	print("############ data",data)
 	return data
 
@@ -390,6 +515,7 @@ def describe_term(name):
 	results = hello_blazegraph(ask)
 	if results["boolean"] == True: # new entity
 		describe = """DESCRIBE <"""+name+ """>"""
+		print("describe:", describe)
 		return hello_blazegraph(describe)
 	else: # vocab term
 		ask = """ASK { ?s ?p ?o .
@@ -429,9 +555,30 @@ def describe_extraction_term(name):
 def getBrowsingFilters(res_template_path):
 	with open(res_template_path) as config_form:
 		fields = json.load(config_form)
-	props = [(f["property"], f["label"], f["type"], f["value"]) for f in fields if ("browse" in f and f["browse"] == "True") or ("disambiguate" in f and f["disambiguate"] == "True")]
+	props = [
+		(
+			f["property"],
+			f["label"],
+			f["type"],
+			f["value"],
+			f.get("values", ""),
+			f["restricted"]
+		)
+		for f in fields
+		if ("browse" in f and f["browse"] == "True")
+		or ("disambiguate" in f and f["disambiguate"] == "True")
+	]
 	return props
 
+def getExtractionProperties(res_template_path):
+	with open(res_template_path) as config_form:
+		fields = json.load(config_form)
+	props = {
+		f["property"]: f["label"]
+		for f in fields
+		if ("type" in f and f["type"] == "KnowledgeExtractor")
+	}
+	return props
 
 # GRAPH methods
 
@@ -488,7 +635,7 @@ def get_subrecords(rdf_property,record_name):
 	return subrecords_list
 
 def retrieve_extractions(res_uri_list, view=False):
-	"""Return a dictionary of Extractions given a list of tuples: [(named_graph_uri, extraction_rdf_property, extraction_field_name)]'
+	"""Return a dictionary of Extractions given a list of tuples: [(named_graph_uri, extraction_rdf_property, extraction_field_name, extraction_field_classes)]'
 	
 	Parameters
 	----------
@@ -501,7 +648,7 @@ def retrieve_extractions(res_uri_list, view=False):
 
 
 	# Retrieve the extraction graphs (URI) for each Record/Subrecord
-	for uri, rdf_property, field_name, field_id in res_uri_list:
+	for uri, rdf_property, field_name, field_id, field_classes in res_uri_list:
 		uri_id = uri.replace(conf.base,'')[:-1]
 		query_var_id = uri.rsplit('/',2)[1].replace('-','_')
 		query_pattern = """<"""+uri+"""> <"""+rdf_property+"""> ?extraction_graph_"""+query_var_id+"""."""+\
@@ -519,7 +666,7 @@ def retrieve_extractions(res_uri_list, view=False):
 				res_dict[uri_id] = {field_id : []}
 
 			# TODO : CHECK THE FOLLOWING IF STATEMENT
-			if view==True:
+			if view:
 				res_dict[uri_id+'_view'] = {
 					'property': rdf_property,
 					'field_name': field_name
@@ -574,10 +721,13 @@ def retrieve_extractions(res_uri_list, view=False):
 
 				# Sparql metadata
 				else:
+					url, query = link.split("?query=") if len(link.split("?query=")) == 2 else "", link.replace("?query=", "")
 					res_dict[uri_id][field_id][-1]["metadata"]['type'] = 'sparql'
-					url, query = link.split("?query=")
 					res_dict[uri_id][field_id][-1]["metadata"]['url'] = url
-					res_dict[uri_id][field_id][-1]["metadata"]['query'] = query
+					if view:
+						res_dict[uri_id][field_id][-1]["metadata"]['query'] = query
+					else:
+						res_dict[uri_id][field_id][-1]["metadata"]['query'] = query.replace("'", "\\'").replace('"', "'")
 			
 			# Retrieve the keywords populating each extraction graph
 			for n in range(len(res_dict[uri_id][field_id])):
@@ -585,10 +735,27 @@ def retrieve_extractions(res_uri_list, view=False):
 				idx = graph_uri.split('/extraction-')[-1][:-1]
 				res_dict[uri_id][field_id][n]["internalId"] = idx.replace(field_id+"-","")
 				retrieve_graph = """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-					SELECT DISTINCT ?uri ?label WHERE {GRAPH <"""+graph_uri+""">
-					{	?uri rdfs:label ?label .  }}"""
+					SELECT DISTINCT ?uri ?label ?class WHERE {GRAPH <"""+graph_uri+""">
+					{	?uri rdfs:label ?label .  
+						OPTIONAL { ?uri a ?class }
+					}}"""
 				graph_results = hello_blazegraph(retrieve_graph)["results"]["bindings"]
-				res_dict[uri_id][field_id][n]["metadata"]['output'] = [{"uri": {"value": urllib.parse.quote(res["uri"]["value"],safe=""), "type":res["uri"]["type"]}, "label": {"value": res["label"]["value"], "type":res["label"]["type"]}} for res in graph_results]
+
+				# find class for extracted entities
+				entity_class = next((result.get("class", {}).get("value") 
+					for result in graph_results if result.get("class", {}).get("value") is not None ), "None")
+				if view and entity_class != "None":
+					extraction_classes = u.get_keywords_classes(view)
+					res_dict[uri_id][field_id][n]["metadata"]["class"] = { "uri" : entity_class.strip() , "label" : extraction_classes[entity_class].strip()}
+				else:
+					res_dict[uri_id][field_id][n]["metadata"]["class"] = entity_class
+
+				if view:
+					res_dict[uri_id][field_id][n]["metadata"]['output'] = [{"uri": {"value": urllib.parse.quote(res["uri"]["value"],safe="").strip(), "type":res["uri"]["type"]}, "label": {"value": res["label"]["value"].strip(), "type":res["label"]["type"]}} for res in graph_results]
+				else:
+					res_dict[uri_id][field_id][n]["metadata"]['output'] = [{"uri": {"value": res["uri"]["value"].strip(), "type":res["uri"]["type"]}, "label": {"value": res["label"]["value"].strip(), "type":res["label"]["type"]}} for res in graph_results]
+	if not view:
+		res_dict = json.dumps(res_dict, ensure_ascii=False)
 	print(res_dict)
 	return res_dict
 
@@ -642,52 +809,134 @@ def get_records_from_object(graph_uri):
 
 # DATA EXTRACTION form SERVICES
 
-def entity_reconciliation(uri,service):
+def entity_reconciliation(uri,service,find,secondary_service="viaf",language="en"):
 
-	# set query params
+	# set query
 	base_url = ""
 	params = {}
 	if service == "wd":
-		base_url = "https://wikidata.org/w/api.php" 
-		params = {
-			"action": "wbsearchentities",
-			"search": uri,
-			"format": "json",
-			"language": "it"
+
+		# set headers
+		base_url = "https://wikidata.org/w/api.php"
+		headers = { 
+			"Accept": "application/json",
+			"User-Agent": "ATLAS/1.0 (https://github.com/dh-atlas/app; mailto:sebastiano.giacomin2@unibo.it)"
 		}
+
+		# set params
+		if find == "uri":
+			params = {
+				"action": "wbsearchentities",
+				"search": uri,
+				"format": "json",
+				"language": language,
+			}
+		elif find == "label":
+			params = {
+				"action": "wbgetentities",
+				"ids": uri.rsplit("/", 1)[1],
+				"format": "json",
+				"languages": language
+			}
+
 	elif service == "viaf":
-		base_url = "https://www.viaf.org/viaf/AutoSuggest"
-		params = {
-			"query": uri
+
+		# set headers
+		headers = {
+			"Accept": "application/json",
+			"Accept-Encoding": "deflate, br, identity",
+			"User-Agent": "Mozilla/5.0 (compatible; VIAFbot/1.0)",
 		}
+
+		# set params
+		if find == "uri":
+			base_url = "https://www.viaf.org/viaf/AutoSuggest"
+			params = {"query": uri}
+		elif find == "label":
+			base_url = f"https://viaf.org/viaf/{uri}/viaf.json"
+			params = {}
+		
 	elif service == "geonames":
-		base_url = "http://api.geonames.org/searchJSON"
-		params = {
-            "q": uri,
-            "username": "palread", 
-            "maxRows": 1
-        }
+
+		# set params
+		if find == "uri":
+			base_url = "http://api.geonames.org/searchJSON"
+			params = {
+				"q": uri,
+				"username": "palread", 
+				"maxRows": 1
+			}
+		elif find == "label":
+			base_url = "http://api.geonames.org/getJSON"
+			params = {
+				"geonameId": uri,
+				"username": "palread"
+			}
 	
-	# execute the query and retrieve the URI
-	try:
-		response = requests.get(base_url, params=params)
-		response.raise_for_status()  # Check if the request was successful
-		data = response.json()  # Parse the JSON response
-		print(data)
-		if service == "wd" and len(data["search"]) > 0:
-			new_uri = data["search"][0]["concepturi"]
-		elif service == "viaf" and data["result"] != None:
-			new_uri = mapping.VIAF + data["result"][0]["viafid"]
-		elif service == "geonames" and len(data["geonames"]) > 0:
-			new_uri = mapping.GEO + str(data["geonames"][0]["geonameId"])
-		else:
+	if find == "uri":
+		# execute the query and retrieve the URI
+		try:
+			response = requests.get(base_url, params=params, headers=headers)
+			response.raise_for_status()  # Check if the request was successful
+			data = response.json()  # Parse the JSON response
+			print(data)
+			if service == "wd":
+				if len(data["search"]) > 0:
+					new_uri = data["search"][0]["concepturi"]
+				elif language == "en":
+					new_uri = entity_reconciliation(uri,"wd",language="it")
+				elif secondary_service:
+					new_uri = entity_reconciliation(uri,secondary_service)
+			elif service == "viaf" and data["result"] != None:
+				new_uri = mapping.VIAF + data["result"][0]["viafid"]
+			elif service == "geonames" and len(data["geonames"]) > 0:
+				new_uri = mapping.GEO + str(data["geonames"][0]["geonameId"])
+			else:
+				new_uri = conf.base+str(time.time()).replace('.','-')
+			return new_uri
+		
+		except requests.exceptions.HTTPError as http_err:
+			print(f"HTTP error occurred: {http_err}")
 			new_uri = conf.base+str(time.time()).replace('.','-')
-		return new_uri
-	
-	except requests.exceptions.HTTPError as http_err:
-		print(f"HTTP error occurred: {http_err}")
-	except Exception as err:
-		print(f"Other error occurred: {err}")
+			return new_uri
+		except Exception as err:
+			print(f"Other error occurred: {err}")
+			new_uri = conf.base+str(time.time()).replace('.','-')
+			return new_uri
+		
+	elif find == "label":
+		# execute the query and retrieve the Label
+		try:
+			response = requests.get(base_url, params=params, headers=headers)
+			response.raise_for_status()
+			data = response.json()
+			print(data)
+
+			if service == "wd":
+				entity_id = uri.rsplit("/", 1)[1]
+				labels = data["entities"][entity_id]["labels"]
+				if language in labels:
+					return labels[language]["value"]
+				elif "en" in labels:  # fallback to english
+					return labels["en"]["value"]
+				else:
+					return list(labels.values())[0]["value"]  # first available language
+
+			elif service == "viaf":
+				if "mainHeadings" in data and "data" in data["mainHeadings"]:
+					return data["mainHeadings"]["data"]["text"]
+				elif "name" in data:
+					return data["name"]
+				else:
+					return None
+
+			elif service == "geonames":
+				return data.get("name")
+
+		except Exception as err:
+			print(f"Error occurred: {err}")
+			return "No label"
+
 
 # GET LATITUDE AND LONGITUDE GIVEN A GEONAMES URI
 def geonames_geocoding(geonames_uri):
@@ -700,18 +949,48 @@ def geonames_geocoding(geonames_uri):
 	return latitude, longitude
 
 
-def SPARQLAnything(query_str):
-	sparql = SPARQLWrapper(conf.sparqlAnythingEndpoint)
-	query = """PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-	PREFIX xyz: <http://sparql.xyz/facade-x/data/>
-	PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-	PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-	PREFIX sa: <http://w3id.org/sparql-anything#>
-	PREFIX ex: <http://example.org/>
-	"""+query_str.replace("&lt;", "<").replace("&gt;", ">")
+def SPARQLAnything(query_str,endpoint=None):
+	def prepare_query(query, endpoint_wrap=False):
+		if endpoint_wrap and endpoint:
+			query = query.replace('{', '{ SERVICE <'+endpoint+'>', 1) 
+			idx = query.rfind('}')
+			if idx != -1:
+				query = query[:idx] + '}}' + query[idx+1:]
+		return query_prefixes + query.replace("&lt;", "<").replace("&gt;", ">")
+	
+
+	results = {}
+	query_prefixes = """PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+		PREFIX xyz: <http://sparql.xyz/facade-x/data/>
+		PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+		PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+		PREFIX sa: <http://w3id.org/sparql-anything#>
+		PREFIX ex: <http://example.org/>
+	"""
+	if "SERVICE <x-sparql-anything:>" in query_str:
+		
+		sparql = SPARQLWrapper(conf.sparqlAnythingEndpoint)
+		sparql.setMethod(POST)
+		sparql.setReturnFormat(JSON)  # o "json", a seconda del tipo di query
+		query_str.replace("&lt;", "<").replace("&gt;", ">")
+		sparql.setQuery(query_str)
+		results = sparql.query().convert()
+		return results
+	elif "SERVICE" in query_str or not endpoint:
+		# Use default endpoint
+		sparql = SPARQLWrapper(conf.sparqlAnythingEndpoint)
+		query = prepare_query(query_str)
+	else:
+		try:
+			# Use specified endpoint
+			sparql = SPARQLWrapper(endpoint)
+			query = prepare_query(query_str)
+		except Exception as e:
+			# Use SPARQL Anything
+			sparql = SPARQLWrapper(conf.sparqlAnythingEndpoint)
+			query = prepare_query(query_str,endpoint_wrap=True) 
 
 	print(query)
-	# Retrieve all results so that user can verify them
 	sparql.setQuery(query)
 	sparql.setReturnFormat(JSON)
 	results = sparql.query().convert()
@@ -764,6 +1043,98 @@ def getChartData(chart):
 			except Exception as e:
 				count = 0
 			results.append(count)
+	elif chart["type"] == "timeline":
+		query_results = hello_blazegraph(chart["query"])["results"]["bindings"]
+		lookup = {}
+		for result in query_results:
+			time = result["time"]["value"].rsplit("/",1)[-1]
+			uri = result["g"]["value"][:-1] 
+			label = result["label"]["value"]
+			if time in lookup:
+				lookup[time]["uri"].append(uri)
+				lookup[time]["label"].append(label)
+			else:
+				lookup[time] = {"uri":[uri], "label":[label], "time":time}
+		results = list(lookup.values())
+	elif chart["type"] == "network":
+		query_results = hello_blazegraph(chart["query"])["results"]["bindings"]
+		tot_value = 0
+		tree = {"name": chart["mainClass"], "children": []}
+		class_map = {}
+
+		for row in query_results:
+			class_name = row["classLabel"]["value"]
+			label = row.get("label", {}).get("value", row["entity"]["value"])
+			count = int(row["count"]["value"])
+			tot_value += count
+
+			# Create category
+			if class_name not in class_map:
+				class_map[class_name] = {"name": class_name, "children": [], "value": count}
+				tree["children"].append(class_map[class_name])
+			else:
+				class_map[class_name]["value"] += count
+
+			# Add entity
+			class_map[class_name]["children"].append({
+				"name": label,
+				"value": count
+			})
+
+		tree["value"] = tot_value		
+		results = tree
 		
 	print("results:", results)
 	return results
+
+# GET RECORDS' SERIALIZATIONS	
+def get_serialization_file(format, graph_id):
+	from rdflib import Graph
+	from SPARQLWrapper import SPARQLWrapper, RDFXML
+	base_graph = conf.base + graph_id
+	graphs = [base_graph]
+	serialized_graphs = []
+
+	# find extraction graphs
+	find_extraction_graphs = f"""
+	SELECT DISTINCT ?graph 
+	WHERE {{
+		GRAPH <{base_graph}/> {{
+			<{base_graph}/> ?extractionProp ?graph .
+		}} GRAPH ?graph {{ ?s ?p ?o }} 
+	}}
+	"""
+	sparql = SPARQLWrapper(conf.myEndpoint)
+	sparql.setQuery(find_extraction_graphs)
+	sparql.setReturnFormat(JSON)
+	extraction_graphs = sparql.query().convert()
+	for extraction_graph in extraction_graphs["results"]["bindings"]:
+		graphs.append(extraction_graph["graph"]["value"][:-1])
+
+
+	# retrieve all graphs
+	for graph_uri in graphs:
+		query = f"""
+		CONSTRUCT {{
+			?s ?p ?o
+		}}
+		WHERE {{
+			GRAPH <{graph_uri}/> {{
+				?s ?p ?o 
+			}}
+		}}
+		"""
+
+		sparql = SPARQLWrapper(conf.myEndpoint)
+		sparql.setQuery(query)
+		sparql.setReturnFormat(RDFXML)
+		results = sparql.query().convert() 
+		serialize_format = {
+			'ttl': 'turtle',
+			'jsonld': 'json-ld',
+			'rdf': 'xml'
+		}
+
+		serialized_graphs.append(results.serialize(format=serialize_format.get(format, 'turtle')))
+	return serialized_graphs
+

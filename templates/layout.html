@@ -29,10 +29,16 @@ $def with (content)
 		<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Karla:wght@200..800&display=swap" rel="stylesheet">
 		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 		<script type="application/javascript">const mainLang = "$content.main_lang"</script>
+		<style>
+			:root {
+				--primary-color: $color[0];
+				--secondary-color: $color[1];
+			}
+		</style>
 	</head>
 	<body class="cbp-spmenu-push">
 		<section class="container-fluid main_content">
-			<section class="cbp-spmenu cbp-spmenu-vertical cbp-spmenu-right" id="cbp-spmenu-s2">
+			<section class="cbp-spmenu cbp-spmenu-vertical cbp-spmenu-right col-xl-4 col-lg-4 col-md-6 col-sm-11 col-11" id="cbp-spmenu-s2">
 			</section>
 			<nav class="row navbar navbar-expand-lg sticky-top">
 				<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,7 +46,7 @@ $def with (content)
 			  </button>
 				<!-- <span class="logo"><a href="/"><img src="static/imgs/logo.svg"></a></span> -->
 				<!-- <a href="about">about</a> -->
-				<section class="col-md-8 col-sm-12 collapse navbar-collapse" id="navbarSupportedContent">
+				<section class="col-lg-8 col-md-12 col-sm-12 collapse navbar-collapse" id="navbarSupportedContent">
 					<span><a href="/" class="logo_header">$content.project</a>
 					<a href="records">Explore</a>
 					<a href="charts-visualization">Charts</a></span>
@@ -51,12 +57,11 @@ $def with (content)
 							<button class="btn btn-dark" onclick="window.location.href='welcome-1'" role="button" id="dropdownMenuLink">Member area</button>
 					$else:
 							<button class="btn btn-dark" onclick="window.location.href='logout'" role="button" id="dropdownMenuLink">Logout</button>
-
 					<form action='' method='POST' id="create_form_menu">
 				    <button class="btn btn-dark" name="action" value="createRecord$time_now()" type="submit">Add a resource</button>
 				  </form>
 				</section>
-				<div class="searchmenu col-md-3 col-sm-12">
+				<div class="searchmenu col-lg-3 col-md-12 col-sm-12">
 					<!-- <i class="fas fa-search" aria-hidden="true"></i> -->
 					<input autocomplete="off" class="searchGeneral" placeholder="search..." id="search" name="search" type="text">
 				</div>
@@ -80,6 +85,7 @@ $def with (content)
 				<section class="col-md-2 col-sm-10">
 					<p><a href="/">Home</a></p>
 					<p><a href="records">Explore</a></p>
+					<p><a href="charts-visualization">Charts</a></p>
 					<p><a href="sparql">SPARQL endpoint</a></p>
 					<p><a href="model">Data model</a></p>
 					<p><a href="documentation">Editorial guidelines</a></p>
@@ -91,6 +97,7 @@ $def with (content)
 						<a href="https://www.linkedin.com/company/polifonia-h2020/"><i class="fab fa-linkedin-in"></i></a> </p>
 					<p>Become a collaborator! send us a request on <a href="https://github.com/polifonia-project/registry_app/issues">github</a></p>
 				</section>
+				
 			</footer>
 		</section>
 	</body>

@@ -1,0 +1,16 @@
+FROM lyrasis/blazegraph:2.1.5
+
+# Copy initial data (this stays in the image, not the mounted volume)
+RUN mkdir -p /app/init_data /app/init_records /app/init_vocabs
+COPY data /app/init_data
+COPY records /app/init_records
+COPY vocabs /app/init_vocabs
+
+COPY blaze_vm.properties /RWStore.properties
+
+# Copy custom startup script
+COPY ./services/blazegraph/init.sh /app/init.sh
+RUN chmod +x /app/init.sh
+
+# Use the default Blazegraph entrypoint, but ensure our script runs first
+CMD ["/bin/sh", "-c", "/app/init.sh && /var/lib/jetty/entrypoint.sh"]

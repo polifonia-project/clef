@@ -1,40 +1,47 @@
-# version: "3.8" # not needed anymore
+version: "3.8"
 services:
   db:
     # container_name: db
-    image: "lyrasis/blazegraph:2.1.5"
+    build:
+      context: .
+      dockerfile: Dockerfile.blazegraph.prod
+    # image: clef-db:0.1.2
+    # image: "lyrasis/blazegraph:2.1.5"
     # Uncomment if you want to access blazegraph interface in your browser (http://localhost:8888)
     ports:
       - "8112:8080"
+    #   - 8888:8080
     volumes:
-      - .:/app
-      - ./blaze_vm.properties:/RWStore.properties
+      - blazegraph_data:/app/data
+      - blazegraph_records:/app/records
+      - blazegraph_vocabs:/app/vocabs
+      # - .:/app
     restart: always
+
   sparqlanything:
     # container_name: sparqlanything
     image: facadex/sparql-anything:latest
     ports:
-      #- "8081:3000"
       - "8113:3000"
     restart: always
-  init-static:
-    image: busybox
-    volumes:
-      - static_data:/app/static
-    command: ["/bin/sh", "-c", "cp -r /app/static_default/* /app/static || true"]
+
   web:
-    # container_name: clef
+    # container_name: web
     build:
       context: .
       dockerfile: Dockerfile.prod
+    image: web:0.1.2
     depends_on:
       - sparqlanything
       - db
     volumes:
-      - .:/app
+      # - .:/app
+      - blazegraph_data:/app/data
+      - blazegraph_records:/app/records
+      - blazegraph_vocabs:/app/vocabs
       - static_data:/app/static  # Share static files with nginx
+      - templates:/app/templates
     ports:
-      #- "8080:8080"
       - "8114:8080"
     stdin_open: true
     tty: true
@@ -50,22 +57,37 @@ services:
     environment:
       BLAZEGRAPH_ENDPOINT: "http://db:8080/bigdata/sparql"
       SPARQL_ANYTHING_ENDPOINT: "http://sparqlanything:3000/sparql.anything"
-      PUBLIC_BLAZEGRAPH_ENDPOINT: "http://localhost:8080/sparql"
+      PUBLIC_BLAZEGRAPH_ENDPOINT: "sparql"
     restart: unless-stopped
+
+  init-static:
+    image: busybox
+    volumes:
+      - static_data:/app/static
+      - templates:/app/templates
+    command: ["/bin/sh", "-c", "cp -r /app/static_default/* /app/static || true"]
+
   nginx:
     container_name: clef
     build:
-      context: ./services/nginx
-      dockerfile: Dockerfile.prod
+      context: .
+      dockerfile: Dockerfile.nginx.prod
+    image: nginx:0.1.1
     volumes:
-      # - ./static:/app/static
       - static_data:/app/static
+      - templates:/app/templates
+      - blazegraph_data:/app/data
+      - blazegraph_data:/app/data
+      - blazegraph_records:/app/records
+      - blazegraph_vocabs:/app/vocabs
     ports:
-      #- 80:80
       - "8115:80"
     depends_on:
       - web
     restart: unless-stopped
 volumes:
+  blazegraph_data:
+  blazegraph_records:
+  blazegraph_vocabs:
   static_data:
-  # blazegraph_data:
+  templates:

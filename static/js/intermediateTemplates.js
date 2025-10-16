@@ -14,7 +14,7 @@ $(document).ready(function() {
     $("[data-supertemplate]:not([data-supertemplate='None'])").each(function() {
         // this code applies only to first-level subtemplates
         // i.e.: subtemplates input fields within subrecords are not made ready in advance
-        $(this).parent().parent().hide();
+        $(this).closest('.form_row.block_field').hide();
     });
 
     // display subtemplates input fields
@@ -52,7 +52,7 @@ function prepareSubtemplateForms(element) {
         // retrieve all existing subrecords for a given subtemplate field
         var subrecords = "";
         $('[data-input="'+subtemplateFieldId+'"').each(function() {
-            subrecords+=$(this).attr('id')+";"+$(this).text()+",";
+            subrecords+=$(this).attr('id')+";"+$(this).text().trim()+",,";
             var subformSection = $("<section class='subform_section col-md-12 col-sm-12' data-target='"+$(this).attr('id')+"'>\
                 <h4 class='subrecord-title closed-title'>"+$(this).text()+"\
                     <section class='buttons-container'>\
@@ -72,7 +72,7 @@ function prepareSubtemplateForms(element) {
 
         // store the existing subrecords' ids in a hidden input
         if (subrecords !== "") {
-            $('#modifyForm').append('<input type="hidden" name="'+subtemplateFieldId+'-subrecords" id="'+subtemplateFieldId+'-subrecords" value="'+subrecords.slice(0,-1)+'">');
+            $('#modifyForm').append('<input type="hidden" name="'+subtemplateFieldId+'-subrecords" id="'+subtemplateFieldId+'-subrecords" value="'+subrecords.slice(0,-2)+'">');
         }
     }
 
@@ -95,13 +95,14 @@ function createSubrecord(subtemplateFieldId,label,el,dataReuse=false,subrecordId
 
     // prepare the new subrecord form
     const formId = $('.corners').eq(0).find('form').eq(0).attr('id'); // either 'recordForm' or 'modifyForm'
-    const subrecordSection = $("<section class='subform_section col-md-12 col-sm-12'></section>");
-    const subrecordForm = $("<section class='subform' id='"+subrecordId+"-form' data-target='"+subrecordId+"'></section>");
+    const subrecordSection = $("<section class='subform_section col-md-12 col-sm-12' data-target='"+subrecordId+"'></section>");
+    const subrecordForm = $("<section class='subform' id='"+subrecordId+"-form'></section>");
 
 
     // create a clone for each input field belonging to the available subtemplates
     // i.e.: use data-class to find templates' related fields
     var subtemplateOptions = $("#"+absoluteSubtemplateFieldId).find("option:not(:first-of-type)");
+    console.log(subtemplateOptions)
     subtemplateOptions.each(function() {
         var subtemplateOptionsClass = $(this).attr("value");
         var clonedElements = []; // store ids to avoid cloning the same element twice
@@ -122,13 +123,16 @@ function createSubrecord(subtemplateFieldId,label,el,dataReuse=false,subrecordId
                 clonedElements.push($(this).attr("id").split("_")[0]);
 
                 // CREATE A CLONE ELEMENT (of the field's section)
+                const cloneTip = $(this).closest(".form_row.block_field").find(".tip").clone(false);
                 const cloneElement = $(this).closest(".form_row.block_field").clone(true);
+                cloneElement.find(".tip").replaceWith(cloneTip);
                 cloneElement.find('textarea, select:not([type="hidden"]), input:not([type="hidden"]):not(label.switch input)').attr('data-subform',subrecordId); // associate the input field with the subrecord id
                 cloneElement.find('textarea, select, input').addClass('hidden');
                 cloneElement.find('textarea, select, input').removeClass('original-template');
                 cloneElement.find('textarea, select, input:not([type="checkbox"])').val('');
                 cloneElement.find('input.checkbox_group[type="checkbox"]').prop('checked', false);
                 cloneElement.find('.subform, .subrecord-title, .add-span, .subform_section').remove();
+                cloneElement.find('.tags-url').empty();
 
                 // associate proper identifiers to input fields belonging to the subrecord form
                 var inputId = cloneElement.find('textarea, select, input:not([type="hidden"]):not(label.switch input)').attr('id');
@@ -273,11 +277,11 @@ function createSubrecord(subtemplateFieldId,label,el,dataReuse=false,subrecordId
         // generate a tag
         var isValid = checkMandatoryFields(this);
         if (isValid) {
-            var labelField = subrecordForm.find('.disambiguate').eq(0);
+            // TODO: check whether multiple subforms create any sort of problem
+            var labelField = subrecordForm.find('.disambiguate:visible').eq(0);
             var labelMainLang = $('#'+labelField.attr('id').replace(labelField.attr('lang'), 'mainLang')).val();
-            var tagLabel = subrecordForm.find('.disambiguate[lang="'+labelMainLang+'"]').val() || (label + "-" + subrecordId);
-            console.log(subrecordForm.find('.disambiguate[lang="'+labelMainLang+'"]'));
-            console.log(labelMainLang, tagLabel)
+            var tagLabel = subrecordForm.find('.disambiguate:visible[lang="'+labelMainLang+'"]').val() || (label + "-" + subrecordId);
+
             // restart from here
             toggleSubform(subrecordTitle,label=tagLabel);
     
@@ -287,8 +291,8 @@ function createSubrecord(subtemplateFieldId,label,el,dataReuse=false,subrecordId
             var createdSubrecords = $('[name="'+subrecordBase+'-subrecords"]');
             if (createdSubrecords.length) {
                 var toExtendValue = createdSubrecords.val();
-                if (!createdSubrecords.val().split(',').includes(subrecordId)) {
-                    createdSubrecords.val(toExtendValue + "," + subrecordId);
+                if (!createdSubrecords.val().split(',,').includes(subrecordId)) {
+                    createdSubrecords.val(toExtendValue + ",," + subrecordId);
                 }
             } else {
                 const newSubrecord = $("<input type='hidden' name='"+subrecordBase+"-subrecords' value='"+subrecordId+"'>");
@@ -313,7 +317,7 @@ function createSubrecord(subtemplateFieldId,label,el,dataReuse=false,subrecordId
     subrecordForm.append(subrecordButtons);
 
     // show the dropdown in case multiple templates are available
-    var subtemplateSelect = $(el).parent().find('select[data-subtemplate][id]:first-of-type').clone().removeAttr("id");
+    var subtemplateSelect = $(el).parent().children('select[data-subtemplate][id]:first-of-type').clone().removeAttr("id");
     var templatesNumber = $(subtemplateSelect).find('option').length - 1;
     console.log(templatesNumber);
     if (templatesNumber > 1) { 
@@ -339,7 +343,12 @@ function createSubrecord(subtemplateFieldId,label,el,dataReuse=false,subrecordId
     });
     subrecordSection.append(subrecordForm);
     $(el).before(subrecordSection);
-    
+    var tooltipTriggerList = subrecordSection.find(".tip").toArray(); // Converte in array DOM
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl); // Ora tooltipTriggerEl è un nodo DOM
+    });
+
+
 }
 
 function activateTemplateSelection(select,subrecordId) {
@@ -365,23 +374,23 @@ function saveSubrecordClass(selectElement,subrecordId,singleOption=false) {
 function cancelSubrecord(subrecordSection) {
     const subform = $(subrecordSection).closest('.subform_section');
     var subrecordId =  subform.data('target');
-    var subrecordLabel = $(subrecordSection).find('h4').text();
-    let substring = subrecordId+";"+subrecordLabel ;
+    var subrecordLabel = subform.find('h4').text();
+    let substring = subrecordId+";"+subrecordLabel.trim();
     var fieldId = subform.siblings('select').attr('id');
+    console.log(fieldId, subrecordId)
 
     // remove cancelled subrecords from field values
     var currentSubrecords = $('[name="'+fieldId+'-subrecords"').val();
     if (currentSubrecords !== undefined) {
         if (currentSubrecords.endsWith(substring)) {
-            substring = currentSubrecords.endsWith(','+substring) ? ','+substring : substring;
+            substring = currentSubrecords.endsWith(',,'+substring) ? ',,'+substring : substring;
         } else if (currentSubrecords.startsWith(substring)) {
-            substring = currentSubrecords === substring ? substring : substring+',';
+            substring = currentSubrecords === substring ? substring : substring+',,';
         } else {
-            substring = ','+substring+',';
+            substring = ',,'+substring;
         }
-        currentSubrecords.replace(substring);
-        console.log(currentSubrecords);
-        $('[name="'+fieldId+'"').val(currentSubrecords);
+        currentSubrecords = currentSubrecords.replace(substring, "");
+        $('[name="'+fieldId+'-subrecords"').val(currentSubrecords);
     }
 
     // remove subform

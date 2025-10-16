@@ -1,0 +1,5 @@
+# python related
+__pycache__
+
+# app specific
+sessions

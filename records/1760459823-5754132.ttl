@@ -1,0 +1,33 @@
+@prefix ns1: <http://schema.org/> .
+@prefix ns2: <http://dbpedia.org/ontology/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://w3id.org/clef/1760459823-5754132> a <http://example.org/ExampleClass> ;
+    rdfs:label "Hello world"@en ;
+    ns1:birthPlace <https://sws.geonames.org/3181928> ;
+    ns1:description "I was born in Tokyo. When I was 13 I moved to Rome with my uncle Federico Fellini."@en ;
+    ns1:knows <http://www.wikidata.org/entity/Q56459946> ;
+    ns1:memberOf <http://example.org/dharc>,
+        <http://example.org/unibo> ;
+    ns1:title "Hello world"@en .
+
+<https://w3id.org/clef/1760459823-5754132/> rdfs:label "Hello world"@en ;
+    ns2:currentStatus "not modified"^^xsd:string ;
+    ns1:title "Hello world"@en ;
+    prov:generatedAtTime "2025-10-14T16:49:30.401707"^^xsd:dateTime ;
+    prov:wasAttributedTo <https://w3id.org/clef/anonymous> ;
+    schema:keywords <https://w3id.org/clef/1760459823-5754132/extraction-1644228232251/> .
+
+<http://example.org/dharc> rdfs:label "Digital Humanities Research Centre"^^xsd:string .
+
+<http://example.org/unibo> rdfs:label "University of Bologna"^^xsd:string .
+
+<http://www.wikidata.org/entity/Q56459946> rdfs:label "Department of Classical Philology and Italian Studies, University of Bologna"^^xsd:string .
+
+<https://sws.geonames.org/3181928> rdfs:label "Bologna"^^xsd:string .
+
+<https://w3id.org/clef/anonymous> rdfs:label "anonymous" .
+

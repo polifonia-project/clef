@@ -1,5 +1,6 @@
-$def with (wikilist, user, varIDpage, alll, all, notreviewed, underreview, published, page, pagination, filter, filterName, is_git_auth, project, templates, main_lang)
+$def with (wikilist, user, varIDpage, alll, all, notreviewed, underreview, published, page, pagination, filter, filterName, is_git_auth, project, templates, main_lang, is_external_user)
 $var user = user
+$var records = '' #modify 
 $var notreviewed = notreviewed
 $var underreview = underreview
 $var published = published
@@ -30,19 +31,14 @@ $var main_lang = main_lang
 			<button class="menu_btn" name="action" value="filterAll" type="submit">all ($alll)</button>
 		</form>
 		<hr/>
-		<form class='p-2' action='' method='POST' id="create_form">
-			<button class="btn btn-dark" name="action" value="createRecord$varIDpage" type="submit">Create a new record</button>
-		</form>
-		<button onclick="window.location.href='setup'" title="setup" class="menu_btn">Setup <i class="fas fa-cogs"></i></button>
-		<section class="btn-group">
+		$if not is_external_user:
+			<form class='p-2' action='' method='POST' id="create_form">
+				<button class="btn btn-dark" name="action" value="createRecord$varIDpage" type="submit">Create a new record</button>
+			</form>
+			<button onclick="window.location.href='setup'" title="setup" class="menu_btn">Setup <i class="fas fa-cogs"></i></button>
 			<button id="showTemplateClassButton" title="form template" class="menu_btn">Templates <i class="fas fa-angle-down"></i></button>
-		</section>
-		<section class="btn-group">
 			<button id="selectTemplateClassButton" title="create a new template" class="menu_btn">New template <i class="fas fa-plus"></i></button>
-		</section>
-		<section class="btn-group">
 			<button onclick="window.location.href='charts-template'" title="visualization template" class="menu_btn">Charts <i class="fas fa-chart-area"></i></button>
-		</section>
 	</section>
 </section>
 
@@ -64,8 +60,11 @@ $var main_lang = main_lang
 						$ t_name = t['short_name']
 						$ t_class_str = "; ".join(t['type'])
 						<tr>
-							<td><span class="tip" data-toggle="tooltip" data-placement="bottom" title="$t_class_str"><i class="fas fa-info-circle"></i></span>
-								<span>$t["name"]</span></td>
+							<td>
+								<span>
+									<span class="tip" data-toggle="tooltip" data-placement="bottom" title="$t_class_str"><i class="fas fa-info-circle"></i></span>
+									<span>$t["name"]</span></td>
+								</span>
 							<td>
 								<form method="POST">
 									<button class="btn btn-dark delete" name="action" value="deleteTemplate$t_name" type="submit" title="modify" value="template-$t['short_name']" type="submit" title="delete"><i class="far fa-trash-alt"></i></button>
@@ -86,12 +85,16 @@ $var main_lang = main_lang
 			<span class="label">Name</span><br><span class="comment">choose a name for this template</span>
 			<input type="text" name="class_name" value="" placeholder="e.g.: Work of art">
 		</section>
+		<!-- <section class="modal-input">
+			<span class="label">Description</span><br><span class="comment">provide a description for this template</span>
+			<textarea name="class_description" value="" placeholder="e.g.: The Work of Art class includes paintings, sculptures, drawings, installations, photographs, and other creative pieces made by artists."></textarea>
+		</section> -->
 		<section class="modal-input">
 			<span class="label">Class</span><br><span class="comment">choose one or multiple OWL classes</span>
 			<input type="text" name="class_uri" value="" placeholder="e.g.: crm:E22_Man-made-object">
 			<section id="uri-container"></section>
 		</section>
-		<section class="modal-input-button">
+		<section class="modal-input">
 			<input type="hidden" class="hiddenInput" name="action" value="createTemplate">
 			<button class="btn btn-dark" name="action" value="createTemplate" type="submit">Create</button>
 			<button class="btn btn-dark discard" value="cancelTemplate" type="submit">Cancel</button>
@@ -132,22 +135,47 @@ $var main_lang = main_lang
 						<td>$result[4][:10]<p class="res_class_small">$result[4][11:-1]</p></td>
 						<td class="stage">$result[5]</td>
 						<td>
-						$if result[5] == 'not modified' or result[5] == 'modified' or result[5] == '-':
+						$if result[5] == 'not modified' or result[5] == '-':
 							<form id="modified" action="" method='POST'>
 							<button class="btn btn-dark delete" data-toggle="modal" data-target="#popup" name="action" value="deleteRecord$:result[0] __$filter" type="submit" title="delete"><i class="far fa-trash-alt"></i></button>
 							<button class="btn btn-dark" name="action" value="modifyRecord$:result[0]" type="submit" title="modify"><i class="far fa-edit"></i></button>
-							<button class="btn btn-dark" name="action" value="reviewRecord$:result[0]" type="submit" title="review and publish"><i class="far fa-check-circle"></i></button>
+							$if not is_external_user:
+								<button class="btn btn-dark" name="action" value="reviewRecord$:result[0]" type="submit" title="review and publish"><i class="far fa-check-circle"></i></button>					
+							</form>
+						$elif result[5] == 'modified':
+							<form id="modified" action="" method='POST'>
+							$if not is_external_user:
+								<button class="btn btn-dark delete" data-toggle="modal" data-target="#popup" name="action" value="deleteRecord$:result[0] __$filter" type="submit" title="delete"><i class="far fa-trash-alt"></i></button>
+								<button class="btn btn-dark" name="action" value="modifyRecord$:result[0]" type="submit" title="modify"><i class="far fa-edit"></i></button>
+								<button class="btn btn-dark" name="action" value="reviewRecord$:result[0]" type="submit" title="review and publish"><i class="far fa-check-circle"></i></button>					
+							$elif result[5] == 'modified':
+								$ view = result[0].split("/")[-2]
+								<button class="btn btn-dark" type="button" title="view" onclick="window.location.href='view-$:view'">
+									<i class="far fa-eye"></i>
+								</button>
 							</form>
 						$elif result[5] == 'in review':
 							<form id="review" action="" method='POST'>
-							<button class="btn btn-dark delete" data-toggle="modal" data-target="#popup" name="action" value="deleteRecord$:result[0] __$filter" type="submit" title="delete"><i class="far fa-trash-alt"></i></button>
-							<button class="btn btn-dark" name="action" value="modifyRecord$:result[0]" type="submit" title="modify"><i class="far fa-edit"></i></button>
-							<button class="btn btn-dark" name="action" value="reviewRecord$:result[0]" type="submit" title="review and publish"><i class="far fa-check-circle"></i></button>
+							$if not is_external_user:
+								<button class="btn btn-dark delete" data-toggle="modal" data-target="#popup" name="action" value="deleteRecord$:result[0] __$filter" type="submit" title="delete"><i class="far fa-trash-alt"></i></button>
+								<button class="btn btn-dark" name="action" value="modifyRecord$:result[0]" type="submit" title="modify"><i class="far fa-edit"></i></button>
+								<button class="btn btn-dark" name="action" value="reviewRecord$:result[0]" type="submit" title="review and publish"><i class="far fa-check-circle"></i></button>
+							$else:
+								$ view = result[0].split("/")[-2]
+								<button class="btn btn-dark" type="button" title="view" onclick="window.location.href='view-$:view'">
+									<i class="far fa-eye"></i>
+								</button>		
 							</form>
 						$elif result[5] == 'published':
 							<form id="published" action="" method='POST'>
-							<button class="btn btn-dark delete" data-toggle="modal" data-target="#popup" name="action" value="deleteRecord$:result[0] __$filter" type="submit" title="delete"><i class="far fa-trash-alt"></i></button>
-							<button class="btn btn-dark" name="action" value="modifyRecord$:result[0]" type="submit" title="modify"><i class="far fa-edit"></i></button>
+							$if not is_external_user:
+								<button class="btn btn-dark delete" data-toggle="modal" data-target="#popup" name="action" value="deleteRecord$:result[0] __$filter" type="submit" title="delete"><i class="far fa-trash-alt"></i></button>
+								<button class="btn btn-dark" name="action" value="modifyRecord$:result[0]" type="submit" title="modify"><i class="far fa-edit"></i></button>
+							$else:
+								$ view = result[0].split("/")[-2]
+								<button class="btn btn-dark" type="button" title="view" onclick="window.location.href='view-$:view'">
+									<i class="far fa-eye"></i>
+								</button>	
 							</form>
 						$else:
 							<span>unknown</span>

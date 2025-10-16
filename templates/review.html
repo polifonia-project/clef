@@ -1,4 +1,4 @@
-$def with (graphdata,pageID,record_form,graph,user,ids_dropdown,is_git_auth,invalid,project,template,query_templates,knowledge_extractor,extractions,main_lang)
+$def with (graphdata,pageID,record_form,graph,user,ids_dropdown,ids_subtemplate,is_git_auth,invalid,project,template,query_templates,knowledge_extractor,extractions,main_lang,keywords_classes)
 
 $var user = user
 $var is_git_auth = is_git_auth
@@ -10,9 +10,15 @@ $if query_templates!=None:
 		const query_templates_str = '$query_templates'.replace(/&#39;/g, '"');
 		const query_templates = JSON.parse(query_templates_str);
 	</script>
+$if keywords_classes!=None:
+	<script type="text/javascript">
+		const keywords_classes_str = '$keywords_classes'.replace(/&#39;/g, '"');
+		const keywords_classes = JSON.parse(keywords_classes_str);
+	</script>
 <header class="row needDoc">
-	<button id="showRight"><i class="far fa-lightbulb"></i> help</button>
 	<button id="scrollToTop"><i class="fas fa-arrow-up"></i> top</button>
+	<button id="showRight"><i class="far fa-lightbulb"></i> help</button>
+	<button id="saveForm" name="action" value="saveRecord$:graph" form="modifyForm" type="submit"><i class="far fa-save"></i> save</button>
 	<script type="text/javascript">
 		$$('#cbp-spmenu-s2').load( "./documentation #documentation", function() {
 			setFormDocumentation();
@@ -28,11 +34,11 @@ $if query_templates!=None:
 		<h2>Ready to publish?</h2>
 	</section>
 	$if template:
-		<section class="col-md-3 col-lg-3 col-sm-3 homeheading" id="table-of-contents">
+		<section class="col-md-3 col-lg-3 col-sm-12 homeheading" id="table-of-contents">
 			<p class="caption">Table of contents</p>
 			<ul class="fields-list"></ul>
 		</section>
-	<section class="col-md-8 col-lg-8 col-sm-8 homeheading" id="form-section">
+	<section class="col-md-8 col-lg-8 col-sm-12 homeheading" id="form-section">
 		<form id="modifyForm" name="review" class="col-md-12 col-sm-12 col-lg-12" action="" method="POST">
 			<input type='hidden' name='recordID' value=$:pageID>
 			$if template:
@@ -72,7 +78,7 @@ $if query_templates!=None:
 							$ checked_value = 'http'+id.split('_http')[1].split(',',1)[0]
 							$ field_base = id.split('_http')[0].rsplit('-',1)[0]
 							$ field_name = id.split('_http')[0]
-							$if any(checked_value in k_v for k_v in graphdata[field_base]):
+							$if any(checked_value in k_v for k_v in graphdata[field_base]) or any(checked_value.rsplit('/', 1)[-1] in k_v for k_v in graphdata[field_base]):
 								<script type="text/javascript">
 									$$("input[name=$field_name]").attr("checked","checked");
 								</script>
@@ -90,7 +96,7 @@ $if query_templates!=None:
 												$if graphdata[id][0].startswith("-"):
 													$ value =  graphdata[id][0][1:] + " B.C."
 												$else:
-													$ value = graphdata[id][0].lstrip("0") + " A.C."
+													$ value = graphdata[id][0].lstrip("0") + " A.D."
 												$:input.set_value(value)
 											$else:
 												$:input.set_value(graphdata[id][0])
@@ -115,15 +121,30 @@ $if query_templates!=None:
 														$ input_name = id+'_'+k_v[0]
 														<span class='tag $k_v[0]' data-input='$id' id='$k_v[0]'>$:k_v[1]</span>
 														<input type='hidden' class='hiddenInput $k_v[0]' name='$input_name' value="$k_v[0],$:k_v[1]"/>
+													$if id in ids_subtemplate:
+														$if len(graphdata[id]) > 0:
+															<script type="text/javascript">
+																$$('#$id').prepend($$('<option value="">Select from the list</option>'));
+																$$("#$id option[value$$='$graphdata[id][0][0]']").attr("selected","selected");
+															</script>
 												$elif type(graphdata[id][0]) is tuple:
 													<!-- Multi-lang Literals -->		
 													$for k_v in graphdata[id]:
 														$ lang = k_v[1]
 														$ lang_id = id+'_'+lang
 														$if input.type=="text":
-															<input type="text" value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" data-supertemplate="$input.attrs['data_supertemplate']" data-mandatory="$input.attrs['data_mandatory']"/>
+															<input type="text" value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" data-class="$input.attrs['data_class']" data-supertemplate="$input.attrs['data_supertemplate']" data-mandatory="$input.attrs['data_mandatory']" data-subclass="$input.attrs['data_subclass']"/>
 														$else:
-															<textarea value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" data-supertemplate="$input.attrs['data_supertemplate']" data-mandatory="$input.attrs['data_mandatory']">$k_v[0]</textarea>	
+															<textarea value="$k_v[0]" id="$lang_id" name="$lang_id" class="$input.attrs['class']" lang="$lang" placeholder="$input.attrs['placeholder']" data-class="$input.attrs['data_class']" data-supertemplate="$input.attrs['data_supertemplate']" data-mandatory="$input.attrs['data_mandatory']" data-subclass="$input.attrs['data_subclass']">$k_v[0]</textarea>	
+															$if "keywords_"+id in graphdata:
+																$for kw in graphdata["keywords_"+id]:
+																	$ name = id+'_'+kw[0]
+																	$ kw_class = kw[2] if len(kw) == 3 else ''
+																	<span class='tag nlp $kw[0]' data-input='$id'>$:kw[1]</span>
+																	<input type='hidden' class='hiddenInput $kw[0]' name='$name' value=""/>
+																	<script type="text/javascript">
+																		$$("[name='$name']").val("$kw[0],"+encodeURIComponent("$:kw[1]")+","+encodeURIComponent("$:kw_class"))
+																	</script>
 														$if len(k_v) == 3:
 															$ lang_id = id+'_mainLang'
 															<input type="hidden" value="$lang" id="$lang_id" name="$lang_id">
@@ -157,7 +178,6 @@ $if query_templates!=None:
 								</section>
 							</section>
 							<script type="text/javascript">
-								console.log('$id')
 								var elements = $$('[id^="$id"]')[0].attributes;
 								var attrsToChange = [];
 
@@ -178,29 +198,21 @@ $if query_templates!=None:
 						$ extractors_prepend = [tpl[2] for tpl in knowledge_extractor]
 						$ extractors_id = [tpl[3] for tpl in knowledge_extractor]
 						$ extractors_service = [tpl[4] for tpl in knowledge_extractor]
+						$ extractors_subclass_restriction = [tpl[5] for tpl in knowledge_extractor]
 						$ extractions_object = extractions
 						<script type="text/javascript">
-							var extractionsString = `$extractions_object`.replace(/\n/g, "\\n").replace(/&quot;/g, "'").replace(/&#39;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+							var extractionsString = `$extractions_object`.replace(/\n/g, "\\n").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 							const extractionsObj = JSON.parse(extractionsString)
 							const extractorsArray = JSON.parse('$extractors_template_ids'.replace(/&#39;/g, '"'));
 							const extractorsNames = JSON.parse('$extractors_names'.replace(/&#39;/g, '"'));
 							const extractorsPrepend = JSON.parse('$extractors_prepend'.replace(/&#39;/g, '"'));
 							const extractorsIds = JSON.parse('$extractors_id'.replace(/&#39;/g, '"'));
 							const extractorsService = JSON.parse('$extractors_service'.replace(/&#39;/g, '"'));
+							const extractorsRestriction = JSON.parse('$extractors_subclass_restriction'.replace(/&#39;/g, '"'));
 							if (extractorsArray.includes('$template')) {
 								generateExtractionField('$template','$pageID');
 							}
 						</script>
-				</section>
-				<section class="homeheading col-md-4 col-sm-4 col-lg-4">
-					$ has_keywords = ['yes' for k,v in graphdata.items() if 'keywords' in k]
-					$if len(has_keywords) > 0:
-						<p>Here are the keywords you saved</p>
-						$for k,v in graphdata.items():
-							$if 'keywords' in k:
-								$for k_v in graphdata[k]:
-									<span class='tag $k_v[0]' data-input='keywords' id='$k_v[0]'>$:k_v[1]</span>
-									<input type='hidden' class='hiddenInput $k_v[0]' name='keywords-$k_v[0]' value="$k_v[0],$:k_v[1]"/>
 				</section>
 			</section>
 

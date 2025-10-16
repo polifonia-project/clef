@@ -17,9 +17,12 @@
       #aside {width:25%; height: 100%; padding: 5em !important;position: fixed; top: 0; right:0; overflow-x: scroll;}
       #aside ul {list-style-type: none; padding-left: 0px !important;}
       #aside a {text-decoration: none !important;}
-      h5 {margin: 2em 0px; font-weight: 500; font-size: 2em;}
-      h6 {color : rgba(100,23,180,1);margin: 2em 0px; font-size: 1.7em;}
-      a.H6 {display:inline-block; padding-left: 0.5em; color:grey !important;}
+      h4 { margin: 2.2em 0 1.8em 0; font-weight: 600; font-size: 2em; color: #3a0070; }
+      h5 { margin: 2em 0 1.6em 0; font-weight: 500; font-size: 1.6em; color: rgba(100,23,180,1)}
+      h6 { margin: 1.8em 0 1.4em 0; font-weight: 400; font-size: 1.4em; }
+      a.H4 {display:inline-block; color: rgba(100,23,180,1) !important;}
+      a.H5 {display:inline-block; padding-left: 0.5em;}
+      a.H6 {display:inline-block; padding-left: 1em; color:grey !important;}
       .red {color: red;}
       img {margin: 1em auto; border: solid 1px;}
       .tip {display: inline-block; border:solid 1px #29003b; padding: 0.2em !important; width:2.3em;}
@@ -33,7 +36,7 @@
       <img src="https://img.shields.io/badge/License-ISC-blue.svg" alt="">
       <p><a href="https://github.com/polifonia-project/clef">Source code</a></p>
       <section>
-        <h5>Introduction</h5>
+        <h4>Introduction</h4>
         <p>CLEF is a lightweight Linked Open Data (LOD) native cataloguing system tailored to small-medium collaborative projects.
           It offers a web-ready solution for setting up data collection or crowdsourcing campaigns.</p>
         <p>CLEF is designed to facilitate admin tasks,
@@ -55,7 +58,7 @@
         </ul>
       </section>
       <section>
-        <h5>Install and run</h5>
+        <h4>Install and run</h4>
         <p>With <strong>Docker</strong></p>
         <ul>
           <li>install Docker on your system</li>
@@ -78,78 +81,91 @@
           <li>ensure that your Docker engine is running</li>
           <li>run <code>docker compose up</code> (the first build might take couple of minutes)</li>
           <ul>
-            <li>Production: docker compose --project-name=clef -f docker-compose.prod.yml up -d</li>
-            <li>-d ensures that it runs as a daemon on the background</li>
-            <li>-f specifies different file to build for production</li>
-            <li>project-name ensures that the containers are not prefixed with app-</li>
+            <li>Production: <code>docker compose --project-name=clef -f docker-compose.prod-opt.yml up -d</code></li>
+            <li><code>-d</code> ensures that it runs as a daemon on the background</li>
+            <li><code>-f</code> specifies different file to build for production</li>
+            <li><code>project-name</code> ensures that the containers are not prefixed with <code>app-</code></li>
           </ul>
           <li>access your web browser at <a href="http://localhost:8080">http://localhost:8080</a></li>
           <li>follow the instructions for <a href="#customization">customization</a></li>
         </ul>
-
-         <p>See section <a href="#setup">Setup</a> for detail on how to change default ports.</p>
       </section>
       <section id="customization">
-        <h5>Setup</h5>
-        <h6 id="setup">Default setup</h6>
-        <p>You can modify the default configuration of the application from the Member area > Setup. Changes to the configuration have immediate effect (no need to restart the application). </p>
-        <img style="max-width:100%;" src="docs/3setup.png" alt="">
-        <p>What you can modify:</p>
-        <p><strong>PROJECT (SHORT) NAME:</strong> Personalise the project name and the payoff, which appear in the homepage and the menu across pages.</p>
-        <p><strong>MAIN LANGUAGE:</strong> The default language used to display cataloged data.</p>
-        <p><strong>MY ENDPOINT:</strong> The local SPARQL endpoint runs on port 3000. Changes are disabled. To modify the default port you'll have to modify the following files:</p>
+        <h4>Setup</h4>
+        <p>Setting up the application involves three main steps: </p>
         <ul>
-          <li>change <code>myEndpoint</code> in <code>conf.py</code>, in the root folder of the application</li>
-          <li><code>docker-compose.yml</code></li>
+          <li><a href="#setup">Default setup</a>: you can modify core parameters on the Setup page, including project name, language, endpoints, URI base, limits, pagination, and catalogue colors;</li>
+          <li><a href="#synchronisation">Github synchronisation</a>: you can connect your application to GitHub for authentication, data backup, and versioning;</li>
+          <li><a href="#templates">Templates and ontologies</a>: before starting to populate your catalogue, you must create and configure templates, each representing an entity category with a user-friendly web form.</li>
         </ul>
-        <p><strong>MY PUBLIC ENDPOINT:</strong> The public URL of your SPARQL endpoint, used for front-end functionalities, e.g. autocomplete. Default URI is <code>http://127.0.0.1:3000/blazegraph/sparql</code>. Similarly to the local endpoint address, to change the port of the web application, change the aforementioned files.</p>
-        <p><strong>SPARQL.ANYTHING ENDPOINT:</strong> Configure the local SPARQL.ANYTHING endpoint, which by default runs on port 3000. To change the default port, update <code>docker-compose.yml</code>.</p>
-        <p><strong>URI BASE:</strong> The URI base is the persistent URI of new entities. You can use external services such as w3id. Be aware that content negotiation is not automatically enabled. See an <a href="https://github.com/perma-id/w3id.org/tree/master/musow">example</a> on how to enable it with w3id.</p>
-        <p><strong>LIMIT REQUESTS:</strong> Limit the number of daily anonymous contributions per user - requests coming from the same IP address.</p>
-        <p><strong>PAGINATION LIMIT:</strong> Choose the number of records to be shown in the backend and frontend (pagination of results).</p>
-        <p><strong>PRIMARY COLOR:</strong> Select the primary color of your catalogue (used for titles). Changing this setting requires restarting the application.</p>
-        <p><strong>SECONDARY COLOR:</strong> Select the secondary color of your catalogue (used for highlights and gradients). Changing this setting requires restarting the application.</p>
-        <h6>GitHub backup</h6>
-        <p>CLEF can be synchronised with a GitHub repository to (1) create a versioned backup of data (and keep track of changes to records) and (2) to create a team to collaborate to the catalogue.</p>
-        <p>Before modifying the Setup page, you will need:</p>
-        <ul>
-          <li>to create <a href="https://github.com/join">a github account</a> (if you do not have it yet)</li>
-          <li>to create <a href="https://docs.github.com/en/get-started/quickstart/create-a-repo">a github repository</a> for storing the backup version of your data. Here <span class='red'>you must create a folder</span> called <code>records</code>.</li>
-          <li>to obtain <a href="https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token">a github bearer token</a>, to allow CLEF to read/write on your repository on your behalf</li>
-        </ul>
-        <p>When selecting the scopes of the permissions for the bearer token, ensure <code>repo</code> rights are selected.</p>
-        <p>In the setup page you can then enable Github synchronization by modifying the following fields:</p>
-        <ul>
-          <li><strong>Enable Github backup:</strong> <code>True</code></li>
-          <li><strong>COMMITS DEFAULT AUTHOR:</strong> your GitHub username </li>
-          <li><strong>COMMITS DEFAULT AUTHOR EMAIL:</strong> the email you used to register on Github</li>
-        </ul>
-        <p>Remember the repository must be either yours or of an organisation where you have been accredited as a collaborator with admin privileges. </p>
-        <ul>
-          <li><strong>REPOSITORY OWNER:</strong> If the repository is yours, use your username, otherwise use the organisation name</li>
-          <li><strong>REPOSITORY NAME:</strong> the name of the repository as recorded in the URL (after the owner name)</li>
-          <li><strong>GITHUB BEARER TOKEN:</strong> Copy and paste the bearer token. Be aware you may need to change this code over time - according to the expiry date you choose.</li>
-        </ul>
-        <h6>Authentication</h6>
-        <p>To allow only a restricted number of collaborators to access the backend of your application, you can use Github for authentication.
-          Every collaborator must have:</p>
-        <ul>
-          <li> a github account</li>
-          <li> been invited (via GitHub) to collaborate to the repository</li>
-        </ul>
-        <p>In addition to prior requirements for synchronization, the owner of the repositoy must also create a github <a href="https://docs.github.com/en/developers/apps/building-oauth-apps/creating-an-oauth-app">OAuth application</a> connected to the repository and the web application</p>
-        <ul>
-          <li>Follow the instructions for creating the OAuth app</li>
-          <li>when asked, select as Authorization callback URL the following path <code>{YOURDOMAIN}/oauth-callback</code>, e.g. http://mydomain.org/oauth-callback</li>
-          <li>At the end, copy and paste the <strong>CLIENT ID</strong> and <strong>SECRET KEY</strong> in the Setup page</li>
-        </ul>
-        <p>GitHub authentication is <span class='red'>strongly recommended</span> for applications that run online.
-          If you do not enable it, any visitor will be able to access the backend of your application.
-          Once it is enabled, only accredited GitHub users that are collaborators of your repository will be allowed to access the Member area from the menu.
-          Notice that anonymous contributions will still be possible (from the menu <code>Add a resource</code>). Only accredited users will be able to review and publish the new record though.</p>
-
+        </p>Once the app is running, visit the Setup page to adjust recommended and optional settings.</p>
+        <section id="setup">
+          <h5 >Default setup</h5>
+          <p>You can modify the default configuration of the application from the Member area > Setup. Changes to the configuration have immediate effect (no need to restart the application), except for interface colors.</p>
+          <img style="max-width:100%;" src="docs/3setup.png" alt="">
+          <h6>Recommended Parameters</h6>
+          <p>These are core parameters you should configure for proper application usage:</p>
+          <p><strong>PROJECT (SHORT) NAME:</strong> Personalise the project name and the payoff, which appear in the homepage and the menu across pages.</p>
+          <p><strong>MY ENDPOINT:</strong> The local SPARQL endpoint runs on port 3000. Changes are disabled. To modify the default port you'll have to modify the following files:</p>
+          <ul>
+            <li>change <code>myEndpoint</code> in <code>conf.py</code>, in the root folder of the application</li>
+            <li><code>docker-compose.yml</code></li>
+          </ul>
+          <p><strong>MY PUBLIC ENDPOINT:</strong> The public URL of your SPARQL endpoint, used for front-end functionalities, e.g. autocomplete. Default URI is <code>http://127.0.0.1:3000/blazegraph/sparql</code>. Similarly to the local endpoint address, to change the port of the web application, change the aforementioned files.</p>
+          <p><strong>SPARQL.ANYTHING ENDPOINT:</strong> Configure the local SPARQL.ANYTHING endpoint, which by default runs on port 3000. To change the default port, update <code>docker-compose.yml</code>.</p>
+          <p><strong>URI BASE:</strong> The URI base is the persistent URI of new entities. You can use external services such as w3id. Be aware that content negotiation is not automatically enabled. See an <a href="https://github.com/perma-id/w3id.org/tree/master/musow">example</a> on how to enable it with w3id.</p>
+          <h6>Optional Parameters</h6>
+          <p>These parameters can be adjusted for personalization or advanced configuration:</p>
+          <p><strong>MAIN LANGUAGE:</strong> The default language used to display cataloged data.</p>
+          <p><strong>LIMIT REQUESTS:</strong> Limit the number of daily anonymous contributions per user - requests coming from the same IP address.</p>
+          <p><strong>PAGINATION LIMIT:</strong> Choose the number of records to be shown in the backend and frontend (pagination of results).</p>
+          <p><strong>PRIMARY COLOR:</strong> Select the primary color of your catalogue (used for titles). Changing this setting requires restarting the application.</p>
+          <p><strong>SECONDARY COLOR:</strong> Select the secondary color of your catalogue (used for highlights and gradients). Changing this setting requires restarting the application.</p>
+        </section>
+        <section id="synchronisation">
+          <h5>GitHub synchronisation</h5>
+          <p>GitHub synchronisation is a necessary step unless you are working in a local environment. It is used for authentication, data backup, and versioning. While local usage does not require GitHub integration, it is essential in production to control who can create and modify content, and to ensure data is saved reliably.</p>
+          <h6>GitHub backup</h6>
+          <p>CLEF can be synchronised with a GitHub repository to (1) create a versioned backup of data (and keep track of changes to records) and (2) to create a team to collaborate to the catalogue.</p>
+          <p>Before modifying the Setup page, you will need:</p>
+          <ul>
+            <li>to create <a href="https://github.com/join">a github account</a> (if you do not have it yet)</li>
+            <li>to create <a href="https://docs.github.com/en/get-started/quickstart/create-a-repo">a github repository</a> for storing the backup version of your data. Here <span class='red'>you must create a folder</span> called <code>records</code>.</li>
+            <li>to obtain <a href="https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token">a github bearer token</a>, to allow CLEF to read/write on your repository on your behalf</li>
+          </ul>
+          <p>When selecting the scopes of the permissions for the bearer token, ensure <code>repo</code> rights are selected.</p>
+          <p>In the setup page you can then enable Github synchronization by modifying the following fields:</p>
+          <ul>
+            <li><strong>Enable Github backup:</strong> <code>True</code></li>
+            <li><strong>COMMITS DEFAULT AUTHOR:</strong> your GitHub username </li>
+            <li><strong>COMMITS DEFAULT AUTHOR EMAIL:</strong> the email you used to register on Github</li>
+          </ul>
+          <p>Remember the repository must be either yours or of an organisation where you have been accredited as a collaborator with admin privileges. </p>
+          <ul>
+            <li><strong>REPOSITORY OWNER:</strong> If the repository is yours, use your username, otherwise use the organisation name</li>
+            <li><strong>REPOSITORY NAME:</strong> the name of the repository as recorded in the URL (after the owner name)</li>
+            <li><strong>GITHUB BEARER TOKEN:</strong> Copy and paste the bearer token. Be aware you may need to change this code over time - according to the expiry date you choose.</li>
+          </ul>
+          <h6>GitHub authentication</h6>
+          <p>To allow only a restricted number of collaborators to access the backend of your application, you can use Github for authentication.
+            Every collaborator must have:</p>
+          <ul>
+            <li> a github account</li>
+            <li> been invited (via GitHub) to collaborate to the repository</li>
+          </ul>
+          <p>In addition to prior requirements for synchronization, the owner of the repositoy must also create a github <a href="https://docs.github.com/en/developers/apps/building-oauth-apps/creating-an-oauth-app">OAuth application</a> connected to the repository and the web application</p>
+          <ul>
+            <li>Follow the instructions for creating the OAuth app</li>
+            <li>when asked, select as Authorization callback URL the following path <code>{YOURDOMAIN}/oauth-callback</code>, e.g. http://mydomain.org/oauth-callback</li>
+            <li>At the end, copy and paste the <strong>CLIENT ID</strong> and <strong>SECRET KEY</strong> in the Setup page</li>
+          </ul>
+          <p>GitHub authentication is <span class='red'>strongly recommended</span> for applications that run online.
+            If you do not enable it, any visitor will be able to access the backend of your application.
+            Once it is enabled, only accredited GitHub users that are collaborators of your repository will be allowed to access the Member area from the menu.
+            Notice that anonymous contributions will still be possible (from the menu <code>Add a resource</code>). Only accredited users will be able to review and publish the new record though.</p>
       </section>
-      <section>
+      </section>
+      <section id="templates">
         <h5>Templates and ontologies</h5>
         <p>Templates are interfaces designed to setup the web forms for data collection. Each template corresponds to a topic of interest to be described (an entity). Templates can be created, modified, and deleted from the Member area. </p>
         <h6>Create a template</h6>
@@ -264,8 +280,8 @@
         </section>
       </section>
       <section>
-        <h5>Getting started!</h5>
-        <h6>Overview</h6>
+        <h4>Getting started!</h4>
+        <h5>Overview</h5>
         <p>CLEF comes with the following webpages, accessible from the menu:</p>
         <ul>
           <li><strong>Homepage</strong> a landing page presenting the project. Title and payoff can be changed from the Setup page. Instead, the page content can be only changed manually by modifying the HTML file <code>templates/login.html</code></li>
@@ -281,7 +297,7 @@
           <li><strong>Editorial guidelines</strong> a list of tips for creating new records. The page is also available as right sidebar when creating a new record.</li>
           </ul>
         <p>Moreover, each record has a dedicated webpage, permanently identified by its URI. Likewise, terms from <em>internal</em> controlled vocabularies and new entities referenced in records (e.g. new entities created in Free text fields) have a dedicated webpage. External terms do not have dedicated page. Rather, a link to the source is provided (e.g. Wikidata items)</p>
-        <h6>Create a record</h6>
+        <h5>Create a record</h5>
         <img src="docs/3create.png" style='max-width:100%;' alt="">
         <p>Users can create a new record in two modalities: anonymous or authenticated mode.</p>
 
@@ -321,7 +337,7 @@
                   
         </section>
 
-        <h6>Knowledge extraction</h6>
+        <h5>Knowledge extraction</h5>
         <p>CLEF comes with a suite of tools that enable users of all levels to harness the potential of Linked Open Data and related technologies. In particular, the Knowledge Extraction field aims to provide powerful solutions for easily retrieving valuable information and fully leveraging online datasets and documents while describing Records.</p>
         <p>Currently available options include API services, SPARQL endpoints, static files (<code>.json</code>, <code>.csv</code>, and <code>.xml</code> formats are supported), and websites. This feature is powered by <a href="https://sparql-anything.cc/">SPARQL Anything</a>, a re-engineering tool that allows users to query a wide range of resources, including static files and web pages, using SPARQL. A dropdown allows you to select the option you prefer to run your query.</p>
         <section class='row'>
@@ -413,7 +429,7 @@
           </section>
         </section>
 
-        <h6>Manage records</h6>
+        <h5>Manage records</h5>
         <p>Records are accessible via the member area to authenticated users. Records are paginated and sorted by date (from the most recent to the oldest).</p>
         <img src="docs/3backend.png" style='max-width:100%;' alt="">
         <p>The list of records can be filtered by publication status:</p>
@@ -428,19 +444,19 @@
         <p>The button <code>review</code> allows a reviewer to modify a record and, if the review process is deemed over, to publish it straightaway. When modifying the record, the reviewer may decide to save the changes without publishing the record. After publication, the status changes to <code>published</code> and the label <code>draft</code> is removed from the title of published records.</p>
         <p>To remove the record from the Explore page, it must be deleted. The button <code>delete</code> in the column <code>ACTIONS</code> allows a reviewer to delete a record permanently. If Github synchronisation is enabled, the action affects also the file stored in the repository.</p>
 
-        <h6>Visualize records</h6>
+        <h5>Visualize records</h5>
         <p>New records are available at <code>{YOURDOMAIN}/view-{RESOURCEID}</code>. The web page shows fields in the same order as in the template.
         When clicking on values, the website can redirect users to Wikidata pages (e.g. <code>Department of classical philology</code>), geonames pages (e.g. <code>Bologna</code>) or to internal pages describing terms belonging to controlled vocabularies (e.g. <code>female</code>).
         From the same page, it is also possible to download the record in multiple formats, including TTL, RDF/XML, and JSON-LD.</p>
         <img src="docs/3-1record.png" style='max-width:100%;' alt="">
-        <h6>Explore and search</h6>
+        <h5>Explore and search</h5>
         <p>Records can be browsed in the page <code>Explore</code>. Records are grouped by template in tabs, also showing the number of records falling uder that cetegory. In each tab, sections are shown for each field specified as a filter in the template. </p>
         <p>By default, an initial filter is created for the text field defined as <strong>primary label</strong>, and records are sorted alphabetically. Filters based on entities (i.e. text fields referencing entity URIs and locations, or dropdwon and checkboxes referencing controlled vocabularies) are grouped by frequency of values, and then sorted alphabetically.</p>
         <img src="docs/3explore.png" style='max-width:100%;' alt="">
         <p>The top-right search bar in the menu looks into the catalogue for resources titles. The search is performed on the <em>primary label</em> of records. Suggestions are shown while typing.</p>
         <img src="docs/2search.png" style='max-width:100%;' alt="">
 
-        <h6>Data visualization</h6>
+        <h5>Data visualization</h5>
         <p>CLEF offers a comprehensive suite of tools designed to facilitate the exploration of resources within the Catalogue. You can access a variety of customizable data visualization options through the dedicated page in the Member Area. By providing SPARQL queries, you can extract meaningful entities and statistics from your data, enabling a deeper and more insightful exploration of the Catalogue's contents.</p>
         <p>Each visualization usually include a Title and a customizable Description, which can be further enriched through HTML tags and related attributes, allowing you to incorporate links, colorful captions, and other interactive elements. Available visualization options include Counters (retrieve counts of key entities within the Knowledge Graph), Charts (graphical representation of your data), and Maps (highlight geographical distributions of recorded entities).</p>
         <p><strong>COUNTERS</strong></p>
@@ -474,7 +490,7 @@
           <p class='col-md-5 col-sm-5'>To ensure your SPARQL query works correctly, it must return at least locations, with an optional numeric value assigned to the variable <code>?count</code>. Locations can be represented either as GeoNames entities (using the variable <code>?geonames</code>) or as pairs of latitude and longitude values (using the variables <code>?lat</code> and <code>?long</code>). In both cases, each location should be associated with a label assigned to the variable <code>?label</code>.</p>
         </section>
 
-        <h6>Data access</h6>
+        <h5>Data access</h5>
         <p><strong>THE DATASET</strong></p>
         <p>New resources (records) are associated with the <code>class</code> and the URI base specified in the template. Instead, URIs from Wikidata and geonames are directly reused and no information on their classes or properties are stored.</p>
         <p>For every new resource a <code>named graph</code> is generated, which includes triples all having the same subject the <code>{resourceURI}</code> identifying the resource. The named graph appears in the form <code>{resourceURI}/</code> (the same URI of the resource, followed by a slash).</p>
@@ -503,19 +519,20 @@
           Be aware that the synchronization between the triplestore and the repository is one-way, that is, changes happening on github only are not sent to the triplestore.</p>
       </section>
       <section>
-        <h5>Deployment</h5>
-        <p>CLEF is based on <a href="https://webpy.org/">webpy</a>. To deploy CLEF in production server, you'll need a professional web server process, such as <a href="https://gunicorn.org/">gunicorn</a>, which will serve the app. See <a href="https://webpy.readthedocs.io/en/latest/deploying.html">how to deploy web.py applications</a>.</p>
+        <h4>Deployment</h4>
+        <p>CLEF is based on <a href="https://webpy.org/">webpy</a>. To deploy CLEF in production server without Docker, you'll need a professional web server process, such as <a href="https://gunicorn.org/">gunicorn</a>, which will serve the app. See <a href="https://webpy.readthedocs.io/en/latest/deploying.html">how to deploy web.py applications</a>.</p>
         <p>DEPLOY WITH DOCKER</p>
-        <p>The <code>docker-compose.prod.yml</code> is set up for the server deployment using three docker containers, with nginx handling the static files as described above.</p>
+        <p>The <code>docker-compose.prod-opt.yml</code> is set up for the server deployment using three docker containers, with nginx handling the static files as described above.</p>
         <ul>
-          <li><code>docker-compose -f "docker-compose.prod.yml" up -d --build'</code></li>
+          <li><code>docker compose --project-name=clef -f docker-compose.prod-opt.yml up -d</code></li>
           <li>The app listens on port 80, so if you run this locally, access your browser at <code>http://localhost</code></li>
         </ul>
       </section>
       <section>
-        <h5>Credits</h5>
-        CLEF is part of <a href="https://polifonia-project.eu/">Polifonia</a>, a H2020 funded project (101004746).
-        The repository is maintained by <code>marilena.daquino2@unibo.it</code>
+        <h4>Credits</h4>
+        <p>CLEF has been funded by <a href="https://polifonia-project.eu/">Polifonia</a>, a H2020 project (101004746), and ATLAS, 
+        a Next Generation EU project (PRIN 2022, Mission 4 Component 1 CUP J53D23013000006).</p>
+        <p>The repository is maintained by <code>marilena.daquino2@unibo.it</code> and <code>sebastiano.giacomin2@unibo.it</code>.</p>
       </section>
     </main>
     <section id="aside">
@@ -523,7 +540,7 @@
       <script type="text/javascript">
         var toc = document.getElementById('aside');
         var tocList = document.createElement("ul");
-        var headers = Array.from(document.querySelectorAll("h5,h6"))
+        var headers = Array.from(document.querySelectorAll("h4,h5,h6"))
         for (i = 0; i < headers.length; i++){
           // Create an id
           name = "h"+i;
